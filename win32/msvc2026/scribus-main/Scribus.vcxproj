@@ -896,6 +896,7 @@
     <moc Include="..\..\..\scribus\ui\tabmanager.h" />
     <moc Include="..\..\..\scribus\ui\tabpdfoptions.h" />
     <moc Include="..\..\..\scribus\ui\tabruler.h" />
+    <moc Include="..\..\..\scribus\ui\toolpalette.h" />
     <ClInclude Include="..\..\..\scribus\textwriter.h" />
     <moc Include="..\..\..\scribus\tocgenerator.h" />
     <ClInclude Include="..\..\..\scribus\transaction.h" />
@@ -1656,6 +1657,7 @@
     <ClCompile Include="..\..\..\scribus\ui\tabmanager.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\tabpdfoptions.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\tabruler.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\toolpalette.cpp" />
     <ClCompile Include="..\..\..\scribus\textwriter.cpp" />
     <ClCompile Include="..\..\..\scribus\tocgenerator.cpp" />
     <ClCompile Include="..\..\..\scribus\transaction.cpp" />

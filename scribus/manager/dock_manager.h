@@ -44,6 +44,7 @@ class Biblio;
 class BookPalette;
 class UndoPalette;
 class SymbolPalette;
+class ToolPalette;
 class DockCentralWidget;
 
 class SCRIBUS_API DockManager : public CDockManager
@@ -91,6 +92,7 @@ public:
 	LayerPalette *layerPalette {nullptr};
 	AlignDistributePalette *alignDistributePalette {nullptr};
 	InlinePalette *inlinePalette {nullptr};
+	ToolPalette *toolPalette {nullptr};
 	Biblio *scrapbookPalette {nullptr};
 	BookPalette *bookPalette {nullptr};
 	UndoPalette *undoPalette {nullptr};

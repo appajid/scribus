@@ -226,3 +226,47 @@ ads--CFloatingWidgetTitleBar {
 #floatingTitleCloseButton:pressed {
    background: rgba(0, 0, 0, 48);
 }
+
+/*
+* Tool Palette (dockable tools)
+*/
+
+QLabel#toolSectionHeader {
+   color: palette(dark);
+   margin-top: 2px;
+   padding: 0px;
+   border: none;
+}
+
+QLabel#toolHelpLabel {
+   color: palette(foreground);
+   background: palette(window);
+   border-top: 1px solid palette(midlight);
+   padding-top: 4px;
+   margin-top: 2px;
+}
+
+QToolButton#toolButton {
+   border: 1px solid transparent;
+   border-radius: 3px;
+   background: transparent;
+   padding: 1px;
+}
+
+QToolButton#toolButton:hover {
+   border: 1px solid palette(mid);
+   background: palette(midlight);
+}
+
+QToolButton#toolButton:checked {
+   border: 1px solid palette(mid);
+   background: palette(midlight);
+}
+
+QToolButton#toolButton:checked:hover {
+   background: palette(light);
+}
+
+QToolButton#toolButton::menu-indicator {
+   image: url(___tb_menu_arrow___);
+}

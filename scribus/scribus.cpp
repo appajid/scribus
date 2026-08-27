@@ -24,6 +24,9 @@ for which a new license (GPL+exception) is in place.
 
 #include <QAction>
 #include <QApplication>
+#include <QTimer>
+
+#include <cstdlib>
 #include <QByteArray>
 #include <QCloseEvent>
 #include <QColor>
@@ -238,6 +241,7 @@ for which a new license (GPL+exception) is in place.
 #include "ui/stylesearchdialog.h"
 #include "ui/symbolpalette.h"
 #include "ui/tabmanager.h"
+#include "ui/toolpalette.h"
 #include "ui/transformdialog.h"
 #include "ui/viewtoolbar.h"
 #include "ui/factories/scribusproxystyle.h"
@@ -721,6 +725,10 @@ void ScribusMainWindow::initPalettes()
 	contentPalette->setMainWindow(this);
 	contentPalette->setToggleViewAction(scrActions["toolsContent"]);
 	contentPalette->installEventFilter(this);
+
+	// Tools
+	toolPalette = dockManager->toolPalette;
+	toolPalette->setToggleViewAction(scrActions["toolsToolbarTools"]);
 
 	// Nodes
 	nodePalette = new NodePalette(this);
@@ -2568,6 +2576,7 @@ void ScribusMainWindow::newActWin(QMdiSubWindow *w)
 	symbolPalette->setDoc(doc);
 	inlinePalette->setDoc(doc);
 	modeToolBar->setDoc(doc);
+	toolPalette->setDoc(doc);
 	viewToolBar->setDoc(doc);
 	// Give plugins a chance to react on changing the current document
 	PluginManager& pluginManager(PluginManager::instance());
@@ -6767,6 +6776,7 @@ void ScribusMainWindow::slotDocSetup()
 	emit UpdateRequest(reqCmsOptionsUpdate);
 	doc->changed();
 	modeToolBar->setDoc(doc);
+	toolPalette->setDoc(doc);
 }
 
 int ScribusMainWindow::ShowSubs()
@@ -6789,6 +6799,7 @@ int ScribusMainWindow::ShowSubs()
 	marksManager->startup();
 	nsEditor->startup();
 	symbolPalette->startup();
+	toolPalette->startup();
 
 	// try to load custom layout from preferences
 	dockManager->restoreWorkspaceFromPrefs();
@@ -6798,6 +6809,95 @@ int ScribusMainWindow::ShowSubs()
 	editToolBar->initVisibility();
 	modeToolBar->initVisibility();
 	pdfToolBar->initVisibility();
+
+	// [dev] env-gated diagnostics for the automated smoke test
+	auto dumpToolPalette = [this](const char* tag) {
+		auto wstate = [](QWidget* w) -> QString {
+			if (!w)
+				return QString("null");
+			CDockWidget* d = qobject_cast<CDockWidget*>(w);
+			QString s = QString("vis=%1").arg(w->isVisible() ? "y" : "n");
+			if (d)
+			{
+				s += QString("|dvis=%1").arg(d->isVisible() ? "y" : "n");
+				if (d->dockAreaWidget())
+					s += QString("|area=%1").arg(d->dockAreaWidget()->isVisible() ? "y" : "n");
+			}
+			return s;
+		};
+		if (!toolPalette)
+		{
+			qInfo().noquote() << "[toolpalette-dump]" << tag << "| missing";
+			return;
+		}
+		QStringList checked;
+		const auto buttons = toolPalette->findChildren<QToolButton*>();
+		for (const QToolButton* b : buttons)
+			if (b->isChecked())
+				checked << b->text() + "/" + (b->defaultAction() ? b->defaultAction()->data().toString() : QString());
+		qInfo().noquote() << "[toolpalette-dump]" << tag
+			<< "| tools=" << wstate(toolPalette)
+			<< "| page=" << wstate(pagePalette)
+			<< "| props=" << wstate(propertiesPalette)
+			<< "| buttons=" << buttons.count()
+			<< "| checked=" << checked.join(",");
+	};
+	if (qEnvironmentVariableIsSet("SCRIBUS_DUMP_TOOLPALETTE"))
+		dumpToolPalette("startup");
+
+	if (qEnvironmentVariableIsSet("SCRIBUS_SELFTEST"))
+	{
+		QTimer::singleShot(800, this, [this, dumpToolPalette]() {
+			dumpToolPalette("shown");
+			scrActions["toolsInsertTextFrame"]->trigger();
+			QTimer::singleShot(300, this, [this, dumpToolPalette]() {
+				dumpToolPalette("after-text-tool");
+
+				// exercise the polygon sidebar preset (e.g. 6 corners)
+				bool polyOk = false;
+				const auto menus = toolPalette->findChildren<QMenu*>();
+				for (QMenu* m : menus)
+				{
+					for (QAction* a : m->actions())
+					{
+						if (a->data().toInt() == 6)
+						{
+							a->trigger();
+							polyOk = true;
+							break;
+						}
+					}
+					if (polyOk)
+						break;
+				}
+				QTimer::singleShot(300, this, [this, polyOk]() {
+					qInfo().noquote() << "[toolpalette-dump] polygon-preset"
+						<< "| menuAction=" << (polyOk ? "y" : "n")
+						<< "| polyCorners=" << (doc ? doc->itemToolPrefs().polyCorners : -1);
+				});
+
+				// the line flyout must share the Bezier action object
+				QAction* bezAct = scrActions["toolsInsertBezier"].data();
+				QTimer::singleShot(600, this, [this, bezAct, dumpToolPalette]() {
+					bool bezInMenu = false;
+					const auto menus = toolPalette->findChildren<QMenu*>();
+					for (QMenu* m : menus)
+						for (QAction* a : m->actions())
+							if (a == bezAct)
+								bezInMenu = true;
+					qInfo().noquote() << "[toolpalette-dump] line-menu"
+						<< "| sharedBezierAction=" << (bezInMenu ? "y" : "n");
+					bezAct->trigger();
+					QTimer::singleShot(300, this, [this, dumpToolPalette]() {
+						dumpToolPalette("after-bezier");
+						// hard exit: Scribus' Qt shutdown can block in this headless
+						// batch context, so do not rely on a clean qApp->quit() here.
+						QTimer::singleShot(400, []() { std::exit(0); });
+					});
+				});
+			});
+		});
+	}
 
 	activateWindow();
 	if (!scriptIsRunning())
@@ -10080,6 +10180,7 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 void ScribusMainWindow::setPreviewToolbar()
 {
 	modeToolBar->setEnabled(!doc->drawAsPreview);
+	toolPalette->setEnabled(!doc->drawAsPreview);
 	editToolBar->setEnabled(!doc->drawAsPreview);
 	pdfToolBar->setEnabled(!doc->drawAsPreview);
 	symbolPalette->setEnabled(!doc->drawAsPreview);

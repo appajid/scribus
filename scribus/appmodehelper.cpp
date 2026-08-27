@@ -38,6 +38,7 @@ for which a new license (GPL+exception) is in place.
 #include "ui/pageselector.h"
 #include "ui/propertiespalette.h"
 #include "ui/scmwmenumanager.h"
+#include "ui/toolpalette.h"
 #include "ui/scrspinbox.h"
 #include "ui/vruler.h"
 #include "undomanager.h"
@@ -257,9 +258,18 @@ void AppModeHelper::setApplicationMode(ScribusMainWindow* scmw, ScribusDoc* doc,
 			break;
 		case modeDrawShapes:
 			{
-				doc->SubMode = scmw->modeToolBar->SubMode;
-				doc->ShapeValues = scmw->modeToolBar->ShapeVals;
-				doc->ValCount = scmw->modeToolBar->ValCount;
+				if (scmw->toolPalette)
+				{
+					doc->SubMode = scmw->toolPalette->SubMode;
+					doc->ShapeValues = scmw->toolPalette->ShapeVals;
+					doc->ValCount = scmw->toolPalette->ValCount;
+				}
+				else
+				{
+					doc->SubMode = scmw->modeToolBar->SubMode;
+					doc->ShapeValues = scmw->modeToolBar->ShapeVals;
+					doc->ValCount = scmw->modeToolBar->ValCount;
+				}
 				scmw->emitUpdateRequest(reqCustomShapeUpdate);
 			}
 			break;

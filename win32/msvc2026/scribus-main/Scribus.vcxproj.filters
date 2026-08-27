@@ -2736,6 +2736,9 @@
     <ClCompile Include="..\..\..\scribus\ui\tabruler.cpp">
       <Filter>Source Files\ui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\toolpalette.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\scribus\ui\transformdialog.cpp">
       <Filter>Source Files\ui</Filter>
     </ClCompile>
@@ -4721,6 +4724,9 @@
       <Filter>Source Files\ui</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\tabruler.h">
+      <Filter>Source Files\ui</Filter>
+    </moc>
+    <moc Include="..\..\..\scribus\ui\toolpalette.h">
       <Filter>Source Files\ui</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\transformdialog.h">

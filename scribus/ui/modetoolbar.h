@@ -62,6 +62,14 @@ public:
 	int ValCount { 0 };
 	double *ShapeVals { nullptr };
 
+	/** @brief Accessor for the shared autoform shape menu.
+	 *  The ToolPalette reuses the same menu so that shape sub-modes
+	 *  (SubMode, ShapeVals, ValCount) stay identical between both UI bars.
+	 */
+	AutoformButtonGroup* getAutoformButtonGroup() const { return autoFormButtonGroup; }
+	/** @brief Accessor for the shared calligraphic pen settings menu. */
+	QMenu* getCalligraphicMenu() const { return calPop; }
+
 public slots:
 	void newCalValues();
 	void GetPolyProps();

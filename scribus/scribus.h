@@ -113,6 +113,7 @@ class StoryEditor;
 class StyleManager;
 class SymbolPalette;
 class TOCGenerator;
+class ToolPalette;
 class UndoManager;
 class UndoPalette;
 class UndoState;
@@ -247,6 +248,7 @@ public:
 	EditToolBar *editToolBar {nullptr};
 	FileToolBar *fileToolBar {nullptr};
 	ModeToolBar* modeToolBar {nullptr};
+	ToolPalette* toolPalette {nullptr};
 	PDFToolBar* pdfToolBar {nullptr};
 	ViewToolBar* viewToolBar {nullptr};
 	QLabel* mainWindowXPosLabel {nullptr};

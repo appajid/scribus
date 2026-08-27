@@ -42,6 +42,7 @@ to the COPYING file provided with the program.
 #include "ui/propertiespalette.h"
 #include "ui/scrapbookpalette.h"
 #include "ui/symbolpalette.h"
+#include "ui/toolpalette.h"
 #include "undogui.h"
 
 
@@ -75,6 +76,7 @@ void DockManager::setupDocks()
 	propertiesPalette = new PropertiesPalette(this);
 	scrapbookPalette = new Biblio(this);
 	symbolPalette = new SymbolPalette(this);
+	toolPalette = new ToolPalette((QWidget *) this->parent());
 	undoPalette = new UndoPalette(this);
 
 	// Apply common configuration for each palette
@@ -88,6 +90,7 @@ void DockManager::setupDocks()
 	configureDock(propertiesPalette);
 	configureDock(scrapbookPalette);
 	configureDock(symbolPalette);
+	configureDock(toolPalette);
 	configureDock(undoPalette);
 
 	// Panel ToolProperties
@@ -259,6 +262,9 @@ void DockManager::createDefaultWorkspace()
 
 	auto *areaCenter = dockCenter->dockAreaWidget();
 
+	// Tools (leftmost, slim)
+	auto *areaToolbox = addDockWidget(LeftDockWidgetArea, toolPalette, areaCenter);
+
 	// Left
 	auto *areaLeft = addDockWidget(LeftDockWidgetArea, pagePalette, areaCenter);
 	addDockWidgetTabToArea(outlinePalette, areaLeft);
@@ -287,10 +293,11 @@ void DockManager::createDefaultWorkspace()
 	int heightL = areaLeft->height();
 	setSplitterSizes(areaLeft, {heightL * 3 / 4, heightL * 1 / 4});
 
-	// Resizing area width of left, center-left, center and right
+	// Resizing area width of toolbox, left, center-left, center and right
 	int widthCL = areaCenter->width();
 	int panelWidth = 290;
-	setSplitterSizes(areaCenter, {panelWidth, panelWidth, widthCL - 3 * panelWidth, panelWidth});
+	int toolboxWidth = 110;
+	setSplitterSizes(areaCenter, {toolboxWidth, panelWidth, panelWidth, widthCL - 3 * panelWidth - toolboxWidth, panelWidth});
 
 
 	// hide panels that are not visible in default workspace
@@ -303,9 +310,16 @@ void DockManager::createDefaultWorkspace()
 	outlinePalette->closeDockWidget();
 
 	// active palettes
+	areaToolbox->setCurrentDockWidget(toolPalette);
 	areaLeft->setCurrentDockWidget(pagePalette);
 	areaRight->setCurrentDockWidget(propertiesPalette);
 	areaLeftBottom->setCurrentDockWidget(alignDistributePalette);
+
+	// addDockWidget() does not open the docks, open the active ones explicitly
+	toolPalette->toggleView(true);
+	pagePalette->toggleView(true);
+	propertiesPalette->toggleView(true);
+	alignDistributePalette->toggleView(true);
 
 	// add perspective for a later usage, like reset workspace to default.
 	this->addPerspective("Default");

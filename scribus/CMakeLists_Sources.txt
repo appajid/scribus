@@ -557,6 +557,7 @@ set(SCRIBUS_SOURCES
 	ui/tabmanager.cpp
 	ui/tabpdfoptions.cpp
 	ui/tabruler.cpp
+	ui/toolpalette.cpp
 	ui/transformdialog.cpp
 	tt/simpletreemodel/treeitem.cpp
 	tt/simpletreemodel/treemodel.cpp
