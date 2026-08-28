@@ -8,10 +8,14 @@ for which a new license (GPL+exception) is in place.
 #include "cmdutil.h"
 #include "documentchecker.h"
 #include "documentinformation.h"
+#include "dynamicvariable.h"
+#include "marks.h"
+#include "pageitem.h"
 #include "pyesstring.h"
 #include "scribuscore.h"
 #include "scribusdoc.h"
 #include "scribusview.h"
+#include "util.h"
 #include "units.h"
 
 #include <QApplication>
@@ -20,6 +24,35 @@ for which a new license (GPL+exception) is in place.
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QObject>
+
+namespace
+{
+QString dynamicVariableId(ScribusDoc* doc, const QString& identifier)
+{
+	if (DynamicVariableResolver::isBuiltInId(identifier))
+		return identifier;
+	for (const DynamicVariable& variable : DynamicVariableResolver::builtInVariables())
+	{
+		if (variable.type == identifier)
+			return variable.id;
+	}
+	if (doc->dynamicVariable(identifier))
+		return identifier;
+	return doc->dynamicVariableIdByName(identifier);
+}
+
+QString userDynamicVariableId(ScribusDoc* doc, const QString& identifier)
+{
+	const QString id = dynamicVariableId(doc, identifier);
+	return (id.isEmpty() || DynamicVariableResolver::isBuiltInId(id)) ? QString() : id;
+}
+
+PyObject* dynamicVariableNotFound(const QString& identifier)
+{
+	PyErr_SetString(NotFoundError, QObject::tr("Dynamic variable '%1' was not found.", "python error").arg(identifier).toUtf8().constData());
+	return nullptr;
+}
+}
 
 PyObject *scribus_newdocument(PyObject* /* self */, PyObject* args)
 {
@@ -779,5 +812,183 @@ PyObject *scribus_setrtl(PyObject* /* self */, PyObject* args)
 	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
 	currentDoc->setRTL(rtl != 0);
 	currentDoc->setModified(true);
+	Py_RETURN_NONE;
+}
+
+PyObject *scribus_createvariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString value;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", name.ptr(), "utf-8", value.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString variableName = QString::fromUtf8(name.c_str());
+	const QString id = currentDoc->addDynamicVariable(variableName, QString::fromUtf8(value.c_str()));
+	if (id.isEmpty())
+	{
+		PyErr_SetString(NameExistsError, QObject::tr("A dynamic variable named '%1' already exists, or the name is empty.", "python error").arg(variableName).toUtf8().constData());
+		return nullptr;
+	}
+	currentDoc->changed();
+	return PyUnicode_FromString(id.toUtf8().constData());
+}
+
+PyObject *scribus_deletevariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", identifier.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = userDynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+	currentDoc->removeDynamicVariable(id);
+	currentDoc->changed();
+	Py_RETURN_NONE;
+}
+
+PyObject *scribus_getvariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", identifier.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = dynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+	return PyUnicode_FromString(currentDoc->resolveDynamicVariable(id).toUtf8().constData());
+}
+
+PyObject *scribus_insertvariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	PyESString objectName;
+	int position = -1;
+	if (!PyArg_ParseTuple(args, "es|esi", "utf-8", identifier.ptr(), "utf-8", objectName.ptr(), &position))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(objectName.c_str()));
+	if (!item)
+		return nullptr;
+	if (!item->isTextFrame() && !item->isPathText())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Cannot insert a dynamic variable into a non-text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (position < -1 || position > item->itemText.length())
+	{
+		PyErr_SetString(PyExc_IndexError, QObject::tr("Insert index out of bounds.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = dynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+
+	Mark* mark = currentDoc->getDynamicVariableMark(id);
+	if (!mark)
+	{
+		QString label;
+		if (DynamicVariableResolver::isBuiltInId(id))
+			label = DynamicVariableResolver::displayNameForType(DynamicVariableResolver::typeForId(id));
+		else
+			label = currentDoc->dynamicVariable(id)->name;
+		getUniqueName(label, currentDoc->marksLabelsList(MARKVariableTextType), QStringLiteral("_"));
+		MarkData data;
+		data.itemName = item->itemName();
+		data.variableId = id;
+		data.text = currentDoc->resolveDynamicVariable(id, item);
+		mark = currentDoc->newMark();
+		mark->setValues(label, item->OwnPage, MARKVariableTextType, data);
+	}
+	if (position < 0)
+		position = item->itemText.length();
+	item->itemText.insertMark(mark, position);
+	item->invalidateLayout();
+	currentDoc->changed();
+	currentDoc->flag_updateMarksLabels = true;
+	return PyUnicode_FromString(id.toUtf8().constData());
+}
+
+PyObject *scribus_listvariables(PyObject* /* self */)
+{
+	if (!checkHaveDocument())
+		return nullptr;
+	const ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const auto& variables = currentDoc->dynamicVariables();
+	PyObject* list = PyList_New(variables.size());
+	if (!list)
+		return nullptr;
+	int index = 0;
+	for (auto it = variables.constBegin(); it != variables.constEnd(); ++it)
+	{
+		const DynamicVariable& variable = it.value();
+		PyObject* tuple = Py_BuildValue("(sss)", variable.id.toUtf8().constData(), variable.name.toUtf8().constData(), variable.value.toUtf8().constData());
+		if (!tuple)
+		{
+			Py_DECREF(list);
+			return nullptr;
+		}
+		PyList_SET_ITEM(list, index++, tuple);
+	}
+	return list;
+}
+
+PyObject *scribus_renamevariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	PyESString newName;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", identifier.ptr(), "utf-8", newName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = userDynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+	const DynamicVariable variable = *currentDoc->dynamicVariable(id);
+	if (!currentDoc->updateDynamicVariable(id, QString::fromUtf8(newName.c_str()), variable.value))
+	{
+		PyErr_SetString(NameExistsError, QObject::tr("The new dynamic variable name is empty or already in use.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	currentDoc->changed();
+	Py_RETURN_NONE;
+}
+
+PyObject *scribus_setvariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	PyESString value;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", identifier.ptr(), "utf-8", value.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = userDynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+	const DynamicVariable variable = *currentDoc->dynamicVariable(id);
+	currentDoc->updateDynamicVariable(id, variable.name, QString::fromUtf8(value.c_str()));
+	currentDoc->changed();
 	Py_RETURN_NONE;
 }

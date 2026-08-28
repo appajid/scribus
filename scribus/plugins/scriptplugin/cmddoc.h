@@ -445,6 +445,33 @@ Sets whether the current document is right-to-left. \"rtl\" is a boolean.\n\
 "));
 PyObject *scribus_setrtl(PyObject * /*self*/, PyObject* args);
 
-#endif
+PyDoc_STRVAR(scribus_createvariable__doc__,
+QT_TR_NOOP("createVariable(name, value) -> str\n\nCreates a user-defined dynamic variable and returns its stable ID."));
+PyObject *scribus_createvariable(PyObject *self, PyObject* args);
 
+PyDoc_STRVAR(scribus_deletevariable__doc__,
+QT_TR_NOOP("deleteVariable(variable)\n\nDeletes a user-defined dynamic variable identified by name or stable ID."));
+PyObject *scribus_deletevariable(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_getvariable__doc__,
+QT_TR_NOOP("getVariable(variable) -> str\n\nReturns the resolved value of a dynamic variable. The argument may be a name, stable ID, or built-in type."));
+PyObject *scribus_getvariable(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_insertvariable__doc__,
+QT_TR_NOOP("insertVariable(variable, [objectName, position=-1]) -> str\n\nInserts a dynamic variable in a text frame and returns its stable ID. A position of -1 appends it."));
+PyObject *scribus_insertvariable(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_listvariables__doc__,
+QT_TR_NOOP("listVariables() -> list\n\nReturns user-defined variables as (stable ID, name, value) tuples."));
+PyObject *scribus_listvariables(PyObject *self);
+
+PyDoc_STRVAR(scribus_renamevariable__doc__,
+QT_TR_NOOP("renameVariable(variable, newName)\n\nRenames a user-defined dynamic variable identified by name or stable ID."));
+PyObject *scribus_renamevariable(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_setvariable__doc__,
+QT_TR_NOOP("setVariable(variable, value)\n\nChanges a user-defined dynamic variable identified by name or stable ID."));
+PyObject *scribus_setvariable(PyObject *self, PyObject* args);
+
+#endif
 

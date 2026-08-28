@@ -28,6 +28,7 @@ for which a new license (GPL+exception) is in place.
 #endif
 // include files for QT
 #include <QColor>
+#include <QDateTime>
 #include <QFile>
 #include <QFont>
 #include <QHash>
@@ -46,6 +47,7 @@ for which a new license (GPL+exception) is in place.
 #include "colormgmt/sccolormgmtengine.h"
 #include "colormgmt/sccolormgmtstructs.h"
 #include "documentinformation.h"
+#include "dynamicvariable.h"
 #include "numeration.h"
 #include "marks.h"
 #include "nodeeditcontext.h"
@@ -247,8 +249,9 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		ColorPrefs& colorPrefs() { return m_docPrefsData.colorPrefs; }
 		CMSData& cmsSettings() { return m_docPrefsData.colorPrefs.DCMSset; }
 		DocumentInformation& documentInfo() { return m_docPrefsData.docInfo; }
+		const DocumentInformation& documentInfo() const { return m_docPrefsData.docInfo; }
 		HyphenatorPrefs& hyphenatorPrefs() { return m_docPrefsData.hyphPrefs; }
-		void setDocumentInfo(DocumentInformation di) { m_docPrefsData.docInfo = di; }
+		void setDocumentInfo(DocumentInformation di);
 		DocumentSectionMap& sections() { return m_docPrefsData.docSectionMap; }
 		void setSections(DocumentSectionMap dsm) { m_docPrefsData.docSectionMap = std::move(dsm); }
 		const QMap<QString, int> & usedFonts() const { return UsedFonts; }
@@ -1382,6 +1385,8 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QString m_currentEditedSymbol;
 		int m_currentEditedIFrame {0};
 		QString m_documentFileName;
+		QMap<QString, DynamicVariable> m_dynamicVariables;
+		QDateTime m_dynamicVariableCreationDate {QDateTime::currentDateTime()};
 		QUuid m_uuid;
 
 	public: // Public attributes
@@ -1876,7 +1881,21 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 
 		//return mark with given label and given type
 		Mark* getMark(const QString& label, MarkType type); //returns mark with label and type (labels are unique only for same type marks)
+		Mark* getDynamicVariableMark(const QString& variableId) const;
 		Mark* newMark(const Mark* mrk = nullptr);
+
+		const QMap<QString, DynamicVariable>& dynamicVariables() const { return m_dynamicVariables; }
+		const DynamicVariable* dynamicVariable(const QString& id) const;
+		QString dynamicVariableIdByName(const QString& name) const;
+		QString addDynamicVariable(const QString& name, const QString& value, const QString& id = QString(), const QString& type = DynamicVariableResolver::UserDefined);
+		bool updateDynamicVariable(const QString& id, const QString& name, const QString& value);
+		bool removeDynamicVariable(const QString& id);
+		QString resolveDynamicVariable(const QString& id, const PageItem* frame = nullptr) const;
+		bool invalidateDynamicVariableFrames(const QString& id = QString(), bool forceUpdate = false);
+		bool updateDynamicVariableValues();
+		QDateTime dynamicVariableCreationDate() const { return m_dynamicVariableCreationDate; }
+		void setDynamicVariableCreationDate(const QDateTime& dateTime) { m_dynamicVariableCreationDate = dateTime; }
+		void restoreDynamicVariable(SimpleState* state, bool isUndo);
 		TextNote* newNote(NotesStyle* NS);
 
 		bool isMarkUsed(const Mark* mrk, bool visible = false) const;

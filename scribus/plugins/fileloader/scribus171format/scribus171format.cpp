@@ -12,6 +12,7 @@ for which a new license (GPL+exception) is in place.
 #include <QApplication>
 #include <QByteArray>
 #include <QCursor>
+#include <QDateTime>
 // #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
@@ -2052,6 +2053,11 @@ bool Scribus171Format::loadFile(const QString & fileName, const FileFormat & /* 
 			success = readMarks(m_Doc, reader);
 			if (!success) break;
 			m_Doc->setUsesMarksAndNotes(true);
+		}
+		else if (tagName == QLatin1String("DynamicVariables"))
+		{
+			success = readDynamicVariables(m_Doc, reader);
+			if (!success) break;
 		}
 		else if (tagName == QLatin1String("OpticalMarginSets"))
 		{
@@ -4637,6 +4643,8 @@ bool Scribus171Format::readMarks(ScribusDoc* doc, ScXmlStreamReader& reader)
 				mark->setType(type);
 				if ((type == MARKVariableTextType || type == MARKIndexType) && attrs.hasAttribute("str"))
 					mark->setString(attrs.valueAsString("str"));
+				if (type == MARKVariableTextType && attrs.hasAttribute("variableId"))
+					mark->setVariableId(attrs.valueAsString("variableId"));
 
 				if (type == MARK2ItemType && attrs.hasAttribute("ItemID"))
 				{
@@ -4659,6 +4667,38 @@ bool Scribus171Format::readMarks(ScribusDoc* doc, ScXmlStreamReader& reader)
 				}
 			}
 		}
+	}
+	return !reader.hasError();
+}
+
+bool Scribus171Format::readDynamicVariables(ScribusDoc* doc, ScXmlStreamReader& reader)
+{
+	const QString tagName(reader.nameAsString());
+	const ScXmlStreamAttributes rootAttrs = reader.scAttributes();
+	if (rootAttrs.hasAttribute("creationDate"))
+	{
+		const QDateTime creationDate = QDateTime::fromString(rootAttrs.valueAsString("creationDate"), Qt::ISODateWithMs);
+		if (creationDate.isValid())
+			doc->setDynamicVariableCreationDate(creationDate);
+	}
+
+	while (!reader.atEnd() && !reader.hasError())
+	{
+		reader.readNext();
+		if (reader.isEndElement() && reader.name() == tagName)
+			break;
+		if (!reader.isStartElement() || reader.name() != QLatin1String("Variable"))
+			continue;
+
+		const ScXmlStreamAttributes attrs = reader.scAttributes();
+		const QString id = attrs.valueAsString("id");
+		const QString name = attrs.valueAsString("name");
+		const QString value = attrs.valueAsString("value");
+		const QString type = attrs.hasAttribute("type") ? attrs.valueAsString("type") : DynamicVariableResolver::UserDefined;
+		if (id.isEmpty() || name.isEmpty() || DynamicVariableResolver::isBuiltInId(id))
+			continue;
+		if (!doc->dynamicVariable(id))
+			doc->addDynamicVariable(name, value, id, type);
 	}
 	return !reader.hasError();
 }

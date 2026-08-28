@@ -197,6 +197,8 @@ for which a new license (GPL+exception) is in place.
 #include "ui/marknote.h"
 #include "ui/marksmanager.h"
 #include "ui/markvariabletext.h"
+#include "ui/dynamicvariableinsert.h"
+#include "ui/dynamicvariablemanager.h"
 #include "ui/mergedoc.h"
 #include "ui/modetoolbar.h"
 #include "ui/movepage.h"
@@ -1006,6 +1008,7 @@ void ScribusMainWindow::initMenuBar()
 	scrMenuMgr->addMenuItemString("editReplaceColors", "Edit");
 	scrMenuMgr->addMenuItemString("editStyles", "Edit");
 	scrMenuMgr->addMenuItemString("editMarks", "Edit");
+	scrMenuMgr->addMenuItemString("editVariables", "Edit");
 	scrMenuMgr->addMenuItemString("editNotesStyles", "Edit");
 	scrMenuMgr->addMenuItemString("editMasterPages", "Edit");
 	scrMenuMgr->addMenuItemString("editJavascripts", "Edit");
@@ -1240,6 +1243,7 @@ void ScribusMainWindow::initMenuBar()
 	scrMenuMgr->addMenuItemString("insertMarkItem", "InsertMark");
 	scrMenuMgr->addMenuItemString("insertMark2Mark", "InsertMark");
 	scrMenuMgr->addMenuItemString("insertMarkVariableText", "InsertMark");
+	scrMenuMgr->addMenuItemString("insertDynamicVariable", "InsertMark");
 	scrMenuMgr->addMenuItemString("insertMarkIndex", "InsertMark");
 
 	//Page menu
@@ -2803,6 +2807,9 @@ void ScribusMainWindow::HaveNewSel()
 
 void ScribusMainWindow::slotDocCh(bool /*reb*/)
 {
+	if (!doc)
+		return;
+	doc->updateDynamicVariableValues();
 	if (!doc->isModified())
 		doc->setModified(true);
 	updateActiveWindowCaption(doc->documentFileName() + "*");
@@ -4183,6 +4190,10 @@ bool ScribusMainWindow::DoFileSave(const QString& fileName, QString* savedFileNa
 	QApplication::processEvents();
 	if (ret)
 	{
+		// The modification timestamp changes only after the file has been
+		// written. Refresh calculated fields now without marking the document
+		// dirty again.
+		doc->updateDynamicVariableValues();
 		updateActiveWindowCaption(fileName);
 		m_undoManager->renameStack(fileName);
 		scrActions["fileRevert"]->setEnabled(false);
@@ -9557,6 +9568,81 @@ void ScribusMainWindow::insertMark(MarkType mType)
 		trans.commit();
 }
 
+void ScribusMainWindow::slotManageDynamicVariables()
+{
+	if (!HaveDoc)
+		return;
+	DynamicVariableManager dialog(doc, this);
+	dialog.exec();
+	view->DrawNew();
+}
+
+void ScribusMainWindow::slotInsertDynamicVariable()
+{
+	if (!HaveDoc || doc->m_Selection->count() != 1 || doc->appMode != modeEdit)
+		return;
+	PageItem* selectedItem = doc->m_Selection->itemAt(0);
+	if (!selectedItem || !selectedItem->isTextFrame())
+		return;
+	auto* currItem = selectedItem->asTextFrame();
+	DynamicVariableInsert dialog(doc, currItem, this);
+	if (dialog.exec() != QDialog::Accepted || dialog.variableId().isEmpty())
+		return;
+
+	UndoTransaction transaction;
+	if (UndoManager::undoEnabled())
+		transaction = m_undoManager->beginTransaction();
+	if (currItem->HasSel)
+		currItem->deleteSelectedTextFromFrame();
+
+	const QString variableId = dialog.variableId();
+	Mark* mark = doc->getDynamicVariableMark(variableId);
+	const bool existingMark = (mark != nullptr);
+	if (!mark)
+	{
+		QString label;
+		if (DynamicVariableResolver::isBuiltInId(variableId))
+			label = DynamicVariableResolver::displayNameForType(DynamicVariableResolver::typeForId(variableId));
+		else if (const DynamicVariable* variable = doc->dynamicVariable(variableId))
+			label = variable->name;
+		if (label.isEmpty())
+			label = tr("Missing Variable");
+		getUniqueName(label, doc->marksLabelsList(MARKVariableTextType), "_");
+		MarkData data;
+		data.itemName = currItem->itemName();
+		data.variableId = variableId;
+		data.text = doc->resolveDynamicVariable(variableId, currItem);
+		mark = doc->newMark();
+		mark->setValues(label, currItem->OwnPage, MARKVariableTextType, data);
+	}
+
+	currItem->itemText.insertMark(mark);
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new ScItemsState(UndoManager::InsertMark);
+		state->set("ETEA", mark->label);
+		state->set("label", mark->label);
+		state->set("type", static_cast<int>(mark->getType()));
+		state->set("strtxt", mark->getString());
+		state->set("variableId", mark->getVariableId());
+		state->set("MARK", existingMark ? QStringLiteral("insert_existing") : QStringLiteral("new"));
+		state->set("at", currItem->itemText.cursorPosition() - 1);
+		if (currItem->isNoteFrame())
+			state->set("noteframeName", currItem->getUName());
+		else
+			state->insertItem("inItem", currItem);
+		m_undoManager->action(doc, state);
+	}
+
+	currItem->invalidateLayout();
+	currItem->layout();
+	doc->changed();
+	doc->flag_updateMarksLabels = true;
+	view->DrawNew();
+	if (transaction)
+		transaction.commit();
+}
+
 void ScribusMainWindow::slotEditMark()
 {
 	if (!HaveDoc)
@@ -9900,6 +9986,11 @@ bool ScribusMainWindow::insertMarkDialog(PageItem_TextFrame* currItem, MarkType 
 
 bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 {
+	if (mrk && mrk->isType(MARKVariableTextType) && !mrk->getVariableId().isEmpty())
+	{
+		slotManageDynamicVariables();
+		return false;
+	}
 	MarkInsert* editMDialog = nullptr;
 	switch (mrk->getType())
 	{

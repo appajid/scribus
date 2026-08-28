@@ -538,6 +538,7 @@ bool Scribus171Format::saveFile(const QString & fileName, const FileFormat & /* 
 	writeDocItemAttributes(docu);
 	writeIndexes(docu);
 	writeTOC(docu);
+	writeDynamicVariables(docu);
 	writeMarks(docu);
 	writeNotesStyles(docu);
 	writeOpticalMarginSets(docu);
@@ -1528,6 +1529,8 @@ void Scribus171Format::writeMarks(ScXmlStreamWriter & docu) const
 		docu.writeEmptyElement("Mark");
 		docu.writeAttribute("label", mrk->label);
 		docu.writeAttribute("type", mrk->getType());
+		if (mrk->isType(MARKVariableTextType) && !mrk->getVariableId().isEmpty())
+			docu.writeAttribute("variableId", mrk->getVariableId());
 
 		if (mrk->isType(MARK2ItemType) && mrk->hasItemPtr())
 		{
@@ -1544,6 +1547,26 @@ void Scribus171Format::writeMarks(ScXmlStreamWriter & docu) const
 			docu.writeAttribute("MARKlabel", label);
 			docu.writeAttribute("MARKtype", type);
 		}
+	}
+	docu.writeEndElement();
+}
+
+void Scribus171Format::writeDynamicVariables(ScXmlStreamWriter& docu) const
+{
+	bool hasDynamicReference = !m_Doc->dynamicVariables().isEmpty();
+	for (const Mark* mark : m_Doc->marksList())
+		hasDynamicReference |= (mark && mark->isType(MARKVariableTextType) && !mark->getVariableId().isEmpty());
+	if (!hasDynamicReference)
+		return;
+	docu.writeStartElement("DynamicVariables");
+	docu.writeAttribute("creationDate", m_Doc->dynamicVariableCreationDate().toString(Qt::ISODateWithMs));
+	for (const DynamicVariable& variable : m_Doc->dynamicVariables())
+	{
+		docu.writeEmptyElement("Variable");
+		docu.writeAttribute("id", variable.id);
+		docu.writeAttribute("type", variable.type);
+		docu.writeAttribute("name", variable.name);
+		docu.writeAttribute("value", variable.value);
 	}
 	docu.writeEndElement();
 }

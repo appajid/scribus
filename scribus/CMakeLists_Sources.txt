@@ -86,6 +86,7 @@ set(SCRIBUS_SOURCES
 	commonstrings.cpp
 	deferredtask.cpp
 	documentchecker.cpp
+	dynamicvariable.cpp
 	documentinformation.cpp
 	documentlogmanager.cpp
 	exif.cpp
@@ -307,6 +308,8 @@ set(SCRIBUS_SOURCES
 	ui/alignselect.cpp
 	ui/alignverticalselect.cpp
 	ui/directionselect.cpp
+	ui/dynamicvariableinsert.cpp
+	ui/dynamicvariablemanager.cpp
 	ui/annot.cpp
 	ui/annota.cpp
 	ui/applytemplatedialog.cpp
@@ -627,5 +630,3 @@ else()
 	set(SCRIBUS_WIN32_ONLY_SOURCES)
 	set(SCRIBUS_MAIN_CPP main.cpp)
 endif()
-
-

@@ -1521,6 +1521,7 @@ void AppModeHelper::mainWindowHasNewDoc(const ScribusDoc *doc, bool clipScrapHav
 	(*a_scrActions)["editReplaceColors"]->setEnabled(true);
 	(*a_scrActions)["editStyles"]->setEnabled(true);
 	(*a_scrActions)["editMarks"]->setEnabled(true);
+	(*a_scrActions)["editVariables"]->setEnabled(true);
 	(*a_scrActions)["editNotesStyles"]->setEnabled(true);
 	(*a_scrActions)["editMasterPages"]->setEnabled(true);
 	(*a_scrActions)["editJavascripts"]->setEnabled(true);
@@ -1684,6 +1685,7 @@ void AppModeHelper::mainWindowCloseLastDoc()
 	(*a_scrActions)["editEditWithImageEditor"]->setEnabled(false);
 	(*a_scrActions)["editJavascripts"]->setEnabled(false);
 	(*a_scrActions)["editMarks"]->setEnabled(false);
+	(*a_scrActions)["editVariables"]->setEnabled(false);
 	(*a_scrActions)["editMasterPages"]->setEnabled(false);
 	(*a_scrActions)["editNotesStyles"]->setEnabled(false);
 	(*a_scrActions)["editPaste"]->setEnabled(false);
@@ -1852,6 +1854,7 @@ void AppModeHelper::enableTextActions(bool enabled, const QString& fontName)
 	if (!enabled)
 	{
 		(*a_scrActions)["insertMarkVariableText"]->setEnabled(false);
+		(*a_scrActions)["insertDynamicVariable"]->setEnabled(false);
 		(*a_scrActions)["insertMarkAnchor"]->setEnabled(false);
 		(*a_scrActions)["insertMarkItem"]->setEnabled(false);
 		(*a_scrActions)["insertMark2Mark"]->setEnabled(false);
@@ -1929,6 +1932,7 @@ void AppModeHelper::setStartupActionsEnabled(bool enabled)
 	(*a_scrActions)["editReplaceColors"]->setEnabled(false);
 	(*a_scrActions)["editStyles"]->setEnabled(false);
 	(*a_scrActions)["editMarks"]->setEnabled(false);
+	(*a_scrActions)["editVariables"]->setEnabled(false);
 	(*a_scrActions)["editNotesStyles"]->setEnabled(false);
 	(*a_scrActions)["editSearchReplace"]->setEnabled(false);
 	(*a_scrActions)["editMasterPages"]->setEnabled(false);
@@ -1937,6 +1941,7 @@ void AppModeHelper::setStartupActionsEnabled(bool enabled)
 	(*a_scrActions)["editEditRenderSource"]->setEnabled(false);
 	(*a_scrActions)["editMark"]->setEnabled(false);
 	(*a_scrActions)["insertMarkVariableText"]->setEnabled(false);
+	(*a_scrActions)["insertDynamicVariable"]->setEnabled(false);
 	(*a_scrActions)["insertMarkAnchor"]->setEnabled(false);
 	(*a_scrActions)["insertMarkItem"]->setEnabled(false);
 	(*a_scrActions)["insertMark2Mark"]->setEnabled(false);
@@ -2073,10 +2078,11 @@ void AppModeHelper::enableExperimentalActions(const ScribusDoc *doc)
 	(*a_scrActions)["insertMarkItem"]->setEnabled(setter);
 	(*a_scrActions)["insertMark2Mark"]->setEnabled(setter);
 	(*a_scrActions)["insertMarkVariableText"]->setEnabled(setter);
+	(*a_scrActions)["insertDynamicVariable"]->setEnabled(true);
 	(*a_scrActions)["insertMarkIndex"]->setEnabled(setter);
 	ScribusMainWindow *scMW = ScCore->primaryMainWindow();
 	scMW->scrMenuMgr->setMenuEnabled("Marks", setter);
-	scMW->scrMenuMgr->setMenuEnabled("InsertMark", setter);
+	scMW->scrMenuMgr->setMenuEnabled("InsertMark", true);
 }
 
 void AppModeHelper::enableTextTransformationActions(bool enabled)
@@ -2087,4 +2093,3 @@ void AppModeHelper::enableTextTransformationActions(bool enabled)
 	(*a_scrActions)["itemTextTransformCapitalize"]->setEnabled(enabled);
 	(*a_scrActions)["itemTextTransformToggleCase"]->setEnabled(enabled);
 }
-

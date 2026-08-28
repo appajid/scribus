@@ -1987,6 +1987,8 @@ void ScribusDoc::restore(UndoState* state, bool isUndo)
 		restoreDeleteNote(state, isUndo);
 	else if (ss->contains("MARK"))
 		restoreMarks(state, isUndo);
+	else if (ss->contains("DYNAMIC_VARIABLE"))
+		restoreDynamicVariable(ss, isUndo);
 
 	if (layersUndo)
 	{
@@ -2241,6 +2243,8 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			mrk = newMark();
 			mrk->label = is->get("label");
 			mrk->setType((MarkType) is->getInt("type"));
+			if (is->contains("variableId"))
+				mrk->setVariableId(is->get("variableId"));
 			if (currItem)
 			{
 				Q_ASSERT(pos >= 0);
@@ -2274,6 +2278,8 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			mrk = newMark();
 			mrk->label = is->get("label");
 			mrk->setType((MarkType) is->getInt("type"));
+			if (is->contains("variableId"))
+				mrk->setVariableId(is->get("variableId"));
 			mrk->setString(is->get("strtxt"));
 			for (int i = 0; i < is->insertItemPos.count(); ++i)
 			{
@@ -2300,6 +2306,8 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			mrk = newMark();
 			mrk->label = is->get("label");
 			mrk->setType((MarkType) is->getInt("type"));
+			if (is->contains("variableId"))
+				mrk->setVariableId(is->get("variableId"));
 			Q_ASSERT(currItem != nullptr);
 			Q_ASSERT(pos >= 0);
 			currItem->itemText.insertMark(mrk, pos);
@@ -2741,6 +2749,8 @@ ScPage* ScribusDoc::addPage(int pageNumber, const QString& masterPageName, bool 
 	setLocationBasedPageLRMargins(pageNumber);
 	if (addAutoFrame && m_automaticTextFrames)
 		addAutomaticTextFrame(pageNumber);
+	if (!isLoading())
+		invalidateDynamicVariableFrames(QString(), false);
 	return addedPage;
 }
 
@@ -2902,6 +2912,7 @@ void ScribusDoc::deletePage(int pageNumber)
 	ScPage* page = Pages->takeAt(pageNumber);
 	delete page;
 	reformPages();
+	invalidateDynamicVariableFrames(QString(), false);
 	changed();
 }
 
@@ -17437,7 +17448,25 @@ QString ScribusDoc::documentFileName() const
 
 void ScribusDoc::setDocumentFileName(const QString& documentFileName)
 {
+	if (m_documentFileName == documentFileName)
+		return;
 	m_documentFileName = documentFileName;
+	if (!isLoading())
+	{
+		invalidateDynamicVariableFrames(DynamicVariableResolver::idForType(DynamicVariableResolver::FileName), false);
+		invalidateDynamicVariableFrames(DynamicVariableResolver::idForType(DynamicVariableResolver::ModificationDate), false);
+	}
+}
+
+void ScribusDoc::setDocumentInfo(DocumentInformation info)
+{
+	const bool titleChanged = (m_docPrefsData.docInfo.title() != info.title());
+	const bool authorChanged = (m_docPrefsData.docInfo.author() != info.author());
+	m_docPrefsData.docInfo = std::move(info);
+	if (!isLoading() && titleChanged)
+		invalidateDynamicVariableFrames(DynamicVariableResolver::idForType(DynamicVariableResolver::DocumentTitle), false);
+	if (!isLoading() && authorChanged)
+		invalidateDynamicVariableFrames(DynamicVariableResolver::idForType(DynamicVariableResolver::Author), false);
 }
 
 void ScribusDoc::itemSelection_UnlinkTextFrameAndCutText( Selection *customSelection)
@@ -18028,6 +18057,189 @@ Mark* ScribusDoc::getMark(const QString& l, MarkType t)
 	return nullptr;
 }
 
+Mark* ScribusDoc::getDynamicVariableMark(const QString& variableId) const
+{
+	for (Mark* mark : m_docMarksList)
+	{
+		if (mark && mark->isType(MARKVariableTextType) && mark->getVariableId() == variableId)
+			return mark;
+	}
+	return nullptr;
+}
+
+const DynamicVariable* ScribusDoc::dynamicVariable(const QString& id) const
+{
+	auto it = m_dynamicVariables.constFind(id);
+	return it == m_dynamicVariables.constEnd() ? nullptr : &it.value();
+}
+
+QString ScribusDoc::dynamicVariableIdByName(const QString& name) const
+{
+	for (auto it = m_dynamicVariables.constBegin(); it != m_dynamicVariables.constEnd(); ++it)
+	{
+		if (it.value().name == name)
+			return it.key();
+	}
+	return QString();
+}
+
+QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type)
+{
+	QString variableId = id;
+	if (variableId.isEmpty())
+		variableId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+	if (m_dynamicVariables.contains(variableId) || name.trimmed().isEmpty() || !dynamicVariableIdByName(name.trimmed()).isEmpty())
+		return QString();
+
+	DynamicVariable variable;
+	variable.id = variableId;
+	variable.type = type.isEmpty() ? DynamicVariableResolver::UserDefined : type;
+	variable.name = name.trimmed();
+	variable.value = value;
+	m_dynamicVariables.insert(variableId, variable);
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new SimpleState(tr("Add Variable"));
+		state->set("DYNAMIC_VARIABLE");
+		state->set("ACTION", QStringLiteral("add"));
+		state->set("ID", variable.id);
+		state->set("TYPE", variable.type);
+		state->set("NAME", variable.name);
+		state->set("VALUE", variable.value);
+		m_undoManager->action(this, state);
+	}
+	return variableId;
+}
+
+bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, const QString& value)
+{
+	auto it = m_dynamicVariables.find(id);
+	if (it == m_dynamicVariables.end() || DynamicVariableResolver::isBuiltInId(id) || name.trimmed().isEmpty())
+		return false;
+	const QString duplicateId = dynamicVariableIdByName(name.trimmed());
+	if (!duplicateId.isEmpty() && duplicateId != id)
+		return false;
+	if (it->name == name.trimmed() && it->value == value)
+		return true;
+	const QString oldName = it->name;
+	const QString oldValue = it->value;
+	it->name = name.trimmed();
+	it->value = value;
+	if (Mark* mark = getDynamicVariableMark(id))
+	{
+		QStringList otherLabels = marksLabelsList(MARKVariableTextType);
+		otherLabels.removeOne(mark->label);
+		QString markLabel = it->name;
+		getUniqueName(markLabel, otherLabels, QStringLiteral("_"));
+		mark->label = markLabel;
+		mark->setString(value);
+	}
+	invalidateDynamicVariableFrames(id, false);
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new SimpleState(tr("Edit Variable"));
+		state->set("DYNAMIC_VARIABLE");
+		state->set("ACTION", QStringLiteral("edit"));
+		state->set("ID", id);
+		state->set("OLD_NAME", oldName);
+		state->set("OLD_VALUE", oldValue);
+		state->set("NEW_NAME", it->name);
+		state->set("NEW_VALUE", it->value);
+		m_undoManager->action(this, state);
+	}
+	return true;
+}
+
+bool ScribusDoc::removeDynamicVariable(const QString& id)
+{
+	auto it = m_dynamicVariables.find(id);
+	if (it == m_dynamicVariables.end())
+		return false;
+	const DynamicVariable removed = it.value();
+	m_dynamicVariables.erase(it);
+	if (Mark* mark = getDynamicVariableMark(id))
+		mark->clearString();
+	invalidateDynamicVariableFrames(id, false);
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new SimpleState(tr("Delete Variable"));
+		state->set("DYNAMIC_VARIABLE");
+		state->set("ACTION", QStringLiteral("delete"));
+		state->set("ID", removed.id);
+		state->set("TYPE", removed.type);
+		state->set("NAME", removed.name);
+		state->set("VALUE", removed.value);
+		m_undoManager->action(this, state);
+	}
+	return true;
+}
+
+void ScribusDoc::restoreDynamicVariable(SimpleState* state, bool isUndo)
+{
+	const QString action = state->get("ACTION");
+	const QString id = state->get("ID");
+	if (action == QLatin1String("add"))
+	{
+		if (isUndo)
+			removeDynamicVariable(id);
+		else
+			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"));
+	}
+	else if (action == QLatin1String("delete"))
+	{
+		if (isUndo)
+			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"));
+		else
+			removeDynamicVariable(id);
+	}
+	else if (action == QLatin1String("edit"))
+	{
+		if (isUndo)
+			updateDynamicVariable(id, state->get("OLD_NAME"), state->get("OLD_VALUE"));
+		else
+			updateDynamicVariable(id, state->get("NEW_NAME"), state->get("NEW_VALUE"));
+	}
+	changed();
+	regionsChanged()->update(QRectF());
+}
+
+QString ScribusDoc::resolveDynamicVariable(const QString& id, const PageItem* frame) const
+{
+	return DynamicVariableResolver::resolve(this, id, frame);
+}
+
+bool ScribusDoc::invalidateDynamicVariableFrames(const QString& id, bool forceUpdate)
+{
+	bool found = false;
+	for (Mark* mark : std::as_const(m_docMarksList))
+	{
+		if (!mark || !mark->isType(MARKVariableTextType) || mark->getVariableId().isEmpty())
+			continue;
+		if (!id.isEmpty() && mark->getVariableId() != id)
+			continue;
+		found |= invalidateVariableTextFrames(mark, forceUpdate);
+	}
+	return found;
+}
+
+bool ScribusDoc::updateDynamicVariableValues()
+{
+	bool changedValue = false;
+	const QString currentPageId = DynamicVariableResolver::idForType(DynamicVariableResolver::CurrentPage);
+	for (Mark* mark : std::as_const(m_docMarksList))
+	{
+		if (!mark || !mark->isType(MARKVariableTextType) || mark->getVariableId().isEmpty() || mark->getVariableId() == currentPageId)
+			continue;
+		const QString value = resolveDynamicVariable(mark->getVariableId());
+		if (mark->getString() == value)
+			continue;
+		mark->setString(value);
+		invalidateVariableTextFrames(mark, false);
+		changedValue = true;
+	}
+	return changedValue;
+}
+
 Mark *ScribusDoc::newMark(const Mark* mrk)
 {
 	Mark* newMark = new Mark();
@@ -18258,6 +18470,8 @@ void ScribusDoc::setUndoDelMark(const Mark *mrk)
 		ims->set("label", mrk->label);
 		ims->set("type", (int) mrk->getType());
 		ims->set("strtxt", mrk->getString());
+		if (!mrk->getVariableId().isEmpty())
+			ims->set("variableId", mrk->getVariableId());
 		m_undoManager->action(this, ims);
 	}
 }
@@ -18318,7 +18532,7 @@ bool ScribusDoc::updateMarks(bool updateNotesMarks)
 	}
 	Q_ASSERT(m_docMarksList.removeAll(nullptr) == 0);
 
-	bool docWasChanged = false;
+	bool docWasChanged = updateDynamicVariableValues();
 
 	if (!isLoading())
 	{

@@ -165,6 +165,7 @@ class PLUGIN_API Scribus171Format : public LoadSavePlugin
 		bool readNotesStyles(ScribusDoc* doc, ScXmlStreamReader& reader) const;
 		bool readNotesFrames(ScXmlStreamReader &reader);
 		bool readMarks(ScribusDoc* doc, ScXmlStreamReader& reader);
+		bool readDynamicVariables(ScribusDoc* doc, ScXmlStreamReader& reader);
 		bool readOpticalMarginSets(ScribusDoc* doc, ScXmlStreamReader& reader) const;
 
 		//lists of items and marks with names only, which need update to pointers
@@ -220,6 +221,7 @@ class PLUGIN_API Scribus171Format : public LoadSavePlugin
 		void writeIndexes(ScXmlStreamWriter& docu) const;
 		void writeTOC(ScXmlStreamWriter& docu) const;
 		void writeMarks(ScXmlStreamWriter & docu) const;
+		void writeDynamicVariables(ScXmlStreamWriter & docu) const;
 		void writeOpticalMarginSets(ScXmlStreamWriter & docu) const;
 		void writeNotesStyles(ScXmlStreamWriter & docu) const;
 		void writeNotesStyles(ScXmlStreamWriter & docu, const QStringList& styleSelection) const;

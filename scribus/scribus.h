@@ -601,6 +601,8 @@ public slots:
 	void slotInsertMark2Mark() { insertMark(MARK2MarkType); }
 	void slotInsertMarkAnchor() { insertMark(MARKAnchorType); }
 	void slotInsertMarkVariableText() { insertMark(MARKVariableTextType); }
+	void slotInsertDynamicVariable();
+	void slotManageDynamicVariables();
 	void slotInsertMarkItem() { insertMark(MARK2ItemType); }
 	void slotInsertMarkNote();
 	void slotInsertMarkIndex() { insertMark(MARKIndexType); }

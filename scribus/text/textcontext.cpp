@@ -91,6 +91,8 @@ QString TextContext::expand(const ExpansionPoint& expansion)
 						if (note == nullptr)
 							return QString();
 					}
+					if (mark->isType(MARKVariableTextType) && !mark->getVariableId().isEmpty())
+						return doc->resolveDynamicVariable(mark->getVariableId(), m_frame);
 					if (!mark->isType(MARKAnchorType) && !mark->isType(MARKIndexType))
 						return mark->getString();
 				}

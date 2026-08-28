@@ -45,6 +45,11 @@ void MarksManager::addListItem(MarkType typeMrk, const QString& typeStr, const Q
 	{
 		if (marks[i]->isType(typeMrk))
 		{
+			// Dynamic variables are managed by the Variables dialog. Keeping them
+			// out of the legacy mark editor prevents their stable references from
+			// being changed into ordinary variable-text marks.
+			if (typeMrk == MARKVariableTextType && !marks[i]->getVariableId().isEmpty())
+				continue;
 			QTreeWidgetItem *listItem2 = new QTreeWidgetItem(listItem);
 			if (marks[i]->isType(MARKIndexType))
 				listItem2->setText(0, marks[i]->getString());

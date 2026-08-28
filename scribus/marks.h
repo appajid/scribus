@@ -33,6 +33,7 @@ struct MarkData
 	TextNote* notePtr { nullptr };
 	QString   destMarkName;
 	MarkType  destMarkType {MARKNoType};
+	QString   variableId;
 };
 
 class SCRIBUS_API Mark
@@ -66,6 +67,8 @@ public:
 
 	const QString& getString() const { return m_data.text; }
 	void setString(const QString& str) { m_data.text = str; }
+	const QString& getVariableId() const { return m_data.variableId; }
+	void setVariableId(const QString& id) { m_data.variableId = id; }
 
 	TextNote* getNotePtr() const { return m_data.notePtr; }
 	void setNotePtr(TextNote *note);
@@ -102,4 +105,3 @@ public:
 };
 
 #endif // MARKS_H
-
