@@ -299,7 +299,7 @@ target_link_libraries(${EXE_NAME} PUBLIC qtadvanceddocking-qt${QT_VERSION_MAJOR}
 
 if(WITH_TESTS)
 	target_link_libraries(${EXE_NAME} PRIVATE
-		${QT_QTTEST_LIBRARY}
+		Qt6::Test
 		${SCRIBUS_TESTS_LIB}
 	)
 endif()

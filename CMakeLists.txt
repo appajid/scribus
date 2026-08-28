@@ -105,7 +105,9 @@ include(TestBigEndian)
 include(GNUInstallDirs)
 #include(FeatureSummary)
 
-#enable_testing()
+if (WITH_TESTS)
+	enable_testing()
+endif()
 
 #Set the custom CMake module directory where our include/lib finders are
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")

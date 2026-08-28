@@ -14,7 +14,7 @@ void TestStoryText::initST()
 {
 	StoryText story;
 	QCOMPARE(story.length(), 0);
-	story.insertChars(0, "Hallo Welt");
+	story.insertChars(0, QStringLiteral("Hallo Welt"));
 	QCOMPARE(story.nrOfParagraphs(), 1u);
 	QCOMPARE(story.nrOfRuns(), 1u);
 }
@@ -25,7 +25,7 @@ void TestStoryText::addText()
 	story.insertChars(0, QString("Hallo Welt"));
 	QCOMPARE(story.length(), 10);
 	QCOMPARE(story.text(0, story.length()), QString("Hallo Welt"));
-	story.insertChars(5, " schöne neue");
+	story.insertChars(5, QStringLiteral(" schöne neue"));
 	QCOMPARE(story.text(0, story.length()), QString("Hallo schöne neue Welt"));
 }
 

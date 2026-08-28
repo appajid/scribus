@@ -117,6 +117,10 @@ find_package(Qt6 COMPONENTS Svg REQUIRED)
 include_directories(${Qt6Svg_INCLUDE_DIRS})
 add_definitions(${Qt6Svg_DEFINITIONS})
 
+if (WITH_TESTS)
+	find_package(Qt6 COMPONENTS Test REQUIRED)
+endif()
+
 message(STATUS "Qt Version Found: ${Qt6Widgets_VERSION}")
 set(QT_VERSION_MAJOR 6)
 

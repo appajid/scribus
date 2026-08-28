@@ -5,7 +5,7 @@
 #include "testStoryText.h"
 #include "runtests.h"
 
-int RunTests::runTests(int argc, char ** argv)
+int RunTests::runTests(const QStringList& arguments)
 { 
 	QList<QObject *> testObjects;
 //	testObjects << new TestGlyphStore();
@@ -14,7 +14,7 @@ int RunTests::runTests(int argc, char ** argv)
 	int failed = 0;
 	for (int i = 0; i < testObjects.count(); ++i)
 	{
-		int rc = QTest::qExec(testObjects[i], argc, argv);
+		int rc = QTest::qExec(testObjects[i], arguments);
 		if (rc != 0)
 		{
 			qDebug() << "          <<<<<<<<<< FAIL!" << rc << ">>>>>>>>>";

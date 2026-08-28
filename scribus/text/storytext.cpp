@@ -1841,17 +1841,57 @@ int StoryText::endOfParagraph(uint index) const
 
 uint StoryText::nrOfRuns() const
 {
-	return length();
+	const int textLength = length();
+	if (textLength == 0)
+		return 0;
+
+	uint runCount = 1;
+	for (int pos = 1; pos < textLength; ++pos)
+	{
+		const ScText* previous = d->at(pos - 1);
+		const ScText* current = d->at(pos);
+		if (previous->ch == SpecialChars::PARSEP || !previous->equiv(*current))
+			++runCount;
+	}
+	return runCount;
 }
 
 int StoryText::startOfRun(uint index) const
 {
-	return index;
+	const int textLength = length();
+	if (textLength == 0)
+		return 0;
+	if (index == 0)
+		return 0;
+
+	uint currentRun = 0;
+	for (int pos = 1; pos < textLength; ++pos)
+	{
+		const ScText* previous = d->at(pos - 1);
+		const ScText* current = d->at(pos);
+		if (previous->ch != SpecialChars::PARSEP && previous->equiv(*current))
+			continue;
+		if (++currentRun == index)
+			return pos;
+	}
+	return textLength;
 }
 
 int StoryText::endOfRun(uint index) const
 {
-	return index + 1;
+	const int textLength = length();
+	const int start = startOfRun(index);
+	if (start >= textLength)
+		return textLength;
+
+	for (int pos = start + 1; pos < textLength; ++pos)
+	{
+		const ScText* previous = d->at(pos - 1);
+		const ScText* current = d->at(pos);
+		if (previous->ch == SpecialChars::PARSEP || !previous->equiv(*current))
+			return pos;
+	}
+	return textLength;
 }
 
 // positioning. all positioning methods return char positions

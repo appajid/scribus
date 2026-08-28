@@ -134,8 +134,7 @@ void ScribusQApp::parseCommandLine()
 	bool runUpgradeCheck = false;
 #ifdef WITH_TESTS
 	bool runtests = false;
-	char** testargsv;
-	int testargsc;
+	QStringList testArguments;
 #endif
 	m_showFontInfo = false;
 	m_showProfileInfo = false;
@@ -202,8 +201,8 @@ void ScribusQApp::parseCommandLine()
 		{
 			header = true;
 			runtests = true;
-			testargsc = argc() - argi;
-			testargsv = argv() + argi;
+			testArguments = args.mid(argi);
+			argi = argsc;
 			break;
 		}
 #endif
@@ -325,7 +324,7 @@ void ScribusQApp::parseCommandLine()
 		showUsage();
 #ifdef WITH_TESTS
 	if (runtests)
-		RunTests::runTests(testargsc, testargsv);
+		RunTests::runTests(testArguments);
 #endif
 	if (runUpgradeCheck)
 	{
