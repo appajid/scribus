@@ -44,8 +44,8 @@ ScreenPainter::~ScreenPainter()
 
 void ScreenPainter::drawGlyph(const GlyphCluster& gc)
 {
-	bool showControls = gc.isEmpty() || (m_item->doc()->guidesPrefs().showControls &&
-										 ((gc.isSpace() && !gc.hasFlag(ScLayout_ImplicitSpace)) || gc.isControlGlyphs()));
+	bool showControls = m_item->doc()->guidesPrefs().showControls &&
+		(gc.isEmpty() || ((gc.isSpace() && !gc.hasFlag(ScLayout_ImplicitSpace)) || gc.isControlGlyphs()));
 #if CAIRO_HAS_FC_FONT
 	if (m_painter->fillMode() == 1 && m_painter->maskMode() <= 0 && !showControls)
 	{
