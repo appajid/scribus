@@ -13,6 +13,7 @@ for which a new license (GPL+exception) is in place.
 class QCloseEvent;
 class QEvent;
 class QFocusEvent;
+class QLabel;
 class QToolBox;
 class QVBoxLayout;
 class QWidget;
@@ -84,6 +85,8 @@ protected:
 private:
 	PageItem* currentItemFromSelection();
 	void enablePalettes(bool enable);
+	QString itemTypeName(const PageItem* item) const;
+	void updateSelectionSummary();
 	
 public slots:
 	void setMainWindow(ScribusMainWindow *mw);
@@ -123,6 +126,7 @@ protected:
 	SectionContainer * scFill {nullptr};
 	SectionContainer * scShadow {nullptr};
 	SectionContainer * scAttributes {nullptr};
+	QLabel *m_selectionSummary {nullptr};
 
 	bool m_haveDoc {false};
 	bool m_haveItem {false};

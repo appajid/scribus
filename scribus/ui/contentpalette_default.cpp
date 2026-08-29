@@ -50,6 +50,7 @@ void ContentPalette_Default::setDoc(ScribusDoc *d)
 
 	m_haveDoc  = true;
 	m_haveItem = false;
+	setEnabled(true);
 
 	setLabelText();
 
@@ -84,8 +85,7 @@ void ContentPalette_Default::handleSelectionChanged()
 	if (!m_haveDoc || !m_ScMW || m_ScMW->scriptIsRunning())
 		return;
 
-	if (m_doc->m_Selection->count() >= 1)
-		m_haveItem = true;
+	m_haveItem = (m_doc->m_Selection->count() >= 1);
 	setLabelText();
 }
 
@@ -140,7 +140,9 @@ void ContentPalette_Default::setLabelText()
 
 	int selectionCount = m_doc->m_Selection->count();
 	if (selectionCount > 1)
-		label->setText( tr("Select a single item to see its properties"));
+		label->setText(tr("%n objects selected. Use Properties to edit their common appearance and geometry.", nullptr, selectionCount));
+	else if (selectionCount == 1)
+		label->setText(tr("This object has no content-specific controls. Use Properties to edit its appearance and geometry."));
 	else if (selectionCount == 0)
-		label->setText( tr("Select an item to see its properties"));
+		label->setText(tr("Select an object to see its content controls."));
 }

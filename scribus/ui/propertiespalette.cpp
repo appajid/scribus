@@ -13,6 +13,7 @@ for which a new license (GPL+exception) is in place.
 #include <QEvent>
 #include <QFocusEvent>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QObject>
 #include <QPoint>
 #include <QSpacerItem>
@@ -98,6 +99,13 @@ PropertiesPalette::PropertiesPalette(QWidget *parent) : DockPanelBase("Propertie
 	QVBoxLayout * lyt = new QVBoxLayout();
 	lyt->setContentsMargins(0, 0, 0, 0);
 	lyt->setSpacing(0);
+	m_selectionSummary = new QLabel(this);
+	m_selectionSummary->setObjectName(QStringLiteral("propertiesSelectionSummary"));
+	m_selectionSummary->setTextFormat(Qt::PlainText);
+	m_selectionSummary->setWordWrap(true);
+	m_selectionSummary->setMargin(6);
+	m_selectionSummary->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+	lyt->addWidget(m_selectionSummary);
 	lyt->addWidget(scXYZ);
 	lyt->addWidget(scShape);
 	lyt->addWidget(scFill);
@@ -126,6 +134,7 @@ PropertiesPalette::PropertiesPalette(QWidget *parent) : DockPanelBase("Propertie
 	}
 
 	m_haveItem = false;
+	updateSelectionSummary();
 }
 
 void PropertiesPalette::closeEvent(QCloseEvent *closeEvent)
@@ -231,6 +240,7 @@ void PropertiesPalette::unsetDoc()
 
 	m_haveItem = false;
 	enablePalettes(false);
+	updateSelectionSummary();
 }
 
 void PropertiesPalette::unsetItem()
@@ -265,6 +275,83 @@ void PropertiesPalette::enablePalettes(bool enable)
 	scLine->setBodyEnabled(enable);
 	scShadow->setBodyEnabled(enable);
 	scAttributes->setBodyEnabled(enable);
+}
+
+QString PropertiesPalette::itemTypeName(const PageItem* item) const
+{
+	if (!item)
+		return tr("Object");
+
+	switch (item->itemType())
+	{
+	case PageItem::ImageFrame:
+		return tr("Image Frame");
+	case PageItem::TextFrame:
+		return tr("Text Frame");
+	case PageItem::Line:
+		return tr("Line");
+	case PageItem::Polygon:
+		return tr("Polygon");
+	case PageItem::PolyLine:
+		return tr("Polyline");
+	case PageItem::PathText:
+		return tr("Text on Path");
+	case PageItem::LatexFrame:
+		return tr("Render Frame");
+	case PageItem::OSGFrame:
+		return tr("3D Frame");
+	case PageItem::Symbol:
+		return tr("Symbol");
+	case PageItem::Group:
+		return tr("Group");
+	case PageItem::RegularPolygon:
+		return tr("Regular Polygon");
+	case PageItem::Arc:
+		return tr("Arc");
+	case PageItem::Spiral:
+		return tr("Spiral");
+	case PageItem::Table:
+		return tr("Table");
+	case PageItem::NoteFrame:
+		return tr("Note Frame");
+	default:
+		return tr("Object");
+	}
+}
+
+void PropertiesPalette::updateSelectionSummary()
+{
+	if (!m_selectionSummary)
+		return;
+
+	if (!m_haveDoc || !m_doc)
+	{
+		m_selectionSummary->setText(tr("No document open"));
+		return;
+	}
+
+	const int selectionCount = m_doc->m_Selection->count();
+	if (selectionCount == 0)
+	{
+		m_selectionSummary->setText(tr("No object selected"));
+		return;
+	}
+	if (selectionCount > 1)
+	{
+		m_selectionSummary->setText(tr("%n objects selected", nullptr, selectionCount));
+		return;
+	}
+
+	const PageItem* item = currentItemFromSelection();
+	if (!item)
+	{
+		m_selectionSummary->setText(tr("No object selected"));
+		return;
+	}
+
+	const QString typeName = itemTypeName(item);
+	const QString itemName = item->itemName().trimmed();
+	m_selectionSummary->setText(itemName.isEmpty() ? typeName : tr("%1 — %2").arg(typeName, itemName));
 }
 
 void PropertiesPalette::AppModeChanged()
@@ -351,6 +438,7 @@ void PropertiesPalette::setCurrentItem(PageItem *item)
 		scFill->setBodyEnabled(false);
 		scAttributes->setBodyEnabled(true);
 	}
+	updateSelectionSummary();
 }
 
 void PropertiesPalette::handleSelectionChanged()
@@ -438,6 +526,7 @@ void PropertiesPalette::handleSelectionChanged()
 	{
 		setCurrentItem(currItem);
 	}
+	updateSelectionSummary();
 
 }
 
@@ -497,6 +586,8 @@ void PropertiesPalette::changeEvent(QEvent *e)
 void PropertiesPalette::languageChange()
 {
 	setWindowTitle( tr("Properties"));
+	if (m_selectionSummary)
+		m_selectionSummary->setAccessibleName(tr("Selection context"));
 
 	scXYZ->setText(tr("X, Y, &Z"));
 	scShadow->setText(tr("&Drop Shadow"));
@@ -511,6 +602,7 @@ void PropertiesPalette::languageChange()
 	linePal->languageChange();
 	fillPal->languageChange();
 	attributesPal->languageChange();
+	updateSelectionSummary();
 }
 
 void PropertiesPalette::setGradientEditMode(bool on)
