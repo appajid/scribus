@@ -315,6 +315,7 @@ public slots:
 	void ToggleStickyTools();
 	void ToggleAllGuides();
 	void ToggleAllPalettes();
+	void resetWorkspaceLayout();
 	void slotStoryEditor(bool fromTable);
 	void slotCharSelect();
 	void ImageEffects();

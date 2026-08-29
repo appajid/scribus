@@ -1036,7 +1036,10 @@ void ActionManager::initWindowsMenuActions()
 	scrActions->insert(name, new ScrAction( "", defaultKey(name), mainWindow));
 	name = "specialToggleAllPalettes";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
+	name = "windowsResetWorkspace";
+	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	connect( (*scrActions)["specialToggleAllPalettes"], SIGNAL(triggered()), mainWindow, SLOT(ToggleAllPalettes()) );
+	connect( (*scrActions)["windowsResetWorkspace"], SIGNAL(triggered()), mainWindow, SLOT(resetWorkspaceLayout()) );
 }
 
 void ActionManager::initScriptMenuActions()
@@ -1859,6 +1862,7 @@ void ActionManager::languageChange()
 	(*scrActions)["windowsCascade"]->setText( tr("&Cascade"));
 	(*scrActions)["windowsTile"]->setText( tr("&Tile"));
 	(*scrActions)["specialToggleAllPalettes"]->setTexts( tr("Toggle Palettes"));
+	(*scrActions)["windowsResetWorkspace"]->setTexts( tr("Reset Workspace &Layout..."));
 
 	//Help Menu
 	(*scrActions)["helpAboutScribus"]->setTexts( tr("&About Scribus"));
@@ -2497,6 +2501,7 @@ void ActionManager::createDefaultMenus()
 		<< "windowsCascade"
 		<< "windowsTile"
 		<< "specialToggleAllPalettes"
+		<< "windowsResetWorkspace"
 		<< "toolsProperties"
 		<< "toolsContent"
 		<< "toolsOutline"

@@ -166,6 +166,19 @@ bool DockManager::hasTemporaryHiddenDocks()
 	return m_dockTemporaryHidden;
 }
 
+bool DockManager::resetWorkspaceToDefault()
+{
+	const QString defaultWorkspace = QStringLiteral("Default");
+	if (!perspectiveNames().contains(defaultWorkspace))
+		return false;
+
+	restoreHiddenWorkspace();
+	openPerspective(defaultWorkspace);
+	m_dockTemporaryHidden = false;
+	saveWorkspaceToPrefs();
+	return true;
+}
+
 CDockAreaWidget *DockManager::addDockFromPlugin(CDockWidget *dock, bool closed)
 {
 	CDockAreaWidget *a = addDockWidget(RightDockWidgetArea, dock, dockCenter->dockAreaWidget());

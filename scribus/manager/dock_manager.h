@@ -78,6 +78,11 @@ public:
 	 */
 	bool hasTemporaryHiddenDocks();
 	/**
+	 * @brief Restores the built-in default workspace and saves it to preferences.
+	 * @return true when the default workspace was available and restored.
+	 */
+	bool resetWorkspaceToDefault();
+	/**
 	 * @brief Adds a dock widget to dock manager. Useful for docks that are not initialized by dock manager, e.g. from plugins.
 	 * @param dock
 	 * @param closed

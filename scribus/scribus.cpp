@@ -1406,6 +1406,7 @@ void ScribusMainWindow::addDefaultWindowMenuItems()
 	scrMenuMgr->addMenuItemString("windowsCascade", "Windows");
 	scrMenuMgr->addMenuItemString("windowsTile", "Windows");
 	scrMenuMgr->addMenuItemString("specialToggleAllPalettes", "Windows");
+	scrMenuMgr->addMenuItemString("windowsResetWorkspace", "Windows");
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Windows");
 	scrMenuMgr->addMenuItemString("toolsProperties", "Windows");
 	scrMenuMgr->addMenuItemString("toolsContent", "Windows");
@@ -5565,6 +5566,27 @@ void ScribusMainWindow::ToggleAllPalettes()
 		downloadsPalette->hide();
 		m_palettesStatus[PAL_ALL] = true;
 	}
+}
+
+void ScribusMainWindow::resetWorkspaceLayout()
+{
+	const auto answer = ScMessageBox::question(
+		this,
+		tr("Reset Workspace Layout"),
+		tr("Restore the default panel arrangement and visibility? Documents and document settings will not be changed."),
+		QMessageBox::Reset | QMessageBox::Cancel,
+		QMessageBox::Cancel,
+		QMessageBox::Cancel);
+	if (answer != QMessageBox::Reset)
+		return;
+
+	if (!dockManager->resetWorkspaceToDefault())
+	{
+		ScMessageBox::warning(this, tr("Reset Workspace Layout"), tr("The default workspace layout is not available."));
+		return;
+	}
+
+	statusBar()->showMessage(tr("Workspace layout restored"), 3000);
 }
 
 void ScribusMainWindow::toggleCheckPal()
