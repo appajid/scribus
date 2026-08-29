@@ -10,68 +10,88 @@
 #include "actionsearch.h"
 
 #include <QAction>
-#include <QDebug>
-#include <QList>
-#include <QMenuBar>
 #include <QMenu>
+#include <QMenuBar>
 #include <QStringList>
 
 ActionSearch::ActionSearch(QMenuBar *menuBar)
-	: menuBar{menuBar}
+	: m_menuBar(menuBar)
 {
-
 }
 
 void ActionSearch::update()
 {
 	m_actions.clear();
-	
-	for (auto menuAction: menuBar->actions())
+	m_actionInfo.clear();
+	m_legacyActionNames.clear();
+
+	if (!m_menuBar)
+		return;
+
+	for (QAction* menuAction : m_menuBar->actions())
 		readMenuActions(menuAction->menu());
 }
 
-void ActionSearch::execute(const QString& actionName)
+void ActionSearch::execute(const QString& actionKey)
 {
-	if (!m_actions.contains(actionName))
-		return;
-
-	QAction* action = m_actions.value(actionName);
-	if (!action->isEnabled())
-		return;
-	action->trigger();
+	tryExecute(actionKey);
 }
 
-void ActionSearch::readMenuActions(QMenu* menu)
+bool ActionSearch::tryExecute(const QString& actionKey)
 {
-	// TODO: check why menu can be null
-	if (menu == nullptr)
-		return;
-	
-	QStringList menus;
-	QMenu* currentMenu = menu;
-	while (currentMenu != nullptr)
-	{
-		QString title = currentMenu->title().replace("&", "");
-		menus.prepend(title);
-		currentMenu = dynamic_cast<QMenu*>(currentMenu->parentWidget());
-	}
-	QString menuName(menus.join(" > "));
+	QAction* action = m_actions.value(actionKey);
+	if (!action || !action->isEnabled() || !action->isVisible())
+		return false;
 
-	for (auto action: menu->actions())
+	action->trigger();
+	return true;
+}
+
+void ActionSearch::readMenuActions(QMenu* menu, const QStringList& parentMenus)
+{
+	if (!menu)
+		return;
+
+	QStringList menus(parentMenus);
+	const QString menuTitle = QString(menu->title()).remove(QLatin1Char('&')).trimmed();
+	if (!menuTitle.isEmpty())
+		menus.append(menuTitle);
+
+	for (QAction* action : menu->actions())
 	{
-		if (action->menu() != nullptr)
+		if (action->menu())
 		{
-			readMenuActions(action->menu());
+			readMenuActions(action->menu(), menus);
 			continue;
 		}
 
-		QString actionName = action->text().replace("&", "");
-		if (actionName.isEmpty() || !action->isEnabled())
+		if (action->isSeparator() || !action->isVisible())
 			continue;
 
-		// TODO: we might want to have a multilevel menuName
-		if (!menuName.isEmpty())
-			actionName += " (" + menuName +")";
-		m_actions.insert(actionName, action);
+		const QString actionName = QString(action->text()).remove(QLatin1Char('&')).trimmed();
+		if (actionName.isEmpty())
+			continue;
+
+		ActionInfo info;
+		info.id = QString::number(m_actionInfo.size());
+		info.name = actionName;
+		info.menuPath = menus.join(QStringLiteral(" > "));
+		info.shortcut = action->shortcut().toString(QKeySequence::NativeText);
+		info.icon = action->icon();
+		info.enabled = action->isEnabled();
+		m_actionInfo.append(info);
+		m_actions.insert(info.id, action);
+
+		// Preserve the original public, name-based API for scripts or plugins
+		// that use ActionSearch directly. The Quick Actions dialog uses the
+		// collision-safe ID above.
+		if (info.enabled)
+		{
+			QString legacyName = info.name;
+			if (!info.menuPath.isEmpty())
+				legacyName += QStringLiteral(" (") + info.menuPath + QLatin1Char(')');
+			m_legacyActionNames.append(legacyName);
+			m_actions.insert(legacyName, action);
+		}
 	}
 }

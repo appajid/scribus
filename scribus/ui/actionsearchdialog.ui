@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>620</width>
+    <height>420</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Action Search</string>
+   <string>Quick Actions</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
@@ -29,7 +29,7 @@
    <item>
     <widget class="QLineEdit" name="filterLineEdit">
      <property name="placeholderText">
-      <string>Search for action...</string>
+      <string>Type a command, menu, or shortcut...</string>
      </property>
     </widget>
    </item>

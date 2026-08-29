@@ -5139,17 +5139,17 @@ void ScribusMainWindow::slotHelpActionSearch()
 	ActionSearch actionSearch(this->menuBar());
 	actionSearch.update();
 
-	QScopedPointer<ActionSearchDialog> dialog(new ActionSearchDialog(this, actionSearch.getActionNames()));
+	QScopedPointer<ActionSearchDialog> dialog(new ActionSearchDialog(this, actionSearch.actions()));
 	dialog->setModal(true);
 
 	int result = dialog->exec();
 	if (result != QDialog::Accepted)
 		return;
 
-	QString actionName = dialog->getActionName();
-	if (actionName.isEmpty())
+	const QString actionId = dialog->actionId();
+	if (actionId.isEmpty())
 		return;
-	actionSearch.execute(actionName);
+	actionSearch.execute(actionId);
 }
 
 void ScribusMainWindow::slotHelpCheckUpdates()

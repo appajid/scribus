@@ -18,6 +18,8 @@ class QEvent;
 #include <QDialog>
 #include <QList>
 
+#include "actionsearch.h"
+
 namespace Ui { class ActionSearchDialog; }
 
 class ActionSearchDialog : public QDialog
@@ -25,19 +27,21 @@ class ActionSearchDialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit ActionSearchDialog(QMainWindow *parent, const QList<QString> &actionNames);
+	explicit ActionSearchDialog(QMainWindow *parent, const QList<ActionSearch::ActionInfo>& actions);
 	~ActionSearchDialog();
 
-	QString getActionName() const;
+	QString actionId() const;
 
 protected:
 	bool eventFilter(QObject *obj, QEvent *ev) override;
 
 private:
 	Ui::ActionSearchDialog *ui { nullptr };
-	QList<QString> m_actionNames;
+	QList<ActionSearch::ActionInfo> m_actions;
 
-	bool filterLineEditKeyPress(QKeyEvent * event);
+	bool filterLineEditKeyPress(QKeyEvent *event);
+	void acceptCurrentAction();
+	void selectNextEnabled(int step);
 
 private slots:
 	void moveSelectionUp();
