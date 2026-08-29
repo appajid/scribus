@@ -89,41 +89,47 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 
 	int row = 0;
 
-	addSectionHeader( "Select & Edit", &row );
+	addSectionHeader( "Select & Navigate", &row );
 	addToolButtonEntry("toolsSelect", row, 0);
 	addToolButtonEntry("toolsEditContents", row, 1);
-	addToolButtonEntry("toolsEditWithStoryEditor", row, 2);
+	++row;
+	addToolButtonEntry("toolsEditWithStoryEditor", row, 0);
+	addToolButtonEntry("toolsZoom", row, 1);
 	++row;
 
-	addSectionHeader( "Insert", &row );
+	addSectionHeader( "Frames", &row );
 	addToolButtonEntry("toolsInsertTextFrame", row, 0);
 	addToolButtonEntry("toolsInsertImageFrame", row, 1);
-	addToolButtonEntry("toolsInsertRenderFrame", row, 2);
-	addToolButtonEntry("toolsInsertTable", row, 3);
+	++row;
+	addToolButtonEntry("toolsInsertTable", row, 0);
+	addToolButtonEntry("toolsInsertRenderFrame", row, 1);
 	++row;
 
-	addSectionHeader( "Draw", &row );
+	addSectionHeader( "Shapes & Lines", &row );
 	QToolButton* shapeBtn = addToolButtonEntry("toolsInsertShape", row, 0);
 	QToolButton* polygonBtn = addToolButtonEntry("toolsInsertPolygon", row, 1);
-	addToolButtonEntry("toolsInsertArc", row, 2);
-	addToolButtonEntry("toolsInsertSpiral", row, 3);
+	++row;
+	addToolButtonEntry("toolsInsertArc", row, 0);
+	addToolButtonEntry("toolsInsertSpiral", row, 1);
 	++row;
 	QToolButton* lineBtn = addToolButtonEntry("toolsInsertLine", row, 0);
 	addToolButtonEntry("toolsInsertBezier", row, 1);
-	addToolButtonEntry("toolsInsertFreehandLine", row, 2);
-	QToolButton* calliBtn = addToolButtonEntry("toolsInsertCalligraphicLine", row, 3);
+	++row;
+	addToolButtonEntry("toolsInsertFreehandLine", row, 0);
+	QToolButton* calliBtn = addToolButtonEntry("toolsInsertCalligraphicLine", row, 1);
 	++row;
 
 	addSectionHeader( "Modify", &row );
 	addToolButtonEntry("toolsRotate", row, 0);
-	addToolButtonEntry("toolsZoom", row, 1);
-	addToolButtonEntry("toolsLinkTextFrame", row, 2);
-	addToolButtonEntry("toolsUnlinkTextFrame", row, 3);
+	addToolButtonEntry("toolsCopyProperties", row, 1);
+	++row;
+	addToolButtonEntry("toolsLinkTextFrame", row, 0);
+	addToolButtonEntry("toolsUnlinkTextFrame", row, 1);
 	++row;
 
 	addSectionHeader( "Inspect", &row );
 	addToolButtonEntry("toolsEyeDropper", row, 0);
-	addToolButtonEntry("toolsCopyProperties", row, 1);
+	addToolButtonEntry("toolsMeasurements", row, 1);
 	++row;
 
 	vbox->addLayout(grid);
@@ -301,7 +307,7 @@ QLabel* ToolPalette::addSectionHeader(const QString &headerText, int *row)
 	fnt.setPointSize(std::max(fnt.pointSize() - 1, 7));
 	label->setFont(fnt);
 	label->setContentsMargins(2, 4, 0, 0);
-	grid->addWidget(label, *row, 0, 1, 4);
+	grid->addWidget(label, *row, 0, 1, 2);
 	m_sectionHeaders.append(label);
 	m_sectionHeaderTexts.append(headerText);
 	++(*row);

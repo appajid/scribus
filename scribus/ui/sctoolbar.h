@@ -55,7 +55,7 @@ public:
 // 	int position();
 // 	void storeDockPosition();
 // 	void moveDock();
-	void initVisibility();
+	void initVisibility(bool visibleByDefault = true);
 
 public slots:
 	void languageChange();

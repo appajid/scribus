@@ -17,6 +17,7 @@ for which a new license (GPL+exception) is in place.
 class ScribusDoc;
 class ScribusMainWindow;
 class Selection;
+class QPushButton;
 
 class SCRIBUS_API ContentPalette_Page : public QWidget, Ui::ContentPalette_PageBase
 {
@@ -37,6 +38,10 @@ protected:
 	ScGuardedPtr<ScribusDoc> m_doc;
 
 	void changeEvent(QEvent *e) override;
+	void setLabelText();
+
+	QPushButton* pagePropertiesButton { nullptr };
+	QPushButton* documentSetupButton { nullptr };
 
 public slots:
 	void setMainWindow(ScribusMainWindow *mw);

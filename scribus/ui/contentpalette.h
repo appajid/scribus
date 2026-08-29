@@ -34,6 +34,13 @@ class SCRIBUS_API ContentPalette : public DockPanelBase
 	Q_OBJECT
 
 	public:
+		enum InspectorTarget
+		{
+			InspectorAppearance,
+			InspectorContent,
+			InspectorAlignment
+		};
+
 		ContentPalette(QWidget* parent);
 		~ContentPalette() {}
 
@@ -64,6 +71,9 @@ class SCRIBUS_API ContentPalette : public DockPanelBase
 
 		void unitChange();
 		void languageChange();
+
+	signals:
+		void inspectorTargetChanged(int target);
 
 	private:
 		ScribusMainWindow *m_ScMW {nullptr};

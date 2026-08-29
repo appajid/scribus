@@ -105,9 +105,9 @@ ScToolBar::ScToolBar(const QString& name, const QString &prefName, QMainWindow *
 // 	connect(this, SIGNAL(placeChanged(Q3DockWindow::Place)), this, SLOT(slotPlaceChanged(Q3DockWindow::Place)));
 }
 
-void ScToolBar::initVisibility()
+void ScToolBar::initVisibility(bool visibleByDefault)
 {
-	if (m_prefs->getBool("IsVisible", true))
+	if (m_prefs->getBool("IsVisible", visibleByDefault))
 	{
 		show();
 		/*
@@ -305,4 +305,3 @@ ScToolBar::~ScToolBar()
 {
 
 }
-

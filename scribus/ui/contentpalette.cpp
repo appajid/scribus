@@ -68,6 +68,7 @@ void ContentPalette::setMainWindow(ScribusMainWindow *mw)
 	defaultPal->setMainWindow(mw);
 	groupPal->setMainWindow(mw);
 	imagePal->setMainWindow(mw);
+	pagePal->setMainWindow(mw);
 	tablePal->setMainWindow(mw);
 	textPal->setMainWindow(mw);
 
@@ -97,6 +98,7 @@ void ContentPalette::setDoc(ScribusDoc *doc)
 	defaultPal->setDoc(m_doc);
 	groupPal->setDoc(m_doc);
 	imagePal->setDoc(m_doc);
+	pagePal->setDoc(m_doc);
 	tablePal->setDocument(m_doc);
 	textPal->setDoc(m_doc);
 
@@ -129,6 +131,8 @@ void ContentPalette::unsetDoc()
 	groupPal->unsetDoc();
 	imagePal->unsetItem();
 	imagePal->unsetDoc();
+	pagePal->unsetItem();
+	pagePal->unsetDoc();
 	tablePal->unsetItem();
 	tablePal->unsetDocument();
 	textPal->unsetItem();
@@ -136,6 +140,7 @@ void ContentPalette::unsetDoc()
 
 	stackedWidget->setCurrentIndex((int) Panel::empty);
 	updatePanelTitle();
+	emit inspectorTargetChanged(InspectorContent);
 }
 
 void ContentPalette::unsetItem()
@@ -231,18 +236,20 @@ void  ContentPalette::handleSelectionChanged()
 
 	auto currentPanel = (Panel) stackedWidget->currentIndex();
 	auto newPanel{currentPanel};
+	auto inspectorTarget = InspectorContent;
 
 	PageItem* currItem = currentItemFromSelection();
 
 	// TODO: should me move this to setCurrentIndex()?
 	if (!currItem)
 	{
-		newPanel = Panel::empty;
+		newPanel = Panel::page;
 		m_haveItem = false;
 	}
 	else if (m_doc->m_Selection->count() > 1)
 	{
 		newPanel = Panel::empty;
+		inspectorTarget = InspectorAlignment;
 		m_haveItem = false;
 	}
 	else
@@ -266,6 +273,7 @@ void  ContentPalette::handleSelectionChanged()
 			break;
 		default:
 			newPanel = Panel::empty;
+			inspectorTarget = InspectorAppearance;
 			break;
 		}
 		setCurrentItem(currItem);
@@ -275,6 +283,7 @@ void  ContentPalette::handleSelectionChanged()
 		stackedWidget->setCurrentIndex((int) newPanel);
 		updatePanelTitle();
 	}
+	emit inspectorTargetChanged(inspectorTarget);
 	updateGeometry();
 	DockPanelBase::update();
 }
@@ -292,6 +301,7 @@ void ContentPalette::unitChange()
 
 	groupPal->unitChange();
 	imagePal->unitChange();
+	pagePal->unitChange();
 	textPal->unitChange();
 	tablePal->unitChange();
 

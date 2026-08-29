@@ -730,7 +730,7 @@ void ScribusMainWindow::initPalettes()
 
 	// Tools
 	toolPalette = dockManager->toolPalette;
-	toolPalette->setToggleViewAction(scrActions["toolsToolbarTools"]);
+	toolPalette->setToggleViewAction(scrActions["toolsToolPalette"]);
 
 	// Nodes
 	nodePalette = new NodePalette(this);
@@ -1410,6 +1410,7 @@ void ScribusMainWindow::addDefaultWindowMenuItems()
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Windows");
 	scrMenuMgr->addMenuItemString("toolsProperties", "Windows");
 	scrMenuMgr->addMenuItemString("toolsContent", "Windows");
+	scrMenuMgr->addMenuItemString("toolsToolPalette", "Windows");
 	scrMenuMgr->addMenuItemString("toolsActionHistory", "Windows");
 	scrMenuMgr->addMenuItemString("toolsAlignDistribute", "Windows");
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Windows");
@@ -6840,7 +6841,7 @@ int ScribusMainWindow::ShowSubs()
 	// init the toolbars
 	fileToolBar->initVisibility();
 	editToolBar->initVisibility();
-	modeToolBar->initVisibility();
+	modeToolBar->initVisibility(false);
 	pdfToolBar->initVisibility();
 
 	// [dev] env-gated diagnostics for the automated smoke test

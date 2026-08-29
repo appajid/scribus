@@ -93,6 +93,30 @@ void DockManager::setupDocks()
 	configureDock(toolPalette);
 	configureDock(undoPalette);
 
+	connect(contentPalette, &ContentPalette::inspectorTargetChanged, this, [this](int target) {
+		if (m_dockTemporaryHidden)
+			return;
+		if (propertiesPalette->isClosed() && contentPalette->isClosed() && alignDistributePalette->isClosed())
+			return;
+		if (auto* inspectorArea = propertiesPalette->dockAreaWidget())
+		{
+			auto* currentDock = inspectorArea->currentDockWidget();
+			if (currentDock != propertiesPalette && currentDock != contentPalette && currentDock != alignDistributePalette)
+				return;
+		}
+
+		CDockWidget* targetDock = contentPalette;
+		if (target == ContentPalette::InspectorAppearance)
+			targetDock = propertiesPalette;
+		else if (target == ContentPalette::InspectorAlignment)
+			targetDock = alignDistributePalette;
+
+		if (targetDock->isClosed())
+			targetDock->toggleView(true);
+		if (auto* area = targetDock->dockAreaWidget())
+			area->setCurrentDockWidget(targetDock);
+	});
+
 	// Panel ToolProperties
 	//    PanelToolProperties * panelTest = new PanelToolProperties();
 	//    dockToolProperties->setWidget(panelTest);
@@ -259,58 +283,42 @@ void DockManager::createDefaultWorkspace()
 	 *
 	 *      LAYOUT SCHEME
 	 *
-	 *        290px     290px           *             290px
-	 *     |---------|---------|-------------------|---------|
-	 *     |  Left   |  Center |      Center       |  Right  |
-	 * 3/4 |         |  Left   |                   |         |
-	 *     |         |         |                   |         |
-	 *     |         |         |                   |         |
-	 *     |---------|         |                   |         |
-	 * 1/4 | Bottom  |         |                   |         |
-	 *     | Left    |         |                   |         |
-	 *     |---------|---------|-------------------|---------|
+	 *       96px                *                  340px
+	 *     |------|-------------------------------|---------|
+	 *     |Tools |        Document canvas        |Context  |
+	 *     |      |                               |inspector|
+	 *     |      |                               |         |
+	 *     |------|-------------------------------|---------|
 	 *
 	 *
 	 *************************************************************/
 
 	auto *areaCenter = dockCenter->dockAreaWidget();
 
-	// Tools (leftmost, slim)
+	// Compact, function-grouped tools palette on the left.
 	auto *areaToolbox = addDockWidget(LeftDockWidgetArea, toolPalette, areaCenter);
 
-	// Left
-	auto *areaLeft = addDockWidget(LeftDockWidgetArea, pagePalette, areaCenter);
-	addDockWidgetTabToArea(outlinePalette, areaLeft);
-
-	// Left	Center
-	auto *areaCenterLeft = addDockWidget(LeftDockWidgetArea, inlinePalette, areaCenter);
-	addDockWidgetTabToArea(scrapbookPalette, areaCenterLeft);
-	addDockWidgetTabToArea(bookPalette, areaCenterLeft);
-	addDockWidgetTabToArea(symbolPalette, areaCenterLeft);
-
-	// Left Bottom
-	auto *areaLeftBottom = addDockWidget(BottomDockWidgetArea, layerPalette, areaLeft);
-	addDockWidgetTabToArea(alignDistributePalette, areaLeftBottom);
-	addDockWidgetTabToArea(undoPalette, areaLeftBottom);
-
-	// Right Panel
+	// Contextual inspector on the right. Existing editors share one dock
+	// area and are selected automatically as the document selection changes.
 	auto *areaRight = addDockWidget(RightDockWidgetArea, propertiesPalette, areaCenter);
-	addDockWidget(CenterDockWidgetArea, contentPalette, areaRight);
+	addDockWidgetTabToArea(contentPalette, areaRight);
+	addDockWidgetTabToArea(alignDistributePalette, areaRight);
 
-	// Top Panel
-	//    auto * areaTop = addDockWidget(TopDockWidgetArea, dockToolProperties);
-	//    areaTop->setAllowedAreas(NoDockWidgetArea);
-	//    areaTop->setDockAreaFlag(CDockAreaWidget::HideSingleWidgetTitleBar, true);
+	// Utility panels stay available from the Windows menu. Dock them as
+	// secondary right-side tabs so opening one never narrows the canvas again.
+	addDockWidgetTabToArea(pagePalette, areaRight);
+	addDockWidgetTabToArea(outlinePalette, areaRight);
+	addDockWidgetTabToArea(layerPalette, areaRight);
+	addDockWidgetTabToArea(undoPalette, areaRight);
+	addDockWidgetTabToArea(inlinePalette, areaRight);
+	addDockWidgetTabToArea(scrapbookPalette, areaRight);
+	addDockWidgetTabToArea(bookPalette, areaRight);
+	addDockWidgetTabToArea(symbolPalette, areaRight);
 
-	// Resizing area height of left and bottom-left
-	int heightL = areaLeft->height();
-	setSplitterSizes(areaLeft, {heightL * 3 / 4, heightL * 1 / 4});
-
-	// Resizing area width of toolbox, left, center-left, center and right
-	int widthCL = areaCenter->width();
-	int panelWidth = 290;
-	int toolboxWidth = 110;
-	setSplitterSizes(areaCenter, {toolboxWidth, panelWidth, panelWidth, widthCL - 3 * panelWidth - toolboxWidth, panelWidth});
+	const int workspaceWidth = qMax(areaCenter->width(), 900);
+	const int toolboxWidth = 96;
+	const int inspectorWidth = 340;
+	setSplitterSizes(areaCenter, {toolboxWidth, workspaceWidth - toolboxWidth - inspectorWidth, inspectorWidth});
 
 
 	// hide panels that are not visible in default workspace
@@ -321,18 +329,18 @@ void DockManager::createDefaultWorkspace()
 	layerPalette->closeDockWidget();
 	undoPalette->closeDockWidget();
 	outlinePalette->closeDockWidget();
+	pagePalette->closeDockWidget();
 
 	// active palettes
 	areaToolbox->setCurrentDockWidget(toolPalette);
-	areaLeft->setCurrentDockWidget(pagePalette);
-	areaRight->setCurrentDockWidget(propertiesPalette);
-	areaLeftBottom->setCurrentDockWidget(alignDistributePalette);
+	areaRight->setCurrentDockWidget(contentPalette);
 
 	// addDockWidget() does not open the docks, open the active ones explicitly
 	toolPalette->toggleView(true);
-	pagePalette->toggleView(true);
 	propertiesPalette->toggleView(true);
+	contentPalette->toggleView(true);
 	alignDistributePalette->toggleView(true);
+	areaRight->setCurrentDockWidget(contentPalette);
 
 	// add perspective for a later usage, like reset workspace to default.
 	this->addPerspective("Default");

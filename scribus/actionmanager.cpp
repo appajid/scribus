@@ -855,6 +855,8 @@ void ActionManager::initToolsMenuActions()
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name="toolsContent";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
+	name = "toolsToolPalette";
+	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name = "toolsOutline";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name = "toolsScrapbook";
@@ -1794,6 +1796,7 @@ void ActionManager::languageChange()
 	//Tool menu
 	(*scrActions)["toolsProperties"]->setTexts( tr("&Properties"));
 	(*scrActions)["toolsContent"]->setTexts( tr("Content Properties"));
+	(*scrActions)["toolsToolPalette"]->setTexts( tr("Tools Palette"));
 	(*scrActions)["toolsOutline"]->setTexts( tr("&Document Navigator", "Document navigation palette"));
 	(*scrActions)["toolsScrapbook"]->setTexts( tr("&Scrapbook"));
 	(*scrActions)["toolsLayers"]->setTexts( tr("&Layers"));
@@ -2504,6 +2507,7 @@ void ActionManager::createDefaultMenus()
 		<< "windowsResetWorkspace"
 		<< "toolsProperties"
 		<< "toolsContent"
+		<< "toolsToolPalette"
 		<< "toolsOutline"
 		<< "toolsScrapbook"
 		<< "toolsLayers"
