@@ -11,6 +11,7 @@ for which a new license (GPL+exception) is in place.
 #include <QHeaderView>
 #include <QHelpEvent>
 #include <QImage>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLayout>
 #include <QList>
@@ -18,6 +19,7 @@ for which a new license (GPL+exception) is in place.
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QResizeEvent>
+#include <QScopedValueRollback>
 #include <QSignalBlocker>
 #include <QSignalMapper>
 #include <QShortcut>
@@ -41,6 +43,42 @@ for which a new license (GPL+exception) is in place.
 #include "scribusview.h"
 #include "selection.h"
 #include "units.h"
+
+namespace
+{
+	constexpr int SearchMatchRole = Qt::UserRole + 20;
+	constexpr int PreSearchExpandedRole = Qt::UserRole + 21;
+	constexpr auto FilterActiveProperty = "documentNavigatorFilterActive";
+
+	bool filterOutlineItem(QTreeWidgetItem* item, const QRegularExpression& expression, bool parentMatches, int& matchCount)
+	{
+		const bool directMatch = item->parent() && item->text(0).contains(expression);
+		item->setData(0, SearchMatchRole, directMatch);
+		if (directMatch)
+			++matchCount;
+
+		bool childMatches = false;
+		for (int i = 0; i < item->childCount(); ++i)
+			childMatches |= filterOutlineItem(item->child(i), expression, parentMatches || directMatch, matchCount);
+
+		const bool visible = parentMatches || directMatch || childMatches;
+		item->setHidden(!visible);
+		if (childMatches && !parentMatches)
+			item->setExpanded(true);
+		return visible;
+	}
+
+	void resetOutlineFilter(QTreeWidgetItem* item, bool restoreExpansion)
+	{
+		item->setHidden(false);
+		item->setData(0, SearchMatchRole, false);
+		if (restoreExpansion)
+			item->setExpanded(item->data(0, PreSearchExpandedRole).toBool());
+		item->setData(0, PreSearchExpandedRole, QVariant());
+		for (int i = 0; i < item->childCount(); ++i)
+			resetOutlineFilter(item->child(i), restoreExpansion);
+	}
+}
 
 OutlineTreeItem::OutlineTreeItem(OutlineTreeItem* parent, OutlineTreeItem* after) : QTreeWidgetItem(parent, after)
 {
@@ -440,10 +478,17 @@ OutlinePalette::OutlinePalette( QWidget* parent) : DockPanelBase("Tree", "panel-
 	containerWidget = new QWidget(this);
  
 	filterEdit = new QLineEdit;
-	filterEdit->setToolTip( tr("Enter a keyword or regular expression to filter the outline") );
+	filterEdit->setObjectName(QStringLiteral("documentNavigatorSearch"));
+	filterEdit->setClearButtonEnabled(true);
+	filterEdit->setPlaceholderText(tr("Search pages, master pages, layers, and objects..."));
+	filterEdit->setToolTip(tr("Search the complete document structure. Press Enter to navigate to the first match."));
+	filterEdit->installEventFilter(this);
 //	QShortcut* filterShortcut = new QShortcut( QKeySequence( tr( "Ctrl+F", "Filter the Outline using a keyword" ) ), this );
-	filterLabel = new QLabel( tr("Filter:") );
+	filterLabel = new QLabel( tr("Search:") );
 	filterLabel->setBuddy( filterEdit );
+	auto* filterStatusLabel = new QLabel;
+	filterStatusLabel->setObjectName(QStringLiteral("documentNavigatorSearchStatus"));
+	filterStatusLabel->setVisible(false);
 
 	reportDisplay = new OutlineWidget( this );
 
@@ -451,7 +496,7 @@ OutlinePalette::OutlinePalette( QWidget* parent) : DockPanelBase("Tree", "panel-
 //	reportDisplay->setMinimumSize( QSize( 220, 240 ) );
 	reportDisplay->setRootIsDecorated( true );
 	reportDisplay->setColumnCount(1);
-	reportDisplay->setHeaderLabel( tr("Element"));
+	reportDisplay->setHeaderLabel( tr("Document Structure"));
 	reportDisplay->header()->setSectionsClickable(false );
 	reportDisplay->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	reportDisplay->setSortingEnabled(false);
@@ -462,6 +507,7 @@ OutlinePalette::OutlinePalette( QWidget* parent) : DockPanelBase("Tree", "panel-
 	layout->addWidget( filterLabel, 0, 0 );
 	layout->addWidget( filterEdit, 0, 1 );
 	layout->addWidget( reportDisplay, 1, 0, 1, 2 );
+	layout->addWidget( filterStatusLabel, 2, 0, 1, 2 );
 	layout->setSpacing(3);
 	layout->setContentsMargins(3, 3, 3, 3);
 	containerWidget->setLayout( layout );
@@ -935,7 +981,7 @@ void OutlinePalette::slotMultiSelect()
 		return;
 
 	QSignalBlocker reportDisplayBlocker(reportDisplay);
-	selectionTriggered = true;
+	QScopedValueRollback<bool> selectionGuard(selectionTriggered, true);
 
 	QList<QTreeWidgetItem *> items = reportDisplay->selectedItems();
 	if (items.count() != 1)
@@ -979,14 +1025,13 @@ void OutlinePalette::slotMultiSelect()
 	}
 	else
 		slotSelect(items[0], 0);
-	selectionTriggered = false;
 }
 
 void OutlinePalette::slotSelect(QTreeWidgetItem* ite, int)
 {
 	if (!m_MainWindow || m_MainWindow->scriptIsRunning())
 		return;
-	selectionTriggered = true;
+	QScopedValueRollback<bool> selectionGuard(selectionTriggered, true);
 	OutlineTreeItem *item = dynamic_cast<OutlineTreeItem*>(ite);
 	if (!item)
 		qFatal("OutlineWidget::slotSelect !item");
@@ -1039,7 +1084,6 @@ void OutlinePalette::slotSelect(QTreeWidgetItem* ite, int)
 		default:
 			break;
 	}
-	selectionTriggered = false;
 }
 
 void OutlinePalette::slotDoubleClick(QTreeWidgetItem* ite, int)
@@ -1083,12 +1127,22 @@ void OutlinePalette::BuildTree(bool storeVals)
 	QSignalBlocker reportDisplayBlocker(reportDisplay);
 	setUpdatesEnabled(false);
 	if (storeVals)
+	{
+		if (filterEdit->property(FilterActiveProperty).toBool())
+		{
+			for (QTreeWidgetItemIterator it(reportDisplay); *it; ++it)
+				(*it)->setExpanded((*it)->data(0, PreSearchExpandedRole).toBool());
+		}
 		buildReopenVals();
+	}
 	clearPalette();
 
 	OutlineTreeItem * item = new OutlineTreeItem( reportDisplay, nullptr );
 	rootObject = item;
-	item->setText( 0, currDoc->documentFileName().section( '/', -1 ) );
+	QString documentName = currDoc->documentFileName().section('/', -1);
+	if (documentName.isEmpty())
+		documentName = tr("Untitled Document");
+	item->setText(0, documentName);
 	item->type = -2;
 	item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 
@@ -1175,7 +1229,7 @@ void OutlinePalette::BuildTree(bool storeVals)
 					}
 				}
 			}
-			page->setText(0, currDoc->MasterPages.at(a)->pageName());
+			page->setText(0, tr("Master Page: %1").arg(currDoc->MasterPages.at(a)->pageName()));
 		}
 		bool hasfreeItems = false;
 		for (int a = 0; a < currDoc->DocPages.count(); ++a)
@@ -1274,7 +1328,17 @@ void OutlinePalette::BuildTree(bool storeVals)
 					}
 				}
 			}
-			page->setText(0, tr("Page ")+tmp.setNum(a+1));
+			const QString physicalPageNumber = tmp.setNum(a + 1);
+			const QString sectionPageNumber = currDoc->getSectionPageNumberForPageIndex(a);
+			QString pageLabel = tr("Page %1").arg(physicalPageNumber);
+			if (!sectionPageNumber.isEmpty() && sectionPageNumber != physicalPageNumber)
+			{
+				pageLabel += tr("  —  Displayed as %1").arg(sectionPageNumber);
+				page->setToolTip(0, tr("Document page %1; displayed page number %2").arg(physicalPageNumber, sectionPageNumber));
+			}
+			else
+				page->setToolTip(0, tr("Document page %1").arg(physicalPageNumber));
+			page->setText(0, pageLabel);
 		}
 		if (hasfreeItems)
 		{
@@ -1383,32 +1447,87 @@ void OutlinePalette::BuildTree(bool storeVals)
 
 void OutlinePalette::filterTree(const QString& keyword)
 {
-	OutlineTreeItem *item = nullptr;
-	QRegularExpression regExp(keyword, QRegularExpression::CaseInsensitiveOption);
-	QTreeWidgetItemIterator it( reportDisplay );
-	while (*it)
+	const QString searchText = keyword.trimmed();
+	auto* filterStatusLabel = containerWidget->findChild<QLabel*>(QStringLiteral("documentNavigatorSearchStatus"));
+	const bool filterActive = filterEdit->property(FilterActiveProperty).toBool();
+	if (searchText.isEmpty())
 	{
-		item = dynamic_cast<OutlineTreeItem*>(*it);
-		if (item != nullptr)
-		{
-			if ((item->type == 1) || (item->type == 3) || (item->type == 4))
-			{
-				if (item->PageItemObject->itemName().contains(regExp))
-					item->setHidden(false);
-				else
-					item->setHidden(true);
-			}
-			else
-				item->setHidden(false);
-		}
-		++it;
+		for (int i = 0; i < reportDisplay->topLevelItemCount(); ++i)
+			resetOutlineFilter(reportDisplay->topLevelItem(i), filterActive);
+		filterEdit->setProperty(FilterActiveProperty, false);
+		filterStatusLabel->clear();
+		filterStatusLabel->setVisible(false);
+		return;
 	}
+
+	QRegularExpression expression(searchText, QRegularExpression::CaseInsensitiveOption);
+	if (!expression.isValid())
+		expression = QRegularExpression(QRegularExpression::escape(searchText), QRegularExpression::CaseInsensitiveOption);
+	if (!filterActive)
+	{
+		for (QTreeWidgetItemIterator it(reportDisplay); *it; ++it)
+			(*it)->setData(0, PreSearchExpandedRole, (*it)->isExpanded());
+		filterEdit->setProperty(FilterActiveProperty, true);
+	}
+
+	int matchCount = 0;
+	for (int i = 0; i < reportDisplay->topLevelItemCount(); ++i)
+		filterOutlineItem(reportDisplay->topLevelItem(i), expression, false, matchCount);
+
+	filterStatusLabel->setText(matchCount == 0
+		? tr("No matching elements")
+		: tr("Matching elements: %1").arg(matchCount));
+	filterStatusLabel->setVisible(true);
 }
 
 void OutlinePalette::filterTree()
 {
-	if ( !filterEdit->text().isEmpty() )
-		filterTree( filterEdit->text() );
+	filterTree(filterEdit->text());
+}
+
+bool OutlinePalette::eventFilter(QObject *obj, QEvent *event)
+{
+	if (obj == filterEdit && event->type() == QEvent::KeyPress)
+	{
+		auto* keyEvent = static_cast<QKeyEvent*>(event);
+		if (keyEvent->key() == Qt::Key_Escape && !filterEdit->text().isEmpty())
+		{
+			filterEdit->clear();
+			return true;
+		}
+		if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)
+		{
+			navigateToFirstMatch();
+			return true;
+		}
+		if (keyEvent->key() == Qt::Key_Down)
+		{
+			navigateToFirstMatch();
+			return true;
+		}
+	}
+	return DockPanelBase::eventFilter(obj, event);
+}
+
+void OutlinePalette::navigateToFirstMatch()
+{
+	for (QTreeWidgetItemIterator it(reportDisplay); *it; ++it)
+	{
+		QTreeWidgetItem* item = *it;
+		if (item->isHidden() || !item->data(0, SearchMatchRole).toBool() || !(item->flags() & Qt::ItemIsSelectable))
+			continue;
+
+		{
+			QSignalBlocker blocker(reportDisplay);
+			reportDisplay->clearSelection();
+			reportDisplay->setCurrentItem(item);
+			item->setSelected(true);
+		}
+		reportDisplay->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+		reportDisplay->setFocus();
+		slotSelect(item, 0);
+		return;
+	}
 }
 
 void OutlinePalette::parseSubGroup(OutlineTreeItem* object, QList<PageItem*> *subGroupList, int itemType, ScPage *a)
@@ -1486,14 +1605,21 @@ void OutlinePalette::iconSetChange()
 
 void OutlinePalette::languageChange()
 {
-	setWindowTitle( tr("Outline"));
-	reportDisplay->setHeaderLabel( tr("Element"));
-	filterLabel->setText( tr("Filter:") );
+	setWindowTitle(tr("Document Navigator"));
+	reportDisplay->setHeaderLabel(tr("Document Structure"));
+	filterLabel->setText(tr("Search:"));
+	filterEdit->setPlaceholderText(tr("Search pages, master pages, layers, and objects..."));
+	filterEdit->setToolTip(tr("Search the complete document structure. Press Enter to navigate to the first match."));
+	filterTree();
 }
 
 void OutlinePalette::clearPalette()
 {
+	filterEdit->setProperty(FilterActiveProperty, false);
 	reportDisplay->clear();
+	auto* filterStatusLabel = containerWidget->findChild<QLabel*>(QStringLiteral("documentNavigatorSearchStatus"));
+	filterStatusLabel->clear();
+	filterStatusLabel->setVisible(false);
 }
 
 void OutlinePalette::createContextMenu(PageItem * currItem, double /*mx*/, double /*my*/)

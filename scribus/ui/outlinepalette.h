@@ -100,8 +100,10 @@ protected slots:
 
 protected:
 	void changeEvent(QEvent *e) override;
+	bool eventFilter(QObject *obj, QEvent *event) override;
 
 	void filterTree();
+	void navigateToFirstMatch();
 	void clearPalette();
 	void createContextMenu(PageItem *currItem, double, double);
 

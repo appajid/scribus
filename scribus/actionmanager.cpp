@@ -1791,7 +1791,7 @@ void ActionManager::languageChange()
 	//Tool menu
 	(*scrActions)["toolsProperties"]->setTexts( tr("&Properties"));
 	(*scrActions)["toolsContent"]->setTexts( tr("Content Properties"));
-	(*scrActions)["toolsOutline"]->setTexts( tr("&Outline", "Document Outline Palette"));
+	(*scrActions)["toolsOutline"]->setTexts( tr("&Document Navigator", "Document navigation palette"));
 	(*scrActions)["toolsScrapbook"]->setTexts( tr("&Scrapbook"));
 	(*scrActions)["toolsLayers"]->setTexts( tr("&Layers"));
 	(*scrActions)["toolsPages"]->setTexts( tr("&Arrange Pages"));
