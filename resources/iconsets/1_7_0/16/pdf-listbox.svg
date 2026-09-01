@@ -1,3 +1,5 @@
-<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><style>@import '../colors.css';</style>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M2 1C1.44772 1 1 1.44772 1 2V14C1 14.5523 1.44772 15 2 15H14C14.5523 15 15 14.5523 15 14V2C15 1.44772 14.5523 1 14 1H2ZM14 2H2V14H14V2ZM6 4H13V6H6V4ZM13 7H6V9H13V7ZM6 10H13V12H6V10ZM5 4H3V6H5V4ZM3 7H5V9H3V7ZM5 10H3V12H5V10Z"/>
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+<style>@import '../colors.css';</style>
+<path fill-rule="evenodd" d="M1 1h14v14H1V1Zm2 2v10h10V3H3Zm1 1h2v2H4V4Zm3 0h5v2H7V4ZM4 7h2v2H4V7Zm3 0h5v2H7V7Zm-3 3h2v2H4v-2Zm3 0h5v2H7v-2Z"/>
+<path class="info" d="M4 7h2v2H4z"/>
 </svg>
