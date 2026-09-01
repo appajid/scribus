@@ -52,6 +52,7 @@ class QLabel;
 class QMdiArea;
 class QMdiSubWindow;
 class QQuickView;
+class QToolButton;
 
 // application specific includes
 #include "scribusapi.h"
@@ -238,6 +239,9 @@ public:
 	DockManager * dockManager {nullptr};
 
 	QProgressBar* mainWindowProgressBar {nullptr};
+	QLabel* backgroundTaskLabel {nullptr};
+	QToolButton* statusSaveButton {nullptr};
+	QToolButton* statusPreflightButton {nullptr};
 	ScrSpinBox* zoomSpinBox {nullptr}; //zoom spinbox at bottom of view
 	PageSelector* pageSelector {nullptr}; //Page selector at bottom of view
 	QPushButton *zoomDefaultToolbarButton {nullptr};

@@ -27,6 +27,15 @@ for which a new license (GPL+exception) is in place.
 #include "scribusapi.h"
 #include "ui/sctoolbar.h"
 
+#include <QList>
+#include <QPair>
+
+class QAction;
+class QEvent;
+class QLabel;
+class QToolButton;
+class PageItem;
+class ScribusDoc;
 class ScribusMainWindow;
 
 class SCRIBUS_API EditToolBar : public ScToolBar
@@ -36,6 +45,32 @@ class SCRIBUS_API EditToolBar : public ScToolBar
 public:
 	EditToolBar(ScribusMainWindow* parent);
 	~EditToolBar() {};
+
+	void setDoc(ScribusDoc* doc);
+
+public slots:
+	void updateForSelection();
+
+protected:
+	void changeEvent(QEvent* event) override;
+
+private:
+	enum Context
+	{
+		NoSelection = 1,
+		TextSelection = 2,
+		ImageSelection = 4,
+		ShapeSelection = 8,
+		MultipleSelection = 16
+	};
+
+	void addContextAction(const QString& actionName, int contexts);
+	void setContext(int context, const QString& labelText);
+
+	ScribusMainWindow* m_mainWindow { nullptr };
+	ScribusDoc* m_doc { nullptr };
+	QLabel* m_contextLabel { nullptr };
+	QList<QPair<QToolButton*, int>> m_contextButtons;
 };
 
 #endif

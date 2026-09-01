@@ -64,6 +64,7 @@ for which a new license (GPL+exception) is in place.
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTranslator>
+#include <QToolButton>
 #include <QWindow>
 #include <QWheelEvent>
 
@@ -1491,6 +1492,15 @@ void ScribusMainWindow::initStatusBar()
 	zoomOutToolbarButton->setIcon(IconManager::instance().loadIcon("zoom-out"));
 	zoomInToolbarButton->setIcon(IconManager::instance().loadIcon("zoom-in"));
 
+	statusPreflightButton = new QToolButton(statusBar());
+	statusPreflightButton->setObjectName("statusPreflightButton");
+	statusPreflightButton->setAutoRaise(true);
+	statusPreflightButton->setDefaultAction(scrActions["toolsPreflightVerifier"]);
+	statusSaveButton = new QToolButton(statusBar());
+	statusSaveButton->setObjectName("statusSaveButton");
+	statusSaveButton->setAutoRaise(true);
+	statusSaveButton->setDefaultAction(scrActions["fileSave"]);
+
 	zoomLayout->addWidget( zoomSpinBox );
 	zoomLayout->addWidget( zoomOutToolbarButton );
 	zoomLayout->addWidget( zoomDefaultToolbarButton );
@@ -1500,8 +1510,10 @@ void ScribusMainWindow::initStatusBar()
 	m_mainWindowStatusLabel->setFont(fo);
 	mainWindowProgressBar = new QProgressBar(statusBar());
 	mainWindowProgressBar->setAlignment(Qt::AlignHCenter);
-	mainWindowProgressBar->setFixedWidth( 100 );
+	mainWindowProgressBar->setFixedWidth(110);
 	mainWindowProgressBar->reset();
+	backgroundTaskLabel = new QLabel(statusBar());
+	backgroundTaskLabel->setFont(fo);
 	mainWindowXPosLabel = new QLabel( tr("X:"), statusBar());
 	mainWindowXPosLabel->setFont(fo);
 	mainWindowYPosLabel = new QLabel( tr("Y:"), statusBar());
@@ -1528,8 +1540,8 @@ void ScribusMainWindow::initStatusBar()
 	QLabel *s3 = new QLabel(QString());
 	statusBar()->addPermanentWidget(s,1);
 	statusBar()->addPermanentWidget(s2,1);
-	statusBar()->addPermanentWidget(zoomWidget,0);
 	statusBar()->addPermanentWidget(pageSelector,0);
+	statusBar()->addPermanentWidget(zoomWidget,0);
 	statusBar()->addPermanentWidget(layerMenu,1);
 	statusBar()->addPermanentWidget(s3,3);
 	statusBar()->addPermanentWidget(mainWindowXPosLabel, 0);
@@ -1538,6 +1550,9 @@ void ScribusMainWindow::initStatusBar()
 	statusBar()->addPermanentWidget(mainWindowYPosDataLabel, 0);
 
 	statusBar()->addPermanentWidget(unitSwitcher,0);
+	statusBar()->addPermanentWidget(statusPreflightButton, 0);
+	statusBar()->addPermanentWidget(statusSaveButton, 0);
+	statusBar()->addPermanentWidget(backgroundTaskLabel, 0);
 	statusBar()->addPermanentWidget(mainWindowProgressBar, 0);
 	connect(statusBar(), SIGNAL(messageChanged(QString)), this, SLOT(setTempStatusBarText(QString)));
 
@@ -2582,6 +2597,7 @@ void ScribusMainWindow::newActWin(QMdiSubWindow *w)
 	symbolPalette->setDoc(doc);
 	inlinePalette->setDoc(doc);
 	modeToolBar->setDoc(doc);
+	editToolBar->setDoc(doc);
 	toolPalette->setDoc(doc);
 	viewToolBar->setDoc(doc);
 	// Give plugins a chance to react on changing the current document
@@ -4287,6 +4303,7 @@ bool ScribusMainWindow::DoFileClose()
 	nsEditor->setDoc(nullptr);
 	layerPalette->clearContent();
 	docCheckerPalette->buildErrorList(nullptr);
+	editToolBar->setDoc(nullptr);
 	viewToolBar->setDoc(nullptr);
 	HaveDoc--;
 	delete doc;
@@ -6810,6 +6827,7 @@ void ScribusMainWindow::slotDocSetup()
 	emit UpdateRequest(reqCmsOptionsUpdate);
 	doc->changed();
 	modeToolBar->setDoc(doc);
+	editToolBar->setDoc(doc);
 	toolPalette->setDoc(doc);
 }
 
@@ -8797,6 +8815,10 @@ void ScribusMainWindow::statusBarLanguageChange()
 	mainWindowXPosDataLabel->setText("         ");
 	mainWindowYPosDataLabel->setText("         ");
 	m_mainWindowStatusLabel->setText( tr("Ready"));
+	statusPreflightButton->setToolTip(tr("Open the Preflight Verifier"));
+	statusSaveButton->setToolTip(tr("Save the current document"));
+	backgroundTaskLabel->setText(tr("Tasks"));
+	mainWindowProgressBar->setToolTip(tr("Background task progress"));
 }
 
 void ScribusMainWindow::setDefaultPrinter(const QString& name, const QString& file, const QString& command)
