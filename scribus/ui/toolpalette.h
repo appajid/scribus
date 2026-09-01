@@ -17,14 +17,12 @@ for which a new license (GPL+exception) is in place.
 #include "ui/docks/dock_panelbase.h"
 
 #include <QHash>
-#include <QList>
 #include <QString>
 #include <QStringList>
 
 class QAction;
 class QEvent;
 class QMenu;
-class QToolBox;
 class QToolButton;
 class QVBoxLayout;
 
@@ -36,9 +34,9 @@ class ScrAction;
 /**
   * @brief InDesign-like dockable Tools palette.
   *
-  * Provides a compact category-at-a-time set of QToolButtons bound to the
-  * same ScrAction objects used throughout Scribus, plus sub-tool flyout
-  * menus for shapes, polygons, lines, and calligraphic settings.
+  * Provides persistent Adobe-style primary tools. Closely related tools
+  * share a segmented flyout button, and the last selected member becomes
+  * the primary action while all commands remain the shared ScrAction objects.
   */
 class SCRIBUS_API ToolPalette : public DockPanelBase
 {
@@ -62,23 +60,23 @@ public slots:
 	void languageChange();
 
 public:
-	/** @brief Update the tool help label for the given action. */
+	/** @brief Show concise tool help in the status bar. */
 	void updateToolHelp(QAction* action);
 
 protected:
-	/** @brief Add a compact, collapsible category to the palette. */
-	QVBoxLayout* addToolSection(const QString &text);
 	/** @brief Add a tool button bound to the named tool action. */
-	QToolButton* addToolButtonEntry(const QString &actionName, QVBoxLayout* sectionLayout);
+	QToolButton* addToolButtonEntry(const QString &actionName, QVBoxLayout* layout);
+	/** @brief Attach related shared actions as a segmented flyout. */
+	QMenu* configureToolGroup(QToolButton* button, const QStringList &actionNames);
+	/** @brief Add a visual separator between tool families. */
+	void addToolSeparator(QVBoxLayout* layout);
 	/** @brief Set the number of polygon corners from a flyout preset. */
 	void setPolygonSides(int sides);
 
 	QHash<QString, QToolButton*> m_buttons;
-	QHash<QToolButton*, ScrAction*> m_buttonActions;
-	QStringList m_categoryTexts;
-	QToolBox* m_categoryBox { nullptr };
 	QMenu* insertPolygonButtonMenu { nullptr };
 	QMenu* lineButtonMenu { nullptr };
+	QMenu* calligraphicSettingsMenu { nullptr };
 	QAction* idPolygonPropertiesAction { nullptr };
 	AutoformButtonGroup* autoFormButtonGroup { nullptr };
 	ScribusMainWindow* m_ScMW { nullptr };

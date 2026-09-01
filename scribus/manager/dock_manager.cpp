@@ -283,7 +283,7 @@ void DockManager::createDefaultWorkspace()
 	 *
 	 *      LAYOUT SCHEME
 	 *
-	 *      108px                *                  320px
+	 *       72px                *                  320px
 	 *     |------|-------------------------------|---------|
 	 *     |Tools |        Document canvas        |Context  |
 	 *     |      |                               |inspector|
@@ -316,7 +316,7 @@ void DockManager::createDefaultWorkspace()
 	addDockWidgetTabToArea(symbolPalette, areaRight);
 
 	const int workspaceWidth = qMax(areaCenter->width(), 900);
-	const int toolboxWidth = 108;
+	const int toolboxWidth = 72;
 	const int inspectorWidth = 320;
 	setSplitterSizes(areaCenter, {toolboxWidth, workspaceWidth - toolboxWidth - inspectorWidth, inspectorWidth});
 

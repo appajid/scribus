@@ -15,12 +15,12 @@ for which a new license (GPL+exception) is in place.
 #include <QAction>
 #include <QEnterEvent>
 #include <QEvent>
+#include <QFrame>
 #include <QIcon>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPointer>
 #include <QStatusBar>
-#include <QToolBox>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -35,8 +35,8 @@ for which a new license (GPL+exception) is in place.
 class ToolPaletteButton : public QToolButton
 {
 public:
-	ToolPaletteButton(ToolPalette* palette, ScrAction* action)
-		: QToolButton(palette), m_palette(palette), m_action(action)
+	ToolPaletteButton(ToolPalette* palette)
+		: QToolButton(palette), m_palette(palette)
 	{
 		setAutoRaise(false);
 	}
@@ -44,21 +44,20 @@ public:
 protected:
 	void enterEvent(QEnterEvent *e) override
 	{
-		if (m_palette && m_action)
-			m_palette->updateToolHelp(m_action);
+		if (m_palette && defaultAction())
+			m_palette->updateToolHelp(defaultAction());
 		QToolButton::enterEvent(e);
 	}
 
 	void mousePressEvent(QMouseEvent *e) override
 	{
-		if (m_palette && m_action)
-			m_palette->updateToolHelp(m_action);
+		if (m_palette && defaultAction())
+			m_palette->updateToolHelp(defaultAction());
 		QToolButton::mousePressEvent(e);
 	}
 
 private:
 	ToolPalette* m_palette { nullptr };
-	ScrAction* m_action { nullptr };
 };
 
 ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-select", parent)
@@ -80,79 +79,48 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 	QVBoxLayout* vbox = new QVBoxLayout(content);
 	vbox->setContentsMargins(4, 4, 4, 4);
 	vbox->setSpacing(2);
+	vbox->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
-	m_categoryBox = new QToolBox(content);
-	m_categoryBox->setObjectName("toolCategories");
-	m_categoryBox->setMinimumWidth(82);
-
-	QVBoxLayout* navigate = addToolSection("Navigate");
-	addToolButtonEntry("toolsSelect", navigate);
-	addToolButtonEntry("toolsEditContents", navigate);
-	addToolButtonEntry("toolsEditWithStoryEditor", navigate);
-	addToolButtonEntry("toolsZoom", navigate);
-
-	QVBoxLayout* frames = addToolSection("Frames");
-	addToolButtonEntry("toolsInsertTextFrame", frames);
-	addToolButtonEntry("toolsInsertImageFrame", frames);
-	addToolButtonEntry("toolsInsertTable", frames);
-	addToolButtonEntry("toolsInsertRenderFrame", frames);
-
-	QVBoxLayout* draw = addToolSection("Draw");
-	QToolButton* shapeBtn = addToolButtonEntry("toolsInsertShape", draw);
-	QToolButton* polygonBtn = addToolButtonEntry("toolsInsertPolygon", draw);
-	addToolButtonEntry("toolsInsertArc", draw);
-	addToolButtonEntry("toolsInsertSpiral", draw);
-	QToolButton* lineBtn = addToolButtonEntry("toolsInsertLine", draw);
-	addToolButtonEntry("toolsInsertBezier", draw);
-	addToolButtonEntry("toolsInsertFreehandLine", draw);
-	QToolButton* calliBtn = addToolButtonEntry("toolsInsertCalligraphicLine", draw);
-
-	QVBoxLayout* modify = addToolSection("Modify");
-	addToolButtonEntry("toolsRotate", modify);
-	addToolButtonEntry("toolsCopyProperties", modify);
-	addToolButtonEntry("toolsLinkTextFrame", modify);
-	addToolButtonEntry("toolsUnlinkTextFrame", modify);
-
-	QVBoxLayout* inspect = addToolSection("Inspect");
-	addToolButtonEntry("toolsEyeDropper", inspect);
-	addToolButtonEntry("toolsMeasurements", inspect);
-
-	QVBoxLayout* interactivePdf = addToolSection("Interactive PDF");
-	addToolButtonEntry("toolsPDFPushButton", interactivePdf);
-	addToolButtonEntry("toolsPDFCheckBox", interactivePdf);
-	addToolButtonEntry("toolsPDFRadioButton", interactivePdf);
-	addToolButtonEntry("toolsPDFTextField", interactivePdf);
-	addToolButtonEntry("toolsPDFComboBox", interactivePdf);
-	addToolButtonEntry("toolsPDFListBox", interactivePdf);
-	addToolButtonEntry("toolsPDFAnnotText", interactivePdf);
-	addToolButtonEntry("toolsPDFAnnotLink", interactivePdf);
-
-	vbox->addWidget(m_categoryBox);
+	// Persistent primary tools. Each segmented button exposes its complete
+	// family and promotes the last selected member, matching Adobe toolbars.
+	QToolButton* selectBtn = addToolButtonEntry("toolsSelect", vbox);
+	addToolSeparator(vbox);
+	QToolButton* textBtn = addToolButtonEntry("toolsInsertTextFrame", vbox);
+	QToolButton* frameBtn = addToolButtonEntry("toolsInsertImageFrame", vbox);
+	addToolSeparator(vbox);
+	QToolButton* shapeBtn = addToolButtonEntry("toolsInsertShape", vbox);
+	QToolButton* lineBtn = addToolButtonEntry("toolsInsertLine", vbox);
+	addToolSeparator(vbox);
+	addToolButtonEntry("toolsRotate", vbox);
+	addToolButtonEntry("toolsCopyProperties", vbox);
+	QToolButton* linkBtn = addToolButtonEntry("toolsLinkTextFrame", vbox);
+	addToolSeparator(vbox);
+	QToolButton* inspectBtn = addToolButtonEntry("toolsEyeDropper", vbox);
+	addToolButtonEntry("toolsZoom", vbox);
+	addToolSeparator(vbox);
+	QToolButton* pdfBtn = addToolButtonEntry("toolsPDFPushButton", vbox);
+	vbox->addStretch(1);
 
 	setWidget(content);
 
 	// --- sub-tool flyout menus ------------------------------------------------
 
-	// Shape: reuse the shared AutoformButtonGroup of the legacy ModeToolBar so
+	// Shape: reuse the shared AutoformButtonGroup of the internal ModeToolBar so
 	// that the shape sub-mode state (SubMode, ShapeVals, ValCount) is identical
-	// in both bars and existing Path Draw behavior is preserved.
+	// and existing Path Draw behavior is preserved.
 	if (m_ScMW->modeToolBar)
 	{
 		autoFormButtonGroup = m_ScMW->modeToolBar->getAutoformButtonGroup();
 		if (autoFormButtonGroup)
 		{
-			shapeBtn->setMenu(autoFormButtonGroup);
-			shapeBtn->setPopupMode(QToolButton::MenuButtonPopup);
+			m_ScMW->scrActions["toolsInsertShape"]->setMenu(nullptr);
 			connect( autoFormButtonGroup, SIGNAL(FormSel(int,int,qreal*)), this, SLOT(SelShape(int,int,qreal*)) );
 		}
 
 		// Calligraphic line: reuse the shared angle/width pen settings.
-		QMenu* calMenu = m_ScMW->modeToolBar->getCalligraphicMenu();
-		if (calMenu)
-		{
-			calliBtn->setMenu(calMenu);
-			calliBtn->setPopupMode(QToolButton::MenuButtonPopup);
-		}
+		calligraphicSettingsMenu = m_ScMW->modeToolBar->getCalligraphicMenu();
+		if (calligraphicSettingsMenu)
+			m_ScMW->scrActions["toolsInsertCalligraphicLine"]->setMenu(nullptr);
 	}
 
 	// Polygon: side presets plus the classic properties dialog.
@@ -165,27 +133,38 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 	}
 	insertPolygonButtonMenu->addSeparator();
 	idPolygonPropertiesAction = insertPolygonButtonMenu->addAction( tr("Properties..."), this, SLOT(GetPolyProps()) );
-	polygonBtn->setMenu(insertPolygonButtonMenu);
-	polygonBtn->setPopupMode(QToolButton::MenuButtonPopup);
 
-	// Line: quick variants of the other drawing tools.
-	lineButtonMenu = new QMenu(this);
-	lineButtonMenu->addAction(m_ScMW->scrActions["toolsInsertLine"].data());
-	lineButtonMenu->addAction(m_ScMW->scrActions["toolsInsertBezier"].data());
-	lineButtonMenu->addAction(m_ScMW->scrActions["toolsInsertFreehandLine"].data());
-	lineBtn->setMenu(lineButtonMenu);
-	lineBtn->setPopupMode(QToolButton::MenuButtonPopup);
+	configureToolGroup(selectBtn, {"toolsSelect", "toolsEditContents"});
+	configureToolGroup(textBtn, {"toolsInsertTextFrame", "toolsEditWithStoryEditor"});
+	configureToolGroup(frameBtn, {"toolsInsertImageFrame", "toolsInsertTable", "toolsInsertRenderFrame"});
+	QMenu* shapeMenu = configureToolGroup(shapeBtn,
+		{"toolsInsertShape", "toolsInsertPolygon", "toolsInsertArc", "toolsInsertSpiral"});
+	shapeMenu->addSeparator();
+	if (autoFormButtonGroup)
+		shapeMenu->addMenu(autoFormButtonGroup);
+	shapeMenu->addMenu(insertPolygonButtonMenu);
+	lineButtonMenu = configureToolGroup(lineBtn,
+		{"toolsInsertLine", "toolsInsertBezier", "toolsInsertFreehandLine", "toolsInsertCalligraphicLine"});
+	if (calligraphicSettingsMenu)
+	{
+		lineButtonMenu->addSeparator();
+		lineButtonMenu->addMenu(calligraphicSettingsMenu);
+	}
+	configureToolGroup(linkBtn, {"toolsLinkTextFrame", "toolsUnlinkTextFrame"});
+	configureToolGroup(inspectBtn, {"toolsEyeDropper", "toolsMeasurements"});
+	configureToolGroup(pdfBtn,
+		{"toolsPDFPushButton", "toolsPDFCheckBox", "toolsPDFRadioButton", "toolsPDFTextField",
+		 "toolsPDFComboBox", "toolsPDFListBox", "toolsPDFAnnotText", "toolsPDFAnnotLink"});
 
 	// The tool actions default to checked=true (see ScrAction::setToggleAction);
 	// clear that here so the palette starts with a single active tool instead of
 	// every button shown pressed. AppModeHelper sets the correct exclusive state
 	// whenever the active tool changes.
 	for (auto it = m_buttons.constBegin(); it != m_buttons.constEnd(); ++it)
-		it.value()->setChecked(false);
-	if (QToolButton* selectBtn = m_buttons.value("toolsSelect"))
-		selectBtn->setChecked(true);
+		m_ScMW->scrActions[it.key()]->setChecked(false);
+	m_ScMW->scrActions["toolsSelect"]->setChecked(true);
 
-	updateToolHelp(m_ScMW->scrActions.value("toolsSelect"));
+	languageChange();
 }
 
 ToolPalette::~ToolPalette()
@@ -255,11 +234,14 @@ void ToolPalette::SelShape(int s, int c, qreal *vals)
 
 void ToolPalette::languageChange()
 {
-	for (int i = 0; i < m_categoryBox->count() && i < m_categoryTexts.count(); ++i)
-		m_categoryBox->setItemText(i, tr(m_categoryTexts[i].toUtf8().constData()));
-
 	if (idPolygonPropertiesAction)
 		idPolygonPropertiesAction->setText( tr("Properties...") );
+	if (autoFormButtonGroup)
+		autoFormButtonGroup->setTitle(tr("Shape Presets"));
+	if (insertPolygonButtonMenu)
+		insertPolygonButtonMenu->setTitle(tr("Polygon Sides"));
+	if (calligraphicSettingsMenu)
+		calligraphicSettingsMenu->setTitle(tr("Calligraphy Settings"));
 
 	updateToolHelp(m_ScMW->scrActions["toolsSelect"]);
 }
@@ -284,33 +266,55 @@ void ToolPalette::updateToolHelp(QAction* action)
 		m_ScMW->statusBar()->showMessage(message, 3000);
 }
 
-QVBoxLayout* ToolPalette::addToolSection(const QString &headerText)
+void ToolPalette::addToolSeparator(QVBoxLayout* layout)
 {
-	QWidget* page = new QWidget(m_categoryBox);
-	QVBoxLayout* layout = new QVBoxLayout(page);
-	layout->setContentsMargins(2, 4, 2, 4);
-	layout->setSpacing(2);
-	layout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
-	m_categoryBox->addItem(page, tr(headerText.toUtf8().constData()));
-	m_categoryTexts.append(headerText);
-	return layout;
+	QFrame* separator = new QFrame(this);
+	separator->setObjectName("toolSeparator");
+	separator->setFrameShape(QFrame::HLine);
+	separator->setFrameShadow(QFrame::Sunken);
+	separator->setFixedWidth(34);
+	layout->addWidget(separator, 0, Qt::AlignHCenter);
 }
 
-QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, QVBoxLayout* sectionLayout)
+QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, QVBoxLayout* layout)
 {
 	QPointer<ScrAction> action = m_ScMW->scrActions.value(actionName);
-	ToolPaletteButton* btn = new ToolPaletteButton(this, action);
+	ToolPaletteButton* btn = new ToolPaletteButton(this);
 	btn->setObjectName("toolButton");
 	btn->setDefaultAction(action);
 	btn->setIconSize(QSize(22, 22));
 	btn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	btn->setMinimumSize(38, 32);
-	sectionLayout->addWidget(btn, 0, Qt::AlignHCenter);
+	btn->setFixedSize(42, 34);
+	layout->addWidget(btn, 0, Qt::AlignHCenter);
 	m_buttons.insert(actionName, btn);
-	m_buttonActions.insert(btn, action);
 	connect(action, &QAction::toggled, this, [this, action](bool on) {
 		if (on)
 			updateToolHelp(action);
 	});
 	return btn;
+}
+
+QMenu* ToolPalette::configureToolGroup(QToolButton* button, const QStringList &actionNames)
+{
+	QMenu* menu = new QMenu(button);
+	for (const QString& actionName : actionNames)
+	{
+		QPointer<ScrAction> action = m_ScMW->scrActions.value(actionName);
+		if (!action)
+			continue;
+
+		menu->addAction(action);
+		m_buttons.insert(actionName, button);
+		connect(action, &QAction::toggled, this, [this, button, menu, action](bool on) {
+			if (!on)
+				return;
+			button->setDefaultAction(action);
+			button->setMenu(menu);
+			button->setPopupMode(QToolButton::MenuButtonPopup);
+			updateToolHelp(action);
+		});
+	}
+	button->setMenu(menu);
+	button->setPopupMode(QToolButton::MenuButtonPopup);
+	return menu;
 }
