@@ -8,6 +8,7 @@ for which a new license (GPL+exception) is in place.
 
 #include <QWidget>
 #include <QStackedWidget>
+#include <QVBoxLayout>
 
 #include "appmodehelper.h" // for AppModeChanged (if needed)
 
@@ -24,9 +25,11 @@ for which a new license (GPL+exception) is in place.
 #include "selection.h"
 #include "styles/paragraphstyle.h"
 #include "styles/charstyle.h"
+#include "widgets/inspector_header.h"
+#include "widgets/section_container.h"
 
 ContentPalette::ContentPalette(QWidget *parent) :
-	DockPanelBase("ContentPalette", "panel-content-properties", parent)
+	DockPanelBase("ContentPalette", "inspector-content", parent)
 {
 	setObjectName(QString::fromLocal8Bit("ContentPalette"));
 
@@ -54,7 +57,22 @@ ContentPalette::ContentPalette(QWidget *parent) :
 	textPal = new PropertiesPalette_Text(this);
 	stackedWidget->addWidget(textPal);
 
-	setWidget(stackedWidget);
+	auto* panel = new QWidget(this);
+	auto* layout = new QVBoxLayout(panel);
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->setSpacing(0);
+	m_inspectorHeader = new InspectorHeader(QStringLiteral("inspector-content"), panel);
+	layout->addWidget(m_inspectorHeader);
+	layout->addWidget(stackedWidget, 1);
+	setWidget(panel);
+
+	const auto sections = panel->findChildren<SectionContainer*>();
+	for (auto* section : sections)
+	{
+		section->setHeaderSize(SectionContainerHeader::Condensed);
+		section->setHeaderType(SectionContainerHeader::Header);
+		section->setHasStyle(false);
+	}
 
 	stackedWidget->setCurrentIndex((int) Panel::empty);
 
@@ -335,25 +353,33 @@ void ContentPalette::changeEvent(QEvent *e)
 
 void ContentPalette::updatePanelTitle()
 {
+	setWindowTitle(tr("Content"));
+
 	switch ((Panel) stackedWidget->currentIndex())
 	{
 		case Panel::empty:
-			setWindowTitle( tr("Content Properties"));
+			m_inspectorHeader->setTitle(tr("Content"));
+			m_inspectorHeader->setSubtitle(tr("Select an object to edit its content"));
 			break;
 		case Panel::group:
-			setWindowTitle( tr("Group Properties"));
+			m_inspectorHeader->setTitle(tr("Group"));
+			m_inspectorHeader->setSubtitle(tr("Grouped object content and options"));
 			break;
 		case Panel::image:
-			setWindowTitle( tr("Image Properties"));
+			m_inspectorHeader->setTitle(tr("Image"));
+			m_inspectorHeader->setSubtitle(tr("Fitting, crop, resolution, and colour"));
 			break;
 		case Panel::page:
-			setWindowTitle( tr("Page Properties"));
+			m_inspectorHeader->setTitle(tr("Page"));
+			m_inspectorHeader->setSubtitle(tr("Document and page settings"));
 			break;
 		case Panel::table:
-			setWindowTitle( tr("Table Properties"));
+			m_inspectorHeader->setTitle(tr("Table"));
+			m_inspectorHeader->setSubtitle(tr("Table and cell content"));
 			break;
 		case Panel::text:
-			setWindowTitle( tr("Text Properties"));
+			m_inspectorHeader->setTitle(tr("Text"));
+			m_inspectorHeader->setSubtitle(tr("Typography, columns, spacing, and flow"));
 			break;
 	}
 }

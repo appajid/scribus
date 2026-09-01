@@ -36,13 +36,16 @@ for which a new license (GPL+exception) is in place.
 #include <QToolButton>
 #include <QToolTip>
 #include <QVariant>
+#include <QVBoxLayout>
 
 #include "iconmanager.h"
 #include "localemgr.h"
 #include "scribusapp.h"
 #include "scribusdoc.h"
 #include "scribusstructs.h"
+#include "selection.h"
 #include "ui/scrspinbox.h"
+#include "ui/widgets/inspector_header.h"
 #include "undomanager.h"
 #include "units.h"
 
@@ -58,20 +61,32 @@ AlignDistribute::AlignDistribute(QWidget* parent) : QWidget(parent)
 	sectionDistribute->setCanSaveState(true);
 	sectionDistribute->restorePreferences();
 
-
+	for (auto* section : { sectionAlign, sectionDistribute })
+	{
+		section->setHeaderSize(SectionContainerHeader::Condensed);
+		section->setHeaderType(SectionContainerHeader::Header);
+		section->setHasStyle(false);
+	}
 }
 
 
 // =============================
 
 
-AlignDistributePalette::AlignDistributePalette(QWidget* parent) : DockPanelBase("AlignDistributePalette", "panel-align-distribute", parent)
+AlignDistributePalette::AlignDistributePalette(QWidget* parent) : DockPanelBase("AlignDistributePalette", "inspector-arrange", parent)
 {
 	setSizePolicy( QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
 	setObjectName("AlignDistributePalette");
 
 	ad = new AlignDistribute(this);
-	setWidget(ad);
+	auto* panel = new QWidget(this);
+	auto* layout = new QVBoxLayout(panel);
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->setSpacing(0);
+	m_inspectorHeader = new InspectorHeader(QStringLiteral("inspector-arrange"), panel);
+	layout->addWidget(m_inspectorHeader);
+	layout->addWidget(ad, 1);
+	setWidget(panel);
 	//set up scrspinboxes
 	ad->distributeDistSpinBox->setValues(-10000.0, 10000.0, 2, 0.0);
 
@@ -112,6 +127,11 @@ void AlignDistributePalette::changeEvent(QEvent *e)
 
 void AlignDistributePalette::languageChange()
 {
+	setWindowTitle(tr("Arrange"));
+	if (m_inspectorHeader)
+		m_inspectorHeader->setTitle(tr("Arrange"));
+	updateSelectionSummary();
+
 	ad->retranslateUi(this);
 
 	referenceGuideTooltipTemplate = tr("Align relative to a guide%1");
@@ -277,12 +297,37 @@ void AlignDistributePalette::unitChange()
 
 void AlignDistributePalette::setDoc(ScribusDoc* newDoc)
 {
+	if (currDoc)
+		disconnect(currDoc->m_Selection, &Selection::selectionChanged, this, &AlignDistributePalette::updateSelectionSummary);
+
 	currDoc = newDoc;
 	if (currDoc != nullptr)
+	{
 		alignObjects = &(currDoc->AObjects);
+		connect(currDoc->m_Selection, &Selection::selectionChanged, this, &AlignDistributePalette::updateSelectionSummary);
+	}
 	else
 		alignObjects = nullptr;
 	unitChange();
+	updateSelectionSummary();
+}
+
+void AlignDistributePalette::updateSelectionSummary()
+{
+	if (!m_inspectorHeader)
+		return;
+
+	if (!currDoc)
+	{
+		m_inspectorHeader->setSubtitle(tr("Open a document to arrange objects"));
+		return;
+	}
+
+	const int selectionCount = currDoc->m_Selection->count();
+	if (selectionCount < 2)
+		m_inspectorHeader->setSubtitle(tr("Select two or more objects to align and distribute"));
+	else
+		m_inspectorHeader->setSubtitle(tr("%n objects selected", nullptr, selectionCount));
 }
 
 void AlignDistributePalette::alignLeftOut()
@@ -520,4 +565,3 @@ void AlignDistributePalette::enableGuideButtons()
 
 	ad->buttonReferenceGuide->setToolTip(referenceGuideTooltipTemplate.arg(guidePositionText == "" ? "" : guidePositionText));
 }
-

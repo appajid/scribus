@@ -489,12 +489,15 @@ SectionContainerHeader::SectionContainerHeader(QWidget *parent)
 SectionContainerHeader::SectionContainerHeader(QString title, QWidget *parent) : QWidget(parent)
 {
 	int padding = 6;
+	setObjectName(QStringLiteral("sectionContainerHeader"));
 
 	layoutHeader = new QHBoxLayout;
 	layoutHeaderPrefix = new QHBoxLayout;
 	layoutHeaderSuffix = new QHBoxLayout;
 	labelTitle = new QLabel(title);
 	buttonCollapse = new QPushButton;
+	labelTitle->setObjectName(QStringLiteral("sectionContainerTitle"));
+	buttonCollapse->setObjectName(QStringLiteral("sectionContainerCollapse"));
 
 	// Label
 	//	QFont m_font(this->font());

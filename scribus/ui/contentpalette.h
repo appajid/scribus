@@ -17,6 +17,7 @@ class QStackedWidget;
 class ScribusMainWindow;
 class ScribusDoc;
 class PageItem;
+class InspectorHeader;
 
 class ContentPalette_Default;
 class ContentPalette_Page;
@@ -86,6 +87,7 @@ class SCRIBUS_API ContentPalette : public DockPanelBase
 		int m_unitIndex {0};
 
 		StackedContainer* stackedWidget {nullptr};
+		InspectorHeader* m_inspectorHeader {nullptr};
 		ContentPalette_Default* defaultPal {nullptr};
 		PropertiesPalette_Group* groupPal {nullptr};
 		PropertiesPalette_Image* imagePal {nullptr};

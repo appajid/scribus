@@ -13,7 +13,6 @@ for which a new license (GPL+exception) is in place.
 class QCloseEvent;
 class QEvent;
 class QFocusEvent;
-class QLabel;
 class QToolBox;
 class QVBoxLayout;
 class QWidget;
@@ -36,6 +35,7 @@ class QWidget;
 
 class ColorCombo;
 class ColorPalette;
+class InspectorHeader;
 class NameWidget;
 class PropertiesPalette_Attributes;
 class PropertiesPalette_Group;
@@ -126,7 +126,7 @@ protected:
 	SectionContainer * scFill {nullptr};
 	SectionContainer * scShadow {nullptr};
 	SectionContainer * scAttributes {nullptr};
-	QLabel *m_selectionSummary {nullptr};
+	InspectorHeader *m_inspectorHeader {nullptr};
 
 	bool m_haveDoc {false};
 	bool m_haveItem {false};

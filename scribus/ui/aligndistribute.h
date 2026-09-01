@@ -42,6 +42,7 @@ class QLabel;
 class QLineEdit;
 class QSpacerItem;
 class QToolButton;
+class InspectorHeader;
 class ScrSpinBox;
 class ScribusMainWindow;
 class ScribusView;
@@ -89,6 +90,7 @@ protected:
 protected slots:
 	virtual void iconSetChange();
 	void languageChange();
+	void updateSelectionSummary();
 	
 	void alignLeftOut();
 	void alignRightOut();
@@ -133,6 +135,7 @@ private:
 	int guideDirection { -1 };
 	qreal guidePosition { 0.0 };
 	QString referenceGuideTooltipTemplate;
+	InspectorHeader* m_inspectorHeader { nullptr };
 	
 signals:
 	void documentChanged();

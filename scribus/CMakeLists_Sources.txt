@@ -596,6 +596,7 @@ set(SCRIBUS_SOURCES
 	ui/widgets/floatingwindow.cpp
 	ui/widgets/form_widget.cpp
 	ui/widgets/gradientlistbox.cpp
+	ui/widgets/inspector_header.cpp
 	ui/widgets/pagelayout.cpp
 	ui/widgets/pagesizelist.cpp
 	ui/widgets/pagesizepreview.cpp

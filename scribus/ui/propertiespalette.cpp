@@ -13,7 +13,6 @@ for which a new license (GPL+exception) is in place.
 #include <QEvent>
 #include <QFocusEvent>
 #include <QKeyEvent>
-#include <QLabel>
 #include <QObject>
 #include <QPoint>
 #include <QSpacerItem>
@@ -45,8 +44,19 @@ for which a new license (GPL+exception) is in place.
 #include "scribusview.h"
 #include "selection.h"
 #include "undomanager.h"
+#include "widgets/inspector_header.h"
 
-PropertiesPalette::PropertiesPalette(QWidget *parent) : DockPanelBase("PropertiesPalette", "panel-frame-properties", parent)
+namespace
+{
+void styleInspectorSection(SectionContainer* section)
+{
+	section->setHeaderSize(SectionContainerHeader::Condensed);
+	section->setHeaderType(SectionContainerHeader::Header);
+	section->setHasStyle(false);
+}
+}
+
+PropertiesPalette::PropertiesPalette(QWidget *parent) : DockPanelBase("PropertiesPalette", "inspector-appearance", parent)
 {
 	undoManager = UndoManager::instance();
 
@@ -95,17 +105,19 @@ PropertiesPalette::PropertiesPalette(QWidget *parent) : DockPanelBase("Propertie
 	scAttributes->setWidget(attributesPal);
 	scAttributes->restorePreferences();
 
+	styleInspectorSection(scXYZ);
+	styleInspectorSection(scShadow);
+	styleInspectorSection(scShape);
+	styleInspectorSection(scFill);
+	styleInspectorSection(scLine);
+	styleInspectorSection(scAttributes);
+
 	// Layout stack
 	QVBoxLayout * lyt = new QVBoxLayout();
 	lyt->setContentsMargins(0, 0, 0, 0);
 	lyt->setSpacing(0);
-	m_selectionSummary = new QLabel(this);
-	m_selectionSummary->setObjectName(QStringLiteral("propertiesSelectionSummary"));
-	m_selectionSummary->setTextFormat(Qt::PlainText);
-	m_selectionSummary->setWordWrap(true);
-	m_selectionSummary->setMargin(6);
-	m_selectionSummary->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
-	lyt->addWidget(m_selectionSummary);
+	m_inspectorHeader = new InspectorHeader(QStringLiteral("inspector-appearance"), this);
+	lyt->addWidget(m_inspectorHeader);
 	lyt->addWidget(scXYZ);
 	lyt->addWidget(scShape);
 	lyt->addWidget(scFill);
@@ -321,37 +333,39 @@ QString PropertiesPalette::itemTypeName(const PageItem* item) const
 
 void PropertiesPalette::updateSelectionSummary()
 {
-	if (!m_selectionSummary)
+	if (!m_inspectorHeader)
 		return;
+
+	m_inspectorHeader->setTitle(tr("Appearance"));
 
 	if (!m_haveDoc || !m_doc)
 	{
-		m_selectionSummary->setText(tr("No document open"));
+		m_inspectorHeader->setSubtitle(tr("Open a document to edit object appearance"));
 		return;
 	}
 
 	const int selectionCount = m_doc->m_Selection->count();
 	if (selectionCount == 0)
 	{
-		m_selectionSummary->setText(tr("No object selected"));
+		m_inspectorHeader->setSubtitle(tr("Select an object to edit its appearance"));
 		return;
 	}
 	if (selectionCount > 1)
 	{
-		m_selectionSummary->setText(tr("%n objects selected", nullptr, selectionCount));
+		m_inspectorHeader->setSubtitle(tr("%n objects selected", nullptr, selectionCount));
 		return;
 	}
 
 	const PageItem* item = currentItemFromSelection();
 	if (!item)
 	{
-		m_selectionSummary->setText(tr("No object selected"));
+		m_inspectorHeader->setSubtitle(tr("Select an object to edit its appearance"));
 		return;
 	}
 
 	const QString typeName = itemTypeName(item);
 	const QString itemName = item->itemName().trimmed();
-	m_selectionSummary->setText(itemName.isEmpty() ? typeName : tr("%1 — %2").arg(typeName, itemName));
+	m_inspectorHeader->setSubtitle(itemName.isEmpty() ? typeName : tr("%1 — %2").arg(typeName, itemName));
 }
 
 void PropertiesPalette::AppModeChanged()
@@ -585,9 +599,7 @@ void PropertiesPalette::changeEvent(QEvent *e)
 
 void PropertiesPalette::languageChange()
 {
-	setWindowTitle( tr("Properties"));
-	if (m_selectionSummary)
-		m_selectionSummary->setAccessibleName(tr("Selection context"));
+	setWindowTitle(tr("Appearance"));
 
 	scXYZ->setText(tr("X, Y, &Z"));
 	scShadow->setText(tr("&Drop Shadow"));
