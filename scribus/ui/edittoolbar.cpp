@@ -40,6 +40,10 @@ for which a new license (GPL+exception) is in place.
 EditToolBar::EditToolBar(ScribusMainWindow* parent) : ScToolBar(tr("Context"), "Context", parent),
 	m_mainWindow(parent)
 {
+	setAllowedAreas(Qt::TopToolBarArea);
+	setFloatable(false);
+	setMovable(false);
+
 	m_contextLabel = new QLabel(this);
 	QFont labelFont(m_contextLabel->font());
 	labelFont.setBold(true);

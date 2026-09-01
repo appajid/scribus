@@ -12,17 +12,15 @@ for which a new license (GPL+exception) is in place.
 
 #include "toolpalette.h"
 
-#include <algorithm>
-
 #include <QAction>
 #include <QEnterEvent>
 #include <QEvent>
-#include <QGridLayout>
 #include <QIcon>
-#include <QLabel>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPointer>
+#include <QStatusBar>
+#include <QToolBox>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -83,65 +81,53 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 	vbox->setContentsMargins(4, 4, 4, 4);
 	vbox->setSpacing(2);
 
-	grid = new QGridLayout();
-	grid->setHorizontalSpacing(2);
-	grid->setVerticalSpacing(2);
+	m_categoryBox = new QToolBox(content);
+	m_categoryBox->setObjectName("toolCategories");
+	m_categoryBox->setMinimumWidth(82);
 
-	int row = 0;
+	QVBoxLayout* navigate = addToolSection("Navigate");
+	addToolButtonEntry("toolsSelect", navigate);
+	addToolButtonEntry("toolsEditContents", navigate);
+	addToolButtonEntry("toolsEditWithStoryEditor", navigate);
+	addToolButtonEntry("toolsZoom", navigate);
 
-	addSectionHeader( "Select & Navigate", &row );
-	addToolButtonEntry("toolsSelect", row, 0);
-	addToolButtonEntry("toolsEditContents", row, 1);
-	++row;
-	addToolButtonEntry("toolsEditWithStoryEditor", row, 0);
-	addToolButtonEntry("toolsZoom", row, 1);
-	++row;
+	QVBoxLayout* frames = addToolSection("Frames");
+	addToolButtonEntry("toolsInsertTextFrame", frames);
+	addToolButtonEntry("toolsInsertImageFrame", frames);
+	addToolButtonEntry("toolsInsertTable", frames);
+	addToolButtonEntry("toolsInsertRenderFrame", frames);
 
-	addSectionHeader( "Frames", &row );
-	addToolButtonEntry("toolsInsertTextFrame", row, 0);
-	addToolButtonEntry("toolsInsertImageFrame", row, 1);
-	++row;
-	addToolButtonEntry("toolsInsertTable", row, 0);
-	addToolButtonEntry("toolsInsertRenderFrame", row, 1);
-	++row;
+	QVBoxLayout* draw = addToolSection("Draw");
+	QToolButton* shapeBtn = addToolButtonEntry("toolsInsertShape", draw);
+	QToolButton* polygonBtn = addToolButtonEntry("toolsInsertPolygon", draw);
+	addToolButtonEntry("toolsInsertArc", draw);
+	addToolButtonEntry("toolsInsertSpiral", draw);
+	QToolButton* lineBtn = addToolButtonEntry("toolsInsertLine", draw);
+	addToolButtonEntry("toolsInsertBezier", draw);
+	addToolButtonEntry("toolsInsertFreehandLine", draw);
+	QToolButton* calliBtn = addToolButtonEntry("toolsInsertCalligraphicLine", draw);
 
-	addSectionHeader( "Shapes & Lines", &row );
-	QToolButton* shapeBtn = addToolButtonEntry("toolsInsertShape", row, 0);
-	QToolButton* polygonBtn = addToolButtonEntry("toolsInsertPolygon", row, 1);
-	++row;
-	addToolButtonEntry("toolsInsertArc", row, 0);
-	addToolButtonEntry("toolsInsertSpiral", row, 1);
-	++row;
-	QToolButton* lineBtn = addToolButtonEntry("toolsInsertLine", row, 0);
-	addToolButtonEntry("toolsInsertBezier", row, 1);
-	++row;
-	addToolButtonEntry("toolsInsertFreehandLine", row, 0);
-	QToolButton* calliBtn = addToolButtonEntry("toolsInsertCalligraphicLine", row, 1);
-	++row;
+	QVBoxLayout* modify = addToolSection("Modify");
+	addToolButtonEntry("toolsRotate", modify);
+	addToolButtonEntry("toolsCopyProperties", modify);
+	addToolButtonEntry("toolsLinkTextFrame", modify);
+	addToolButtonEntry("toolsUnlinkTextFrame", modify);
 
-	addSectionHeader( "Modify", &row );
-	addToolButtonEntry("toolsRotate", row, 0);
-	addToolButtonEntry("toolsCopyProperties", row, 1);
-	++row;
-	addToolButtonEntry("toolsLinkTextFrame", row, 0);
-	addToolButtonEntry("toolsUnlinkTextFrame", row, 1);
-	++row;
+	QVBoxLayout* inspect = addToolSection("Inspect");
+	addToolButtonEntry("toolsEyeDropper", inspect);
+	addToolButtonEntry("toolsMeasurements", inspect);
 
-	addSectionHeader( "Inspect", &row );
-	addToolButtonEntry("toolsEyeDropper", row, 0);
-	addToolButtonEntry("toolsMeasurements", row, 1);
-	++row;
+	QVBoxLayout* interactivePdf = addToolSection("Interactive PDF");
+	addToolButtonEntry("toolsPDFPushButton", interactivePdf);
+	addToolButtonEntry("toolsPDFCheckBox", interactivePdf);
+	addToolButtonEntry("toolsPDFRadioButton", interactivePdf);
+	addToolButtonEntry("toolsPDFTextField", interactivePdf);
+	addToolButtonEntry("toolsPDFComboBox", interactivePdf);
+	addToolButtonEntry("toolsPDFListBox", interactivePdf);
+	addToolButtonEntry("toolsPDFAnnotText", interactivePdf);
+	addToolButtonEntry("toolsPDFAnnotLink", interactivePdf);
 
-	vbox->addLayout(grid);
-
-	toolHelpLabel = new QLabel(content);
-	toolHelpLabel->setObjectName("toolHelpLabel");
-	toolHelpLabel->setWordWrap(true);
-	toolHelpLabel->setTextFormat(Qt::RichText);
-	toolHelpLabel->setTextInteractionFlags(Qt::NoTextInteraction);
-	toolHelpLabel->setMinimumHeight(fontMetrics().lineSpacing() * 3);
-	vbox->addWidget(toolHelpLabel);
-	vbox->addStretch(1);
+	vbox->addWidget(m_categoryBox);
 
 	setWidget(content);
 
@@ -269,8 +255,8 @@ void ToolPalette::SelShape(int s, int c, qreal *vals)
 
 void ToolPalette::languageChange()
 {
-	for (int i = 0; i < m_sectionHeaders.count() && i < m_sectionHeaderTexts.count(); ++i)
-		m_sectionHeaders[i]->setText(tr(m_sectionHeaderTexts[i].toUtf8().constData()));
+	for (int i = 0; i < m_categoryBox->count() && i < m_categoryTexts.count(); ++i)
+		m_categoryBox->setItemText(i, tr(m_categoryTexts[i].toUtf8().constData()));
 
 	if (idPolygonPropertiesAction)
 		idPolygonPropertiesAction->setText( tr("Properties...") );
@@ -289,32 +275,28 @@ void ToolPalette::updateToolHelp(QAction* action)
 	if (!sct.isEmpty() && status.endsWith("(" + sct + ")"))
 		status.chop(sct.length() + 2);
 
-	QString text = "<qt><b>" + name.toHtmlEscaped() + "</b>";
+	QString message = name;
 	if (!sct.isEmpty())
-		text += " (" + sct.toHtmlEscaped() + ")";
-	text += "</qt>";
+		message += " (" + sct + ")";
 	if (!status.isEmpty())
-		text += "<br/>" + status.toHtmlEscaped();
-	toolHelpLabel->setText(text);
+		message += " — " + status;
+	if (m_ScMW && m_ScMW->statusBar())
+		m_ScMW->statusBar()->showMessage(message, 3000);
 }
 
-QLabel* ToolPalette::addSectionHeader(const QString &headerText, int *row)
+QVBoxLayout* ToolPalette::addToolSection(const QString &headerText)
 {
-	QLabel* label = new QLabel(tr(headerText.toUtf8().constData()), this);
-	label->setObjectName("toolSectionHeader");
-	QFont fnt(label->font());
-	fnt.setBold(true);
-	fnt.setPointSize(std::max(fnt.pointSize() - 1, 7));
-	label->setFont(fnt);
-	label->setContentsMargins(2, 4, 0, 0);
-	grid->addWidget(label, *row, 0, 1, 2);
-	m_sectionHeaders.append(label);
-	m_sectionHeaderTexts.append(headerText);
-	++(*row);
-	return label;
+	QWidget* page = new QWidget(m_categoryBox);
+	QVBoxLayout* layout = new QVBoxLayout(page);
+	layout->setContentsMargins(2, 4, 2, 4);
+	layout->setSpacing(2);
+	layout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+	m_categoryBox->addItem(page, tr(headerText.toUtf8().constData()));
+	m_categoryTexts.append(headerText);
+	return layout;
 }
 
-QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, int row, int col)
+QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, QVBoxLayout* sectionLayout)
 {
 	QPointer<ScrAction> action = m_ScMW->scrActions.value(actionName);
 	ToolPaletteButton* btn = new ToolPaletteButton(this, action);
@@ -322,7 +304,8 @@ QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, int row,
 	btn->setDefaultAction(action);
 	btn->setIconSize(QSize(22, 22));
 	btn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	grid->addWidget(btn, row, col);
+	btn->setMinimumSize(38, 32);
+	sectionLayout->addWidget(btn, 0, Qt::AlignHCenter);
 	m_buttons.insert(actionName, btn);
 	m_buttonActions.insert(btn, action);
 	connect(action, &QAction::toggled, this, [this, action](bool on) {

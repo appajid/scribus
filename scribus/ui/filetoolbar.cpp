@@ -29,16 +29,21 @@ for which a new license (GPL+exception) is in place.
 #include "scraction.h"
 #include "scribus.h"
 
-FileToolBar::FileToolBar(ScribusMainWindow* p) : ScToolBar( tr("File"), "File", p)
+FileToolBar::FileToolBar(ScribusMainWindow* p) : ScToolBar( tr("Main"), "Main", p)
 {
 	parent = p;
+	setAllowedAreas(Qt::TopToolBarArea);
+	setFloatable(false);
+	setMovable(false);
+
 	addAction(p->scrActions["fileNew"]);
 	addAction(p->scrActions["fileOpen"]);
 	addAction(p->scrActions["fileSave"]);
-	addAction(p->scrActions["fileClose"]);
-	addAction(p->scrActions["filePrint"]);
-	addAction(p->scrActions["toolsPreflightVerifier"]);
-	addAction(p->scrActions["fileExportAsPDF"]);
+	addSeparator();
+	addAction(p->scrActions["editUndoAction"]);
+	addAction(p->scrActions["editRedoAction"]);
+	addSeparator();
+	addAction(p->scrActions["helpActionSearch"]);
 	fileOpenButtonMenu = new QMenu();
 	QToolButton* tb = dynamic_cast<QToolButton*>(widgetForAction(parent->scrActions["fileOpen"]));
 	tb->setMenu(fileOpenButtonMenu);

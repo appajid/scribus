@@ -1061,7 +1061,7 @@ void ActionManager::initHelpMenuActions()
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	(*scrActions)[name]->setMenuRole(QAction::AboutQtRole);
 	name = "helpActionSearch";
-	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
+	scrActions->insert(name, new ScrAction("edit-find-replace", "edit-find-replace", "", defaultKey(name), mainWindow));
 	name = "helpTooltips";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name = "helpManual";

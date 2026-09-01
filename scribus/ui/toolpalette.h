@@ -23,9 +23,8 @@ for which a new license (GPL+exception) is in place.
 
 class QAction;
 class QEvent;
-class QGridLayout;
-class QLabel;
 class QMenu;
+class QToolBox;
 class QToolButton;
 class QVBoxLayout;
 
@@ -37,10 +36,9 @@ class ScrAction;
 /**
   * @brief InDesign-like dockable Tools palette.
   *
-  * Provides a grouped, checkable grid of QToolButtons bound to the same
-  * ScrAction objects used by the legacy ModeToolBar, plus sub-tool flyout
-  * menus (autoforms, polygon side presets, line variants, calligraphic pen
-  * settings) and a tool help label at the bottom.
+  * Provides a compact category-at-a-time set of QToolButtons bound to the
+  * same ScrAction objects used throughout Scribus, plus sub-tool flyout
+  * menus for shapes, polygons, lines, and calligraphic settings.
   */
 class SCRIBUS_API ToolPalette : public DockPanelBase
 {
@@ -68,19 +66,17 @@ public:
 	void updateToolHelp(QAction* action);
 
 protected:
-	/** @brief Add a section header label to the tools grid. */
-	QLabel* addSectionHeader(const QString &text, int *row);
+	/** @brief Add a compact, collapsible category to the palette. */
+	QVBoxLayout* addToolSection(const QString &text);
 	/** @brief Add a tool button bound to the named tool action. */
-	QToolButton* addToolButtonEntry(const QString &actionName, int row, int col);
+	QToolButton* addToolButtonEntry(const QString &actionName, QVBoxLayout* sectionLayout);
 	/** @brief Set the number of polygon corners from a flyout preset. */
 	void setPolygonSides(int sides);
 
 	QHash<QString, QToolButton*> m_buttons;
 	QHash<QToolButton*, ScrAction*> m_buttonActions;
-	QList<QLabel*> m_sectionHeaders;
-	QStringList m_sectionHeaderTexts;
-	QLabel* toolHelpLabel { nullptr };
-	QGridLayout* grid { nullptr };
+	QStringList m_categoryTexts;
+	QToolBox* m_categoryBox { nullptr };
 	QMenu* insertPolygonButtonMenu { nullptr };
 	QMenu* lineButtonMenu { nullptr };
 	QAction* idPolygonPropertiesAction { nullptr };

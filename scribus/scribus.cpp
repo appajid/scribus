@@ -588,23 +588,24 @@ void ScribusMainWindow::initToolBars()
 {
 	fileToolBar = new FileToolBar(this);
 	editToolBar = new EditToolBar(this);
-	UndoWidget* uWidget = new UndoWidget(editToolBar, "uWidget");
+	// The undo helper maintains action history without adding unrelated edit
+	// commands to the contextual row. Main exposes Undo and Redo directly.
+	UndoWidget* uWidget = new UndoWidget(this, "uWidget");
+	uWidget->hide();
 	m_undoManager->registerGui(uWidget);
 	modeToolBar = new ModeToolBar(this);
 	pdfToolBar = new PDFToolBar(this);
 	viewToolBar = new ViewToolBar(this);
 
-	addScToolBar(fileToolBar, fileToolBar->objectName());
-	addScToolBar(editToolBar, editToolBar->objectName());
-	addScToolBar(modeToolBar, modeToolBar->objectName(), Qt::ToolBarArea::LeftToolBarArea);
-	addScToolBar(pdfToolBar, pdfToolBar->objectName());
-	addScToolBar(viewToolBar, viewToolBar->objectName());
-	connect(modeToolBar, SIGNAL(visibilityChanged(bool)), scrActions["toolsToolbarTools"], SLOT(setChecked(bool)));
-	connect(scrActions["toolsToolbarPDF"], SIGNAL(toggled(bool)), pdfToolBar, SLOT(setVisible(bool)));
-	connect(pdfToolBar, SIGNAL(visibilityChanged(bool)), scrActions["toolsToolbarPDF"], SLOT(setChecked(bool)));
-	connect(scrActions["toolsToolbarTools"], SIGNAL(toggled(bool)), modeToolBar, SLOT(setVisible(bool)) );
-	connect(viewToolBar, SIGNAL(visibilityChanged(bool)), scrActions["toolsToolbarView"], SLOT(setChecked(bool)));
-	connect(scrActions["toolsToolbarView"], SIGNAL(toggled(bool)), viewToolBar, SLOT(setVisible(bool)) );
+	addScToolBar(fileToolBar, fileToolBar->objectName(), Qt::TopToolBarArea);
+	addToolBarBreak(Qt::TopToolBarArea);
+	addScToolBar(editToolBar, editToolBar->objectName(), Qt::TopToolBarArea);
+
+	// Mode, PDF, and View toolbars still own a few shared widgets and flyout
+	// models internally, but are no longer part of the visible workspace.
+	modeToolBar->hide();
+	pdfToolBar->hide();
+	viewToolBar->hide();
 }
 
 void ScribusMainWindow::setStyleSheet()
@@ -1430,10 +1431,6 @@ void ScribusMainWindow::addDefaultWindowMenuItems()
 	scrMenuMgr->addMenuItemString("toolsPreflightVerifier", "Windows");
 	scrMenuMgr->addMenuItemString("toolsDocumentLog", "Windows");
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Windows");
-	scrMenuMgr->addMenuItemString("toolsToolbarTools", "Windows");
-	scrMenuMgr->addMenuItemString("toolsToolbarPDF", "Windows");
-	scrMenuMgr->addMenuItemString("toolsToolbarView", "Windows");
-	scrMenuMgr->addMenuItemString("SEPARATOR", "Windows");
 	scrMenuMgr->addMenuItemStringsToMenuBar("Windows", scrActions);
 }
 
@@ -1954,8 +1951,6 @@ void ScribusMainWindow::closeEvent(QCloseEvent *ce)
 	}
 	fileToolBar->connectPrefsSlot(false);
 	editToolBar->connectPrefsSlot(false);
-	modeToolBar->connectPrefsSlot(false);
-	pdfToolBar->connectPrefsSlot(false);
 
 	// if palettes are temporary hidden restore them before saving the workspace
 	dockManager->restoreHiddenWorkspace();
@@ -6853,14 +6848,29 @@ int ScribusMainWindow::ShowSubs()
 	symbolPalette->startup();
 	toolPalette->startup();
 
-	// try to load custom layout from preferences
-	dockManager->restoreWorkspaceFromPrefs();
+	// Move existing profiles to the streamlined single-column workspace once.
+	// Layout changes made after this migration continue to persist normally.
+	PrefsContext* workspacePrefs = m_prefsManager.prefsFile->getContext("WorkspaceModernization");
+	const bool migrateEssentialLayout = !workspacePrefs->getBool("EssentialDockLayoutV2", false);
+	if (migrateEssentialLayout)
+	{
+		dockManager->resetWorkspaceToDefault();
+		workspacePrefs->set("EssentialDockLayoutV2", true);
+	}
+	else
+		dockManager->restoreWorkspaceFromPrefs();
 
 	// init the toolbars
 	fileToolBar->initVisibility();
 	editToolBar->initVisibility();
-	modeToolBar->initVisibility(false);
-	pdfToolBar->initVisibility();
+	if (migrateEssentialLayout)
+	{
+		fileToolBar->show();
+		editToolBar->show();
+	}
+	modeToolBar->hide();
+	pdfToolBar->hide();
+	viewToolBar->hide();
 
 	// [dev] env-gated diagnostics for the automated smoke test
 	auto dumpToolPalette = [this](const char* tag) {
