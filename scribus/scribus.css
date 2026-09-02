@@ -181,6 +181,17 @@ QWidget#sectionContainerHeader QLabel#sectionContainerTitle {
        padding-left: 2px;
 }
 
+SectionContainer[inspectorSection="true"] {
+       background: palette(base);
+       border: 1px solid palette(mid);
+       border-radius: 4px;
+}
+
+SectionContainer[inspectorSection="true"] QWidget#sectionContainerHeader {
+       border-top-left-radius: 4px;
+       border-top-right-radius: 4px;
+}
+
 QPushButton#sectionContainerCollapse {
        border: none;
        background: transparent;

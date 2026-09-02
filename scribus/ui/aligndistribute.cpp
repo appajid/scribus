@@ -63,9 +63,11 @@ AlignDistribute::AlignDistribute(QWidget* parent) : QWidget(parent)
 
 	for (auto* section : { sectionAlign, sectionDistribute })
 	{
-		section->setHeaderSize(SectionContainerHeader::Condensed);
+		section->setProperty("inspectorSection", true);
+		section->setAttribute(Qt::WA_StyledBackground, true);
+		section->setHeaderSize(SectionContainerHeader::Normal);
 		section->setHeaderType(SectionContainerHeader::Header);
-		section->setHasStyle(false);
+		section->setHasStyle(true);
 	}
 }
 

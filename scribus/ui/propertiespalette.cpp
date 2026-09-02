@@ -50,9 +50,11 @@ namespace
 {
 void styleInspectorSection(SectionContainer* section)
 {
-	section->setHeaderSize(SectionContainerHeader::Condensed);
+	section->setProperty("inspectorSection", true);
+	section->setAttribute(Qt::WA_StyledBackground, true);
+	section->setHeaderSize(SectionContainerHeader::Normal);
 	section->setHeaderType(SectionContainerHeader::Header);
-	section->setHasStyle(false);
+	section->setHasStyle(true);
 }
 }
 

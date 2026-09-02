@@ -69,9 +69,22 @@ ContentPalette::ContentPalette(QWidget *parent) :
 	const auto sections = panel->findChildren<SectionContainer*>();
 	for (auto* section : sections)
 	{
-		section->setHeaderSize(SectionContainerHeader::Condensed);
+		section->setProperty("inspectorSection", true);
+		section->setAttribute(Qt::WA_StyledBackground, true);
+		section->setHeaderSize(SectionContainerHeader::Normal);
 		section->setHeaderType(SectionContainerHeader::Header);
-		section->setHasStyle(false);
+		section->setHasStyle(true);
+	}
+
+	for (auto* contentPanel : { static_cast<QWidget*>(defaultPal), static_cast<QWidget*>(groupPal),
+		static_cast<QWidget*>(imagePal), static_cast<QWidget*>(pagePal),
+		static_cast<QWidget*>(tablePal), static_cast<QWidget*>(textPal) })
+	{
+		if (contentPanel->layout())
+		{
+			contentPanel->layout()->setContentsMargins(6, 6, 6, 6);
+			contentPanel->layout()->setSpacing(6);
+		}
 	}
 
 	stackedWidget->setCurrentIndex((int) Panel::empty);
