@@ -13,6 +13,8 @@ for which a new license (GPL+exception) is in place.
 #include "sctextstruct.h"
 #include "units.h"
 
+class QStackedWidget;
+class QTabBar;
 class PageItem;
 class PropertyWidget_Advanced;
 class PropertyWidget_Alignment;
@@ -91,19 +93,26 @@ protected:
 	PropertyWidget_FontFeatures* fontfeaturesWidget;
 	PropertyWidget_Hyphenation* hyphenationWidget;
 	PropertyWidget_Orphans* orphanBox;
-	PropertyWidget_ParagraphStyle* styleWidgets;
-	PropertyWidget_ParEffect* parEffectWidgets;
+	PropertyWidget_ParagraphStyle* characterStyleWidgets;
+	PropertyWidget_ParagraphStyle* paragraphStyleWidgets;
+	PropertyWidget_ParEffect* dropCapWidgets;
+	PropertyWidget_ParEffect* listWidgets;
 	PropertyWidget_PathText* pathTextWidgets;
 	PropertyWidget_Text* textWidgets;
 
-	SectionContainer * scStyles= {nullptr};
+	QTabBar* textModeTabs {nullptr};
+	QStackedWidget* textModeStack {nullptr};
+
+	SectionContainer * scCharacterStyles = {nullptr};
+	SectionContainer * scParagraphStyles = {nullptr};
 	SectionContainer * scAdvanced = {nullptr};
 	SectionContainer * scAlignment = {nullptr};
 	SectionContainer * scDistance = {nullptr};
 	SectionContainer * scFontFeatures = {nullptr};
 	SectionContainer * scHyphenation = {nullptr};
 	SectionContainer * scOrphans = {nullptr};
-	SectionContainer * scParEffect = {nullptr};
+	SectionContainer * scDropCaps = {nullptr};
+	SectionContainer * scLists = {nullptr};
 	SectionContainer * scPathText = {nullptr};
 	SectionContainer * scText = {nullptr};
 	SectionContainer * scTextColor = {nullptr};

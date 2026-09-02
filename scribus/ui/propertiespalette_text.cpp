@@ -13,7 +13,9 @@ for which a new license (GPL+exception) is in place.
 #endif
 #include <cmath>
 #include <QSignalBlocker>
-#include <QStackedLayout>
+#include <QStackedWidget>
+#include <QTabBar>
+#include <QVBoxLayout>
 
 #include "appmodes.h"
 #include "commonstrings.h"
@@ -43,11 +45,19 @@ for which a new license (GPL+exception) is in place.
 
 PropertiesPalette_Text::PropertiesPalette_Text( QWidget* parent) : QWidget(parent)
 {
-	styleWidgets = new PropertyWidget_ParagraphStyle(this);
-	scStyles = new SectionContainer(tr("Styles"), "SectionTPStyles", true, true);
-	scStyles->setCanSaveState(true);
-	scStyles->setWidget(styleWidgets);
-	scStyles->restorePreferences();
+	characterStyleWidgets = new PropertyWidget_ParagraphStyle(this);
+	characterStyleWidgets->hideParagraphStyle(true);
+	scCharacterStyles = new SectionContainer(tr("Character Styles"), "SectionTPCharacterStyles", true, true);
+	scCharacterStyles->setCanSaveState(true);
+	scCharacterStyles->setWidget(characterStyleWidgets);
+	scCharacterStyles->restorePreferences();
+
+	paragraphStyleWidgets = new PropertyWidget_ParagraphStyle(this);
+	paragraphStyleWidgets->hideCharacterStyle(true);
+	scParagraphStyles = new SectionContainer(tr("Paragraph Styles"), "SectionTPParagraphStyles", true, true);
+	scParagraphStyles->setCanSaveState(true);
+	scParagraphStyles->setWidget(paragraphStyleWidgets);
+	scParagraphStyles->restorePreferences();
 
 	textWidgets = new PropertyWidget_Text(this);
 	scText = new SectionContainer(tr("Font"), "SectionTPFont", true, true);
@@ -73,11 +83,19 @@ PropertiesPalette_Text::PropertiesPalette_Text( QWidget* parent) : QWidget(paren
 	scAdvanced->setWidget(advancedWidgets);
 	scAdvanced->restorePreferences();
 
-	parEffectWidgets = new PropertyWidget_ParEffect(this);
-	scParEffect = new SectionContainer(tr("Lists && Drop Caps"), "SectionTPLists", true, false);
-	scParEffect->setCanSaveState(true);
-	scParEffect->setWidget(parEffectWidgets);
-	scParEffect->restorePreferences();
+	dropCapWidgets = new PropertyWidget_ParEffect(this);
+	dropCapWidgets->setEffectMode(PropertyWidget_ParEffect::EffectMode::DropCaps);
+	scDropCaps = new SectionContainer(tr("Drop Caps"), "SectionTPDropCaps", true, false);
+	scDropCaps->setCanSaveState(true);
+	scDropCaps->setWidget(dropCapWidgets);
+	scDropCaps->restorePreferences();
+
+	listWidgets = new PropertyWidget_ParEffect(this);
+	listWidgets->setEffectMode(PropertyWidget_ParEffect::EffectMode::Lists);
+	scLists = new SectionContainer(tr("Lists && Numbering"), "SectionTPLists", true, false);
+	scLists->setCanSaveState(true);
+	scLists->setWidget(listWidgets);
+	scLists->restorePreferences();
 
 	hyphenationWidget = new PropertyWidget_Hyphenation(this);
 	scHyphenation = new SectionContainer(tr("Hyphenation && Language"), "SectionTPHyphenation", true, false);
@@ -103,21 +121,51 @@ PropertiesPalette_Text::PropertiesPalette_Text( QWidget* parent) : QWidget(paren
 	scPathText->setWidget(pathTextWidgets);
 	scPathText->restorePreferences();
 
+	textModeTabs = new QTabBar(this);
+	textModeTabs->setObjectName(QStringLiteral("textInspectorTabs"));
+	textModeTabs->setAccessibleName(tr("Text controls"));
+	textModeTabs->setDrawBase(false);
+	textModeTabs->setExpanding(true);
+	textModeTabs->setUsesScrollButtons(false);
+	textModeTabs->addTab(tr("Type"));
+	textModeTabs->addTab(tr("Paragraph"));
+
+	auto* typePage = new QWidget(this);
+	auto* typeLayout = new QVBoxLayout(typePage);
+	typeLayout->setContentsMargins(0, 0, 0, 0);
+	typeLayout->setSpacing(6);
+	typeLayout->addWidget(scCharacterStyles);
+	typeLayout->addWidget(scText);
+	typeLayout->addWidget(scAdvanced);
+	typeLayout->addWidget(scFontFeatures);
+	typeLayout->addWidget(scDropCaps);
+	typeLayout->addWidget(scPathText);
+	typeLayout->addStretch(1);
+
+	auto* paragraphPage = new QWidget(this);
+	auto* paragraphLayout = new QVBoxLayout(paragraphPage);
+	paragraphLayout->setContentsMargins(0, 0, 0, 0);
+	paragraphLayout->setSpacing(6);
+	paragraphLayout->addWidget(scParagraphStyles);
+	paragraphLayout->addWidget(scAlignment);
+	paragraphLayout->addWidget(scDistance);
+	paragraphLayout->addWidget(scLists);
+	paragraphLayout->addWidget(scHyphenation);
+	paragraphLayout->addWidget(scOrphans);
+	paragraphLayout->addStretch(1);
+
+	textModeStack = new QStackedWidget(this);
+	textModeStack->setObjectName(QStringLiteral("textInspectorStack"));
+	textModeStack->addWidget(typePage);
+	textModeStack->addWidget(paragraphPage);
+	connect(textModeTabs, &QTabBar::currentChanged, textModeStack, &QStackedWidget::setCurrentIndex);
+
 	// Layout stack
 	QVBoxLayout * lyt = new QVBoxLayout();
 	lyt->setContentsMargins(0, 0, 0, 0);
-	lyt->setSpacing(0);
-	lyt->addWidget(scStyles);
-	lyt->addWidget(scText);
-	lyt->addWidget(scAlignment);
-	lyt->addWidget(scAdvanced);
-	lyt->addWidget(scDistance);
-	lyt->addWidget(scParEffect);
-	lyt->addWidget(scHyphenation);
-	lyt->addWidget(scOrphans);
-	lyt->addWidget(scFontFeatures);
-	lyt->addWidget(scPathText);
-	lyt->addStretch(1);
+	lyt->setSpacing(6);
+	lyt->addWidget(textModeTabs);
+	lyt->addWidget(textModeStack, 1);
 
 	setLayout(lyt);
 	setEnabled(false);
@@ -139,8 +187,10 @@ void PropertiesPalette_Text::setMainWindow(ScribusMainWindow* mw)
 	fontfeaturesWidget->setMainWindow(mw);
 	distanceWidgets->setMainWindow(mw);
 	hyphenationWidget->setMainWindow(mw);
-	styleWidgets->setMainWindow(mw);
-	parEffectWidgets->setMainWindow(mw);
+	characterStyleWidgets->setMainWindow(mw);
+	paragraphStyleWidgets->setMainWindow(mw);
+	dropCapWidgets->setMainWindow(mw);
+	listWidgets->setMainWindow(mw);
 	pathTextWidgets->setMainWindow(mw);
 
 	connect(m_ScMW, SIGNAL(UpdateRequest(int))     , this  , SLOT(handleUpdateRequest(int)));
@@ -171,9 +221,11 @@ void PropertiesPalette_Text::setDoc(ScribusDoc *d)
 	alignmentWidgets->setDoc(m_doc);
 	fontfeaturesWidget->setDoc(m_doc);
 	distanceWidgets->setDoc(m_doc);
-	parEffectWidgets->setDoc(m_doc);
+	dropCapWidgets->setDoc(m_doc);
+	listWidgets->setDoc(m_doc);
 	hyphenationWidget->setDoc(m_doc);
-	styleWidgets->setDoc(m_doc);
+	characterStyleWidgets->setDoc(m_doc);
+	paragraphStyleWidgets->setDoc(m_doc);
 	orphanBox->setDoc(m_doc);
 	pathTextWidgets->setDoc(m_doc);
 
@@ -200,9 +252,11 @@ void PropertiesPalette_Text::unsetDoc()
 	fontfeaturesWidget->setDoc(nullptr);
 	distanceWidgets->setDoc(nullptr);
 	hyphenationWidget->setDoc(nullptr);
-	styleWidgets->setDoc(nullptr);
+	characterStyleWidgets->setDoc(nullptr);
+	paragraphStyleWidgets->setDoc(nullptr);
 	orphanBox->setDoc(nullptr);
-	parEffectWidgets->setDoc(nullptr);
+	dropCapWidgets->setDoc(nullptr);
+	listWidgets->setDoc(nullptr);
 	pathTextWidgets->setDoc(nullptr);
 
 	setEnabled(false);
@@ -276,8 +330,10 @@ void PropertiesPalette_Text::handleSelectionChanged()
 void PropertiesPalette_Text::handleUpdateRequest(int updateFlags)
 {
 	textWidgets->handleUpdateRequest(updateFlags);
-	styleWidgets->handleUpdateRequest(updateFlags);
-	parEffectWidgets->handleUpdateRequest(updateFlags);
+	characterStyleWidgets->handleUpdateRequest(updateFlags);
+	paragraphStyleWidgets->handleUpdateRequest(updateFlags);
+	dropCapWidgets->handleUpdateRequest(updateFlags);
+	listWidgets->handleUpdateRequest(updateFlags);
 
 }
 
@@ -309,7 +365,8 @@ void PropertiesPalette_Text::setCurrentItem(PageItem *item)
 	{
 		alignmentWidgets->handleSelectionChanged();
 		distanceWidgets->handleSelectionChanged();
-		parEffectWidgets->handleSelectionChanged();
+		dropCapWidgets->handleSelectionChanged();
+		listWidgets->handleSelectionChanged();
 	}
 
 	if (m_item->isTextFrame() || m_item->isPathText() || m_item->isTable())
@@ -346,7 +403,8 @@ void PropertiesPalette_Text::unitChange()
 	fontfeaturesWidget->unitChange();
 	distanceWidgets->unitChange();
 	pathTextWidgets->unitChange();
-	parEffectWidgets->unitChange();
+	dropCapWidgets->unitChange();
+	listWidgets->unitChange();
 	textWidgets->unitChange();
 
 	m_haveItem = tmp;
@@ -386,18 +444,22 @@ void PropertiesPalette_Text::updateParagraphStyle(const ParagraphStyle& newCurre
 	advancedWidgets->updateStyle(newCurrent);
 	fontfeaturesWidget->updateStyle(newCurrent);
 	orphanBox->updateStyle(newCurrent);
-	parEffectWidgets->updateStyle(newCurrent);
+	dropCapWidgets->updateStyle(newCurrent);
+	listWidgets->updateStyle(newCurrent);
 	hyphenationWidget->updateStyle(newCurrent);
 	textWidgets->updateStyle(newCurrent);
-	styleWidgets->updateStyle(newCurrent);
+	characterStyleWidgets->updateStyle(newCurrent);
+	paragraphStyleWidgets->updateStyle(newCurrent);
 	alignmentWidgets->updateStyle(newCurrent);
 	distanceWidgets->updateStyle(newCurrent);
 }
 
 void PropertiesPalette_Text::updateTextStyles()
 {
-	styleWidgets->updateTextStyles();
-	parEffectWidgets->updateTextStyles();
+	characterStyleWidgets->updateTextStyles();
+	paragraphStyleWidgets->updateTextStyles();
+	dropCapWidgets->updateTextStyles();
+	listWidgets->updateTextStyles();
 }
 
 void PropertiesPalette_Text::showAlignment(int e)
@@ -422,15 +484,25 @@ void PropertiesPalette_Text::changeEvent(QEvent *e)
 
 void PropertiesPalette_Text::languageChange()
 {
+	const int currentMode = textModeTabs->currentIndex();
+	textModeTabs->setTabText(0, tr("Type"));
+	textModeTabs->setTabText(1, tr("Paragraph"));
+	textModeTabs->setCurrentIndex(currentMode);
+	textModeTabs->setTabToolTip(0, tr("Character formatting and type effects"));
+	textModeTabs->setTabToolTip(1, tr("Paragraph formatting and flow"));
+
+	scCharacterStyles->setText(tr("Character Styles"));
+	scParagraphStyles->setText(tr("Paragraph Styles"));
 	scAdvanced->setText(tr("Typography"));
-	scAlignment->setText(tr("Alignment"));
-	scDistance->setText(tr("Columns && Indentation"));
+	scAlignment->setText(tr("Alignment && Direction"));
+	scDistance->setText(tr("Indents, Spacing && Columns"));
 	scFontFeatures->setText(tr("OpenType Features"));
 	scHyphenation->setText(tr("Hyphenation && Language"));
-	scOrphans->setText(tr("Orphans && Widows"));
-	scParEffect->setText(tr("Lists && Drop Caps"));
+	scOrphans->setText(tr("Keep Options"));
+	scDropCaps->setText(tr("Drop Caps"));
+	scLists->setText(tr("Lists && Numbering"));
 	scPathText->setText(tr("Text on Path"));
-	scText->setText(tr("Font"));
+	scText->setText(tr("Font && Character Color"));
 
 	orphanBox->languageChange();
 	distanceWidgets->languageChange();
@@ -440,5 +512,8 @@ void PropertiesPalette_Text::languageChange()
 	fontfeaturesWidget->languageChange();
 	hyphenationWidget->languageChange();
 	textWidgets->languageChange();
-	styleWidgets->languageChange();
+	characterStyleWidgets->languageChange();
+	paragraphStyleWidgets->languageChange();
+	dropCapWidgets->languageChange();
+	listWidgets->languageChange();
 }

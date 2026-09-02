@@ -18,9 +18,17 @@ class PropertyWidget_ParEffect : public QFrame, private Ui::PropertyWidget_ParEf
 	Q_OBJECT
 
 public:
+	enum class EffectMode
+	{
+		All,
+		DropCaps,
+		Lists
+	};
+
 	PropertyWidget_ParEffect(QWidget* parent = nullptr);
 	~PropertyWidget_ParEffect() {}
 
+	void setEffectMode(EffectMode mode);
 	void updateStyle(const ParagraphStyle& newPStyle);
 	void updateTextStyles();
 
@@ -74,6 +82,8 @@ private slots:
 	void insertSpecialChars(const QVector<uint> &charCodes);
 
 private:
+	EffectMode m_effectMode { EffectMode::All };
+
 	void openEnhanced();
 	void closeEnhanced(bool show = false);
 	void setType(int id);

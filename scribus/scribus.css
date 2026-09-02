@@ -177,6 +177,32 @@ QLabel#inspectorContextSubtitle {
        color: palette(dark);
 }
 
+QTabBar#textInspectorTabs {
+       background: palette(midlight);
+       border: 1px solid palette(mid);
+       border-radius: 4px;
+}
+
+QTabBar#textInspectorTabs::tab {
+       background: transparent;
+       border: none;
+       color: palette(dark);
+       font-weight: 600;
+       min-height: 24px;
+       padding: 3px 10px;
+}
+
+QTabBar#textInspectorTabs::tab:selected {
+       background: palette(base);
+       color: palette(text);
+       border-radius: 3px;
+}
+
+QTabBar#textInspectorTabs::tab:hover:!selected {
+       background: palette(light);
+       color: palette(text);
+}
+
 QWidget#sectionContainerHeader QLabel#sectionContainerTitle {
        padding-left: 2px;
 }

@@ -201,24 +201,34 @@ void PropertyWidget_ParEffect::fillBulletStrEditCombo()
 void PropertyWidget_ParEffect::fillPECombo()
 {
 	QSignalBlocker sb(peCombo);
-	int currIndex = peCombo->currentIndex();
+	const int currentEffect = peCombo->currentData().isValid() ? peCombo->currentData().toInt() : -1;
 	peCombo->clear();
 	peCombo->addItem(tr("No Paragraph Effects"), -1);
-	peCombo->addItem(tr("Drop Caps"), 0);
-	peCombo->addItem(tr("Bulleted List"), 1);
-	peCombo->addItem(tr("Numbered List"), 2);
-	peCombo->setCurrentIndex(currIndex);
+	if (m_effectMode != EffectMode::Lists)
+		peCombo->addItem(tr("Drop Caps"), 0);
+	if (m_effectMode != EffectMode::DropCaps)
+	{
+		peCombo->addItem(tr("Bulleted List"), 1);
+		peCombo->addItem(tr("Numbered List"), 2);
+	}
+
+	const int currentIndex = peCombo->findData(currentEffect);
+	peCombo->setCurrentIndex(currentIndex >= 0 ? currentIndex : 0);
+	setType(peCombo->currentData().toInt());
+}
+
+void PropertyWidget_ParEffect::setEffectMode(EffectMode mode)
+{
+	if (m_effectMode == mode)
+		return;
+
+	m_effectMode = mode;
+	fillPECombo();
 }
 
 void PropertyWidget_ParEffect::updateStyle(const ParagraphStyle& newPStyle)
 {
 	int oldPeComboIndex = peCombo->currentIndex();
-
-	if (peCombo->currentIndex() && !newPStyle.hasBullet() && !newPStyle.hasDropCap() && !newPStyle.hasNum())
-	{
-		setType(-1);
-		return;
-	}
 
 	QSignalBlocker blocker1(peCombo);
 	QSignalBlocker blocker2(dropCapLines);
@@ -233,20 +243,16 @@ void PropertyWidget_ParEffect::updateStyle(const ParagraphStyle& newPStyle)
 	QSignalBlocker blockerB(peIndent);
 	QSignalBlocker blockerC(peCharStyleCombo);
 
+	int effectType = -1;
 	if (newPStyle.hasDropCap())
-	{
-		peCombo->setCurrentIndex(1);
-	}
+		effectType = 0;
 	else if (newPStyle.hasBullet())
-	{
-		peCombo->setCurrentIndex(2);
-	}
+		effectType = 1;
 	else if (newPStyle.hasNum())
-	{
-		peCombo->setCurrentIndex(3);
-	}
-	else
-		peCombo->setCurrentIndex(0);
+		effectType = 2;
+
+	const int effectIndex = peCombo->findData(effectType);
+	peCombo->setCurrentIndex(effectIndex >= 0 ? effectIndex : peCombo->findData(-1));
 
 	setType(peCombo->currentData().toInt());
 
@@ -355,22 +361,22 @@ void PropertyWidget_ParEffect::handleParEffectUse()
 	if (!m_doc || !m_item)
 		return;
 
-	int id = peCombo->currentIndex();
+	const int effectType = peCombo->currentData().toInt();
 	double newMinimum = -3000.0;
-	if (id == 2 || id == 3)
+	if (effectType == 1 || effectType == 2)
 		newMinimum = 0.0;
 	peOffset->setMinimum(newMinimum);
 
 	ParagraphStyle newStyle;
 
-	if (peCombo->currentIndex() == 1)
+	if (effectType == 0)
 	{
 		newStyle.setDropCapLines(dropCapLines->value());
 		newStyle.setHasDropCap(true);
 		newStyle.setHasBullet(false);
 		newStyle.setHasNum(false);
 	}
-	else if (peCombo->currentIndex() == 2)
+	else if (effectType == 1)
 	{
 		newStyle.setHasBullet(true);
 		QString bStr = bulletStrEdit->currentText();
@@ -380,7 +386,7 @@ void PropertyWidget_ParEffect::handleParEffectUse()
 		newStyle.setHasNum(false);
 		newStyle.setHasDropCap(false);
 	}
-	else if (peCombo->currentIndex() == 3)
+	else if (effectType == 2)
 	{
 		newStyle.setHasDropCap(false);
 		newStyle.setHasBullet(false);
