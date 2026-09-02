@@ -1376,6 +1376,17 @@ void ScribusDoc::replaceNamedResources(ResourceCollection& newNames)
 		if (newNames.charStyles().contains(nStyle->marksChStyle()))
 			nStyle->setMarksCharStyle(newNames.charStyles().value(nStyle->marksChStyle()));
 	}
+	for (DynamicVariable& variable : m_dynamicVariables)
+	{
+		if (variable.type != DynamicVariableResolver::RunningHeader || variable.paragraphStyle.isEmpty())
+			continue;
+		const auto replacement = newNames.styles().constFind(variable.paragraphStyle);
+		if (replacement != newNames.styles().constEnd() && !replacement.value().isEmpty())
+		{
+			variable.paragraphStyle = replacement.value();
+			invalidateDynamicVariableFrames(variable.id, false);
+		}
+	}
 	for (auto itf = FrameItems.begin(); itf != FrameItems.end(); ++itf)
 	{
 		PageItem *currItem = itf.value();
@@ -18085,6 +18096,12 @@ QString ScribusDoc::dynamicVariableIdByName(const QString& name) const
 
 QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type)
 {
+	return addDynamicVariable(name, value, id, type, QString(), QString());
+}
+
+QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type,
+	const QString& paragraphStyle, const QString& runningHeaderMode)
+{
 	QString variableId = id;
 	if (variableId.isEmpty())
 		variableId = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -18096,6 +18113,11 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 	variable.type = type.isEmpty() ? DynamicVariableResolver::UserDefined : type;
 	variable.name = name.trimmed();
 	variable.value = value;
+	if (variable.type == DynamicVariableResolver::RunningHeader)
+	{
+		variable.paragraphStyle = paragraphStyle;
+		variable.runningHeaderMode = runningHeaderMode;
+	}
 	m_dynamicVariables.insert(variableId, variable);
 	if (UndoManager::undoEnabled())
 	{
@@ -18106,9 +18128,20 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 		state->set("TYPE", variable.type);
 		state->set("NAME", variable.name);
 		state->set("VALUE", variable.value);
+		state->set("PARAGRAPH_STYLE", variable.paragraphStyle);
+		state->set("RUNNING_HEADER_MODE", variable.runningHeaderMode);
 		m_undoManager->action(this, state);
 	}
 	return variableId;
+}
+
+QString ScribusDoc::addRunningHeaderVariable(const QString& name, const QString& paragraphStyle,
+	DynamicVariable::RunningHeaderMode mode, const QString& id)
+{
+	const QString modeName = DynamicVariableResolver::runningHeaderModeToString(mode);
+	if (paragraphStyle.isEmpty() || modeName.isEmpty())
+		return QString();
+	return addDynamicVariable(name, QString(), id, DynamicVariableResolver::RunningHeader, paragraphStyle, modeName);
 }
 
 bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, const QString& value)
@@ -18169,6 +18202,8 @@ bool ScribusDoc::removeDynamicVariable(const QString& id)
 		state->set("TYPE", removed.type);
 		state->set("NAME", removed.name);
 		state->set("VALUE", removed.value);
+		state->set("PARAGRAPH_STYLE", removed.paragraphStyle);
+		state->set("RUNNING_HEADER_MODE", removed.runningHeaderMode);
 		m_undoManager->action(this, state);
 	}
 	return true;
@@ -18183,12 +18218,14 @@ void ScribusDoc::restoreDynamicVariable(SimpleState* state, bool isUndo)
 		if (isUndo)
 			removeDynamicVariable(id);
 		else
-			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"));
+			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"),
+				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"));
 	}
 	else if (action == QLatin1String("delete"))
 	{
 		if (isUndo)
-			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"));
+			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"),
+				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"));
 		else
 			removeDynamicVariable(id);
 	}

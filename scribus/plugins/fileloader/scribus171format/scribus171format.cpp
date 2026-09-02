@@ -4695,10 +4695,12 @@ bool Scribus171Format::readDynamicVariables(ScribusDoc* doc, ScXmlStreamReader& 
 		const QString name = attrs.valueAsString("name");
 		const QString value = attrs.valueAsString("value");
 		const QString type = attrs.hasAttribute("type") ? attrs.valueAsString("type") : DynamicVariableResolver::UserDefined;
+		const QString paragraphStyle = attrs.valueAsString("paragraphStyle");
+		const QString runningHeaderMode = attrs.valueAsString("mode");
 		if (id.isEmpty() || name.isEmpty() || DynamicVariableResolver::isBuiltInId(id))
 			continue;
 		if (!doc->dynamicVariable(id))
-			doc->addDynamicVariable(name, value, id, type);
+			doc->addDynamicVariable(name, value, id, type, paragraphStyle, runningHeaderMode);
 	}
 	return !reader.hasError();
 }

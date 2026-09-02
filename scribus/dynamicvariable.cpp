@@ -23,6 +23,10 @@ const QString DynamicVariableResolver::PageCount = QStringLiteral("page-count");
 const QString DynamicVariableResolver::CurrentPage = QStringLiteral("current-page");
 const QString DynamicVariableResolver::CreationDate = QStringLiteral("creation-date");
 const QString DynamicVariableResolver::ModificationDate = QStringLiteral("modification-date");
+const QString DynamicVariableResolver::RunningHeader = QStringLiteral("running-header");
+const QString DynamicVariableResolver::FirstOnPageMode = QStringLiteral("first-on-page");
+const QString DynamicVariableResolver::LastOnPageMode = QStringLiteral("last-on-page");
+const QString DynamicVariableResolver::MostRecentMode = QStringLiteral("most-recent");
 
 namespace
 {
@@ -77,6 +81,8 @@ QString DynamicVariableResolver::displayNameForType(const QString& type)
 		return QObject::tr("Creation Date");
 	if (type == ModificationDate)
 		return QObject::tr("Modification Date");
+	if (type == RunningHeader)
+		return QObject::tr("Running Header");
 	if (type == UserDefined)
 		return QObject::tr("User Defined");
 	return QObject::tr("Unknown");
@@ -92,6 +98,33 @@ QString DynamicVariableResolver::typeForId(const QString& id)
 	return isBuiltInId(id) ? id.mid(BuiltInPrefix.length()) : UserDefined;
 }
 
+DynamicVariable::RunningHeaderMode DynamicVariableResolver::runningHeaderModeFromString(const QString& mode)
+{
+	if (mode == FirstOnPageMode)
+		return DynamicVariable::RunningHeaderMode::FirstOnPage;
+	if (mode == LastOnPageMode)
+		return DynamicVariable::RunningHeaderMode::LastOnPage;
+	if (mode == MostRecentMode)
+		return DynamicVariable::RunningHeaderMode::MostRecent;
+	return DynamicVariable::RunningHeaderMode::Unsupported;
+}
+
+QString DynamicVariableResolver::runningHeaderModeToString(DynamicVariable::RunningHeaderMode mode)
+{
+	switch (mode)
+	{
+	case DynamicVariable::RunningHeaderMode::FirstOnPage:
+		return FirstOnPageMode;
+	case DynamicVariable::RunningHeaderMode::LastOnPage:
+		return LastOnPageMode;
+	case DynamicVariable::RunningHeaderMode::MostRecent:
+		return MostRecentMode;
+	case DynamicVariable::RunningHeaderMode::Unsupported:
+		break;
+	}
+	return QString();
+}
+
 QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame)
 {
 	if (!doc || variableId.isEmpty())
@@ -100,7 +133,20 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 	if (!isBuiltInId(variableId))
 	{
 		const DynamicVariable* variable = doc->dynamicVariable(variableId);
-		return variable ? variable->value : QString();
+		if (!variable)
+			return QString();
+		if (variable->type == RunningHeader)
+		{
+			// Phase 2A stores and validates the definition. Page-aware layout
+			// resolution is added separately so malformed or future definitions
+			// remain safe and cannot trigger paint-time document scans.
+			if (variable->paragraphStyle.isEmpty()
+				|| !doc->paragraphStyles().contains(variable->paragraphStyle)
+				|| runningHeaderModeFromString(variable->runningHeaderMode) == DynamicVariable::RunningHeaderMode::Unsupported)
+				return QString();
+			return QString();
+		}
+		return variable->value;
 	}
 
 	const QString type = typeForId(variableId);

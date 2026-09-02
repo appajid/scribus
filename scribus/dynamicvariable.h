@@ -18,10 +18,20 @@ class ScribusDoc;
 
 struct SCRIBUS_API DynamicVariable
 {
+	enum class RunningHeaderMode
+	{
+		FirstOnPage,
+		LastOnPage,
+		MostRecent,
+		Unsupported
+	};
+
 	QString id;
 	QString type;
 	QString name;
 	QString value;
+	QString paragraphStyle;
+	QString runningHeaderMode;
 };
 
 class SCRIBUS_API DynamicVariableResolver
@@ -35,12 +45,18 @@ public:
 	static const QString CurrentPage;
 	static const QString CreationDate;
 	static const QString ModificationDate;
+	static const QString RunningHeader;
+	static const QString FirstOnPageMode;
+	static const QString LastOnPageMode;
+	static const QString MostRecentMode;
 
 	static QList<DynamicVariable> builtInVariables();
 	static bool isBuiltInId(const QString& id);
 	static QString displayNameForType(const QString& type);
 	static QString idForType(const QString& type);
 	static QString typeForId(const QString& id);
+	static DynamicVariable::RunningHeaderMode runningHeaderModeFromString(const QString& mode);
+	static QString runningHeaderModeToString(DynamicVariable::RunningHeaderMode mode);
 	static QString resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame = nullptr);
 };
 

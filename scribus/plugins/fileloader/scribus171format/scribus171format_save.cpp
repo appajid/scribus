@@ -1567,6 +1567,11 @@ void Scribus171Format::writeDynamicVariables(ScXmlStreamWriter& docu) const
 		docu.writeAttribute("type", variable.type);
 		docu.writeAttribute("name", variable.name);
 		docu.writeAttribute("value", variable.value);
+		if (variable.type == DynamicVariableResolver::RunningHeader)
+		{
+			docu.writeAttribute("paragraphStyle", variable.paragraphStyle);
+			docu.writeAttribute("mode", variable.runningHeaderMode);
+		}
 	}
 	docu.writeEndElement();
 }

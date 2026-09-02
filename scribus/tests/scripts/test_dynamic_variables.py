@@ -45,6 +45,7 @@ created = scribus.newDocument(
 )
 check(created, "could not create the test document")
 scribus.setInfo("Test Author", "Dynamic Variables Test", "Phase 1 regression test")
+scribus.createParagraphStyle("ChapterTitle")
 
 step("testing variable CRUD")
 variable_id = scribus.createVariable("Edition", "Second Edition")
@@ -75,15 +76,47 @@ if saved_data.startswith(b"\x1f\x8b"):
 check(b"<DynamicVariables" in saved_data, "dynamic variable definitions were not serialized")
 check(variable_id.encode("utf-8") in saved_data, "the stable variable ID was not serialized")
 check(b'variableId="builtin:document-title"' in saved_data, "the built-in mark reference was not serialized")
-step("reopening document")
+
+step("injecting running-header definitions")
 scribus.closeDoc()
+running_header_id = "running-header-test"
+future_mode_id = "running-header-future-mode"
+running_header_xml = (
+    b'<Variable id="running-header-test" type="running-header" name="Chapter Header" value="" '
+    b'paragraphStyle="ChapterTitle" mode="most-recent"/>'
+    b'<Variable id="running-header-future-mode" type="running-header" name="Future Header" value="" '
+    b'paragraphStyle="ChapterTitle" mode="from-spread"/>'
+)
+check(b"</DynamicVariables>" in saved_data, "dynamic variable container is incomplete")
+saved_data = saved_data.replace(b"</DynamicVariables>", running_header_xml + b"</DynamicVariables>", 1)
+with open(output_path, "wb") as saved_file:
+    saved_file.write(saved_data)
+
+step("reopening document")
 check(scribus.openDoc(output_path), "could not reopen the saved test document")
 check(scribus.getVariable(variable_id) == "Third Edition", "user variable did not survive save/reopen")
 check(scribus.getVariable("Edition Label") == "Third Edition", "saved name lookup failed")
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved built-in metadata lookup failed")
+check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
+check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
+check(scribus.insertVariable(running_header_id, frame_name) == running_header_id, "running-header insertion failed")
+
+step("round-tripping running-header definitions")
+scribus.saveDoc()
+with open(output_path, "rb") as saved_file:
+    round_trip_data = saved_file.read()
+if round_trip_data.startswith(b"\x1f\x8b"):
+    round_trip_data = gzip.decompress(round_trip_data)
+check(b'type="running-header"' in round_trip_data, "running-header type was not preserved")
+check(b'paragraphStyle="ChapterTitle"' in round_trip_data, "running-header style was not preserved")
+check(b'mode="most-recent"' in round_trip_data, "running-header mode was not preserved")
+check(b'mode="from-spread"' in round_trip_data, "unknown future mode was not preserved")
+check(b'variableId="running-header-test"' in round_trip_data, "running-header mark reference was not serialized")
 
 step("deleting variable")
 scribus.deleteVariable(variable_id)
+scribus.deleteVariable(running_header_id)
+scribus.deleteVariable(future_mode_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)
 scribus.closeDoc()
