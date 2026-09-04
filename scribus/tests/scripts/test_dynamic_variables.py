@@ -48,6 +48,7 @@ created = scribus.newDocument(
 check(created, "could not create the test document")
 scribus.setInfo("Test Author", "Dynamic Variables Test", "Phase 1 regression test")
 scribus.createParagraphStyle("ChapterTitle")
+scribus.createParagraphStyle("RecursiveHeading")
 
 step("testing variable CRUD")
 variable_id = scribus.createVariable("Edition", "Second Edition")
@@ -102,6 +103,7 @@ running_header_id = "running-header-test"
 first_on_page_id = "running-header-first-on-page"
 last_on_page_id = "running-header-last-on-page"
 future_mode_id = "running-header-future-mode"
+recursive_header_id = "running-header-recursion-guard"
 running_header_xml = (
     b'<Variable id="running-header-test" type="running-header" name="Chapter Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="most-recent"/>'
@@ -111,6 +113,8 @@ running_header_xml = (
     b'paragraphStyle="ChapterTitle" mode="last-on-page"/>'
     b'<Variable id="running-header-future-mode" type="running-header" name="Future Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="from-spread"/>'
+    b'<Variable id="running-header-recursion-guard" type="running-header" name="Recursive Header" value="" '
+    b'paragraphStyle="RecursiveHeading" mode="first-on-page"/>'
 )
 check(b"</DynamicVariables>" in saved_data, "dynamic variable container is incomplete")
 saved_data = saved_data.replace(b"</DynamicVariables>", running_header_xml + b"</DynamicVariables>", 1)
@@ -216,6 +220,17 @@ pdf_pages = extract_pdf_pages()
 if pdf_pages is not None:
     check("Final Second Page Heading" in pdf_pages[0], "master header was stale after editing its source")
 
+step("checking cyclic running-header layout safety")
+scribus.gotoPage(3)
+recursive_first = scribus.createText(360, 620, 180, 40, "RecursiveHeaderFirst")
+recursive_second = scribus.createText(360, 680, 180, 40, "RecursiveHeaderSecond")
+scribus.insertVariable(recursive_header_id, recursive_first)
+scribus.setParagraphStyle("RecursiveHeading", recursive_first)
+scribus.insertVariable(recursive_header_id, recursive_second)
+scribus.setParagraphStyle("RecursiveHeading", recursive_second)
+recursive_value = scribus.getVariable(recursive_header_id, third_page_context)
+check(recursive_value == "", "cyclic running-header resolution did not fail safely")
+
 step("round-tripping running-header definitions")
 scribus.saveDoc()
 with open(output_path, "rb") as saved_file:
@@ -234,6 +249,7 @@ scribus.deleteVariable(running_header_id)
 scribus.deleteVariable(first_on_page_id)
 scribus.deleteVariable(last_on_page_id)
 scribus.deleteVariable(future_mode_id)
+scribus.deleteVariable(recursive_header_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)
 scribus.closeDoc()

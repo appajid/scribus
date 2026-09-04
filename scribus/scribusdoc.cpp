@@ -18259,6 +18259,25 @@ void ScribusDoc::setRunningHeaderCacheValue(const QString& id, int page, const Q
 	m_runningHeaderPageCache[id].insert(page, value);
 }
 
+bool ScribusDoc::beginRunningHeaderResolution(const QString& id, int page) const
+{
+	QSet<int>& pages = m_runningHeaderResolutions[id];
+	if (pages.contains(page))
+		return false;
+	pages.insert(page);
+	return true;
+}
+
+void ScribusDoc::endRunningHeaderResolution(const QString& id, int page) const
+{
+	auto variableIt = m_runningHeaderResolutions.find(id);
+	if (variableIt == m_runningHeaderResolutions.end())
+		return;
+	variableIt->remove(page);
+	if (variableIt->isEmpty())
+		m_runningHeaderResolutions.erase(variableIt);
+}
+
 void ScribusDoc::clearRunningHeaderCache() const
 {
 	m_runningHeaderPageCache.clear();

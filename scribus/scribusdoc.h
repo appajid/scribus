@@ -37,6 +37,7 @@ for which a new license (GPL+exception) is in place.
 #include <QObject>
 #include <QPixmap>
 #include <QRectF>
+#include <QSet>
 #include <QStringList>
 #include <QTimer>
 #include <QUuid>
@@ -1388,11 +1389,14 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QMap<QString, DynamicVariable> m_dynamicVariables;
 		QDateTime m_dynamicVariableCreationDate {QDateTime::currentDateTime()};
 		mutable QHash<QString, QHash<int, QString>> m_runningHeaderPageCache;
+		mutable QHash<QString, QSet<int>> m_runningHeaderResolutions;
 		QUuid m_uuid;
 
 		friend class DynamicVariableResolver;
 		bool runningHeaderCacheValue(const QString& id, int page, QString& value) const;
 		void setRunningHeaderCacheValue(const QString& id, int page, const QString& value) const;
+		bool beginRunningHeaderResolution(const QString& id, int page) const;
+		void endRunningHeaderResolution(const QString& id, int page) const;
 		void clearRunningHeaderCache() const;
 
 	public: // Public attributes

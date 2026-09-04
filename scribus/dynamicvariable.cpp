@@ -18,6 +18,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "pageitem.h"
 #include "pageitemiterator.h"
+#include "marks.h"
 #include "scribusdoc.h"
 #include "styles/paragraphstyle.h"
 #include "text/specialchars.h"
@@ -83,6 +84,20 @@ QString runningHeaderText(const StoryText& story, int paragraphStart, int paragr
 	return text.trimmed();
 }
 
+bool containsRunningHeaderVariable(const StoryText& story, int paragraphStart, int paragraphEnd,
+	const QString& variableId)
+{
+	for (int position = paragraphStart; position < paragraphEnd; ++position)
+	{
+		if (!story.hasMark(position))
+			continue;
+		const Mark* mark = story.mark(position);
+		if (mark && mark->isType(MARKVariableTextType) && mark->getVariableId() == variableId)
+			return true;
+	}
+	return false;
+}
+
 QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& variable,
 	DynamicVariable::RunningHeaderMode mode, const PageItem* contextFrame)
 {
@@ -119,7 +134,8 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 			// earlier page. This prevents a long heading from becoming a second
 			// running-header candidate merely because it continues here.
 			if (paragraphStart >= first && paragraphStart <= last
-				&& appliedParagraphStyleName(item->itemText.paragraphStyle(paragraphStart)) == variable.paragraphStyle)
+				&& appliedParagraphStyleName(item->itemText.paragraphStyle(paragraphStart)) == variable.paragraphStyle
+				&& !containsRunningHeaderVariable(item->itemText, paragraphStart, paragraphEnd, variable.id))
 			{
 				const QString text = runningHeaderText(item->itemText, paragraphStart, paragraphEnd);
 				if (!text.isEmpty())
@@ -263,7 +279,10 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 			QString cachedValue;
 			if (doc->runningHeaderCacheValue(variable->id, frame->OwnPage, cachedValue))
 				return cachedValue;
+			if (!doc->beginRunningHeaderResolution(variable->id, frame->OwnPage))
+				return QString();
 			const QString value = resolveRunningHeader(doc, *variable, mode, frame);
+			doc->endRunningHeaderResolution(variable->id, frame->OwnPage);
 			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, value);
 			return value;
 		}
