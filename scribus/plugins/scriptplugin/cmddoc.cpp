@@ -857,17 +857,26 @@ PyObject *scribus_deletevariable(PyObject* /* self */, PyObject* args)
 PyObject *scribus_getvariable(PyObject* /* self */, PyObject* args)
 {
 	PyESString identifier;
-	if (!PyArg_ParseTuple(args, "es", "utf-8", identifier.ptr()))
+	PyESString objectName;
+	if (!PyArg_ParseTuple(args, "es|es", "utf-8", identifier.ptr(), "utf-8", objectName.ptr()))
 		return nullptr;
 	if (!checkHaveDocument())
 		return nullptr;
 
 	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	PageItem* contextFrame = nullptr;
+	const QString contextName = QString::fromUtf8(objectName.c_str());
+	if (!contextName.isEmpty())
+	{
+		contextFrame = GetUniqueItem(contextName);
+		if (!contextFrame)
+			return nullptr;
+	}
 	const QString requested = QString::fromUtf8(identifier.c_str());
 	const QString id = dynamicVariableId(currentDoc, requested);
 	if (id.isEmpty())
 		return dynamicVariableNotFound(requested);
-	return PyUnicode_FromString(currentDoc->resolveDynamicVariable(id).toUtf8().constData());
+	return PyUnicode_FromString(currentDoc->resolveDynamicVariable(id, contextFrame).toUtf8().constData());
 }
 
 PyObject *scribus_insertvariable(PyObject* /* self */, PyObject* args)

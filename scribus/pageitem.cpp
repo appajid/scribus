@@ -4621,8 +4621,15 @@ void PageItem::setLayer(int newLayerID)
 
 void PageItem::checkChanges(bool force)
 {
+	const bool textFrameGeometryChanged = isTextFrame()
+		&& (force || oldXpos != m_xPos || oldYpos != m_yPos
+			|| !qFuzzyCompare(oldWidth, m_width) || !qFuzzyCompare(oldHeight, m_height));
 	if (m_Doc->view() == nullptr)
+	{
+		if (textFrameGeometryChanged && !m_Doc->isLoading())
+			m_Doc->invalidateRunningHeaderFrames(false);
 		return;
+	}
 	bool spreadChanges(false);
 
 	QRectF textFlowCheckRect;
@@ -4670,6 +4677,8 @@ void PageItem::checkChanges(bool force)
 	{
 		checkTextFlowInteractions(textFlowCheckRect);
 	}
+	if (textFrameGeometryChanged && !m_Doc->isLoading())
+		m_Doc->invalidateRunningHeaderFrames(false);
 }
 
 bool PageItem::shouldCheck() const

@@ -3192,6 +3192,8 @@ void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int /*endItem*/)
 		invalidFrame->invalid = true;
 		invalidFrame = dynamic_cast<PageItem_TextFrame*>(invalidFrame->m_nextBox);
 	}
+	if (m_Doc && !m_Doc->isLoading())
+		m_Doc->invalidateRunningHeaderFrames(false);
 }
 
 void PageItem_TextFrame::slotSpellCheckTextChanged(int /*firstItem*/, int /*endItem*/)

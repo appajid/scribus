@@ -454,7 +454,7 @@ QT_TR_NOOP("deleteVariable(variable)\n\nDeletes a user-defined dynamic variable 
 PyObject *scribus_deletevariable(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_getvariable__doc__,
-QT_TR_NOOP("getVariable(variable) -> str\n\nReturns the resolved value of a dynamic variable. The argument may be a name, stable ID, or built-in type."));
+QT_TR_NOOP("getVariable(variable, [objectName]) -> str\n\nReturns the resolved value of a dynamic variable. The argument may be a name, stable ID, or built-in type. Supply a page item name for page-sensitive variables such as current page and running headers."));
 PyObject *scribus_getvariable(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_insertvariable__doc__,
@@ -474,4 +474,3 @@ QT_TR_NOOP("setVariable(variable, value)\n\nChanges a user-defined dynamic varia
 PyObject *scribus_setvariable(PyObject *self, PyObject* args);
 
 #endif
-

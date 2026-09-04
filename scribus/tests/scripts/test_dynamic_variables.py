@@ -66,6 +66,21 @@ scribus.setFont("Arial Regular", frame_name)
 check(scribus.insertVariable(variable_id, frame_name) == variable_id, "user variable insertion failed")
 title_id = scribus.insertVariable("document-title", frame_name)
 check(title_id == "builtin:document-title", "built-in insertion returned the wrong ID")
+check(scribus.getVariable("current-page", frame_name) == "1", "contextual current-page lookup failed")
+
+step("creating styled running-header sources")
+lower_heading = scribus.createText(40, 220, 300, 40, "LowerChapterHeading")
+scribus.setText("Last Visual Heading", lower_heading)
+scribus.setParagraphStyle("ChapterTitle", lower_heading)
+upper_heading = scribus.createText(40, 140, 300, 40, "UpperChapterHeading")
+scribus.setText("First Visual Heading", upper_heading)
+scribus.setParagraphStyle("ChapterTitle", upper_heading)
+scribus.gotoPage(2)
+second_page_context = scribus.createText(40, 40, 300, 40, "SecondPageContext")
+second_page_heading = scribus.createText(40, 140, 300, 40, "SecondPageHeading")
+scribus.setText("Second Page Heading", second_page_heading)
+scribus.setParagraphStyle("ChapterTitle", second_page_heading)
+scribus.gotoPage(1)
 
 step("saving document")
 scribus.saveDocAs(output_path)
@@ -80,10 +95,16 @@ check(b'variableId="builtin:document-title"' in saved_data, "the built-in mark r
 step("injecting running-header definitions")
 scribus.closeDoc()
 running_header_id = "running-header-test"
+first_on_page_id = "running-header-first-on-page"
+last_on_page_id = "running-header-last-on-page"
 future_mode_id = "running-header-future-mode"
 running_header_xml = (
     b'<Variable id="running-header-test" type="running-header" name="Chapter Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="most-recent"/>'
+    b'<Variable id="running-header-first-on-page" type="running-header" name="First Chapter Header" value="" '
+    b'paragraphStyle="ChapterTitle" mode="first-on-page"/>'
+    b'<Variable id="running-header-last-on-page" type="running-header" name="Last Chapter Header" value="" '
+    b'paragraphStyle="ChapterTitle" mode="last-on-page"/>'
     b'<Variable id="running-header-future-mode" type="running-header" name="Future Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="from-spread"/>'
 )
@@ -99,6 +120,34 @@ check(scribus.getVariable("Edition Label") == "Third Edition", "saved name looku
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved built-in metadata lookup failed")
 check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
 check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
+check(
+    scribus.getVariable(first_on_page_id, frame_name) == "First Visual Heading",
+    "first-on-page did not use visual page order",
+)
+check(
+    scribus.getVariable(last_on_page_id, frame_name) == "Last Visual Heading",
+    "last-on-page did not use visual page order",
+)
+check(
+    scribus.getVariable(first_on_page_id, second_page_context) == "Second Page Heading",
+    "first-on-page did not isolate candidates to the context page",
+)
+check(scribus.insertVariable(first_on_page_id, frame_name) == first_on_page_id, "first-on-page insertion failed")
+scribus.setText("Updated First Heading", upper_heading)
+scribus.setParagraphStyle("ChapterTitle", upper_heading)
+check(
+    scribus.getVariable(first_on_page_id, frame_name) == "Updated First Heading",
+    "first-on-page did not update after source text changed",
+)
+scribus.moveObjectAbs(40, 300, upper_heading)
+check(
+    scribus.getVariable(first_on_page_id, frame_name) == "Last Visual Heading",
+    "first-on-page did not update after source frame moved",
+)
+check(
+    scribus.getVariable(last_on_page_id, frame_name) == "Updated First Heading",
+    "last-on-page did not update after source frame moved",
+)
 check(scribus.insertVariable(running_header_id, frame_name) == running_header_id, "running-header insertion failed")
 
 step("round-tripping running-header definitions")
@@ -116,6 +165,8 @@ check(b'variableId="running-header-test"' in round_trip_data, "running-header ma
 step("deleting variable")
 scribus.deleteVariable(variable_id)
 scribus.deleteVariable(running_header_id)
+scribus.deleteVariable(first_on_page_id)
+scribus.deleteVariable(last_on_page_id)
 scribus.deleteVariable(future_mode_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)

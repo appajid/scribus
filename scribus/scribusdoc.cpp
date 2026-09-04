@@ -18259,6 +18259,21 @@ bool ScribusDoc::invalidateDynamicVariableFrames(const QString& id, bool forceUp
 	return found;
 }
 
+bool ScribusDoc::invalidateRunningHeaderFrames(bool forceUpdate)
+{
+	bool found = false;
+	for (Mark* mark : std::as_const(m_docMarksList))
+	{
+		if (!mark || !mark->isType(MARKVariableTextType) || mark->getVariableId().isEmpty())
+			continue;
+		const DynamicVariable* variable = dynamicVariable(mark->getVariableId());
+		if (!variable || variable->type != DynamicVariableResolver::RunningHeader)
+			continue;
+		found |= invalidateVariableTextFrames(mark, forceUpdate);
+	}
+	return found;
+}
+
 bool ScribusDoc::updateDynamicVariableValues()
 {
 	bool changedValue = false;
@@ -18266,6 +18281,9 @@ bool ScribusDoc::updateDynamicVariableValues()
 	for (Mark* mark : std::as_const(m_docMarksList))
 	{
 		if (!mark || !mark->isType(MARKVariableTextType) || mark->getVariableId().isEmpty() || mark->getVariableId() == currentPageId)
+			continue;
+		const DynamicVariable* variable = dynamicVariable(mark->getVariableId());
+		if (variable && variable->type == DynamicVariableResolver::RunningHeader)
 			continue;
 		const QString value = resolveDynamicVariable(mark->getVariableId());
 		if (mark->getString() == value)

@@ -1896,6 +1896,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		bool removeDynamicVariable(const QString& id);
 		QString resolveDynamicVariable(const QString& id, const PageItem* frame = nullptr) const;
 		bool invalidateDynamicVariableFrames(const QString& id = QString(), bool forceUpdate = false);
+		bool invalidateRunningHeaderFrames(bool forceUpdate = false);
 		bool updateDynamicVariableValues();
 		QDateTime dynamicVariableCreationDate() const { return m_dynamicVariableCreationDate; }
 		void setDynamicVariableCreationDate(const QDateTime& dateTime) { m_dynamicVariableCreationDate = dateTime; }

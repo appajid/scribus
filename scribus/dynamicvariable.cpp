@@ -11,9 +11,17 @@ for which a new license (GPL+exception) is in place.
 #include <QFileInfo>
 #include <QLocale>
 #include <QObject>
+#include <QPointF>
+#include <QVector>
+
+#include <algorithm>
 
 #include "pageitem.h"
+#include "pageitemiterator.h"
 #include "scribusdoc.h"
+#include "styles/paragraphstyle.h"
+#include "text/specialchars.h"
+#include "text/storytext.h"
 
 const QString DynamicVariableResolver::UserDefined = QStringLiteral("user-defined");
 const QString DynamicVariableResolver::DocumentTitle = QStringLiteral("document-title");
@@ -44,6 +52,108 @@ DynamicVariable makeBuiltIn(const QString& type)
 QString formatDateTime(const QDateTime& value)
 {
 	return value.isValid() ? QLocale().toString(value, QLocale::ShortFormat) : QString();
+}
+
+struct RunningHeaderCandidate
+{
+	QString text;
+	QPointF position;
+	int itemOrder { 0 };
+	int storyPosition { 0 };
+};
+
+QString appliedParagraphStyleName(const ParagraphStyle& style)
+{
+	if (style.hasParent())
+	{
+		const BaseStyle* parent = style.parentStyle();
+		if (parent)
+			return parent->name();
+	}
+	return style.name();
+}
+
+QString runningHeaderText(const StoryText& story, int paragraphStart, int paragraphEnd)
+{
+	QString text = story.text(paragraphStart, paragraphEnd - paragraphStart);
+	text.remove(SpecialChars::COLBREAK);
+	text.remove(SpecialChars::FRAMEBREAK);
+	text.replace(SpecialChars::LINEBREAK, QLatin1Char(' '));
+	return text.trimmed();
+}
+
+QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& variable,
+	DynamicVariable::RunningHeaderMode mode, const PageItem* contextFrame)
+{
+	if (!contextFrame || contextFrame->OwnPage < 0 || contextFrame->OwnPage >= doc->DocPages.count())
+		return QString();
+
+	QVector<RunningHeaderCandidate> candidates;
+	int itemOrder = 0;
+	for (PageItemIterator it(doc->DocItems, PageItemIterator::IterateInGroups); *it; ++it, ++itemOrder)
+	{
+		PageItem* item = *it;
+		if (!item || item == contextFrame || !item->isTextFrame() || item->OwnPage != contextFrame->OwnPage)
+			continue;
+		if (item->itemText.isEmpty())
+			continue;
+
+		if (item->invalid)
+			item->layout();
+		const int first = item->firstInFrame();
+		const int last = item->lastInFrame();
+		if (first < 0 || last < first)
+			continue;
+
+		int position = first;
+		while (position <= last && position < item->itemText.length())
+		{
+			const uint paragraph = item->itemText.nrOfParagraph(position);
+			const int paragraphStart = item->itemText.startOfParagraph(paragraph);
+			const int paragraphEnd = item->itemText.endOfParagraph(paragraph);
+
+			// A paragraph which began in an earlier linked frame belongs to that
+			// earlier page. This prevents a long heading from becoming a second
+			// running-header candidate merely because it continues here.
+			if (paragraphStart >= first && paragraphStart <= last
+				&& appliedParagraphStyleName(item->itemText.paragraphStyle(paragraphStart)) == variable.paragraphStyle)
+			{
+				const QString text = runningHeaderText(item->itemText, paragraphStart, paragraphEnd);
+				if (!text.isEmpty())
+				{
+					RunningHeaderCandidate candidate;
+					candidate.text = text;
+					candidate.position = QPointF(item->visualXPos(), item->visualYPos());
+					candidate.itemOrder = itemOrder;
+					candidate.storyPosition = paragraphStart;
+					candidates.append(candidate);
+				}
+			}
+
+			const int nextPosition = item->itemText.startOfNextParagraph(position);
+			if (nextPosition <= position)
+				break;
+			position = nextPosition;
+		}
+	}
+
+	if (candidates.isEmpty())
+		return QString();
+
+	std::stable_sort(candidates.begin(), candidates.end(), [](const RunningHeaderCandidate& left,
+		const RunningHeaderCandidate& right) {
+		if (!qFuzzyCompare(left.position.y() + 1.0, right.position.y() + 1.0))
+			return left.position.y() < right.position.y();
+		if (!qFuzzyCompare(left.position.x() + 1.0, right.position.x() + 1.0))
+			return left.position.x() < right.position.x();
+		if (left.itemOrder != right.itemOrder)
+			return left.itemOrder < right.itemOrder;
+		return left.storyPosition < right.storyPosition;
+	});
+
+	return mode == DynamicVariable::RunningHeaderMode::LastOnPage
+		? candidates.constLast().text
+		: candidates.constFirst().text;
 }
 }
 
@@ -137,14 +247,13 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 			return QString();
 		if (variable->type == RunningHeader)
 		{
-			// Phase 2A stores and validates the definition. Page-aware layout
-			// resolution is added separately so malformed or future definitions
-			// remain safe and cannot trigger paint-time document scans.
+			const DynamicVariable::RunningHeaderMode mode = runningHeaderModeFromString(variable->runningHeaderMode);
 			if (variable->paragraphStyle.isEmpty()
 				|| !doc->paragraphStyles().contains(variable->paragraphStyle)
-				|| runningHeaderModeFromString(variable->runningHeaderMode) == DynamicVariable::RunningHeaderMode::Unsupported)
+				|| mode == DynamicVariable::RunningHeaderMode::Unsupported
+				|| mode == DynamicVariable::RunningHeaderMode::MostRecent)
 				return QString();
-			return QString();
+			return resolveRunningHeader(doc, *variable, mode, frame);
 		}
 		return variable->value;
 	}
