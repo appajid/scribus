@@ -88,12 +88,25 @@ public:
 		connect(m_type, &QComboBox::currentIndexChanged, this, [this]() { updateFields(); });
 		connect(m_name, &QLineEdit::textChanged, this, [this]() { updateAcceptState(); });
 		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
+		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
+		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
+		m_sourceDescription = new QLabel(this);
+		m_sourceDescription->setWordWrap(true);
+		layout->addWidget(m_sourceDescription);
 		layout->addWidget(buttons);
 
 		if (variable && variable->type == DynamicVariableResolver::RunningHeader)
 		{
 			m_type->setCurrentIndex(m_type->findData(DynamicVariableResolver::RunningHeader));
-			m_paragraphStyle->setCurrentIndex(m_paragraphStyle->findData(variable->paragraphStyle));
+			const int styleIndex = m_paragraphStyle->findData(variable->paragraphStyle);
+			if (styleIndex >= 0)
+				m_paragraphStyle->setCurrentIndex(styleIndex);
+			else if (!variable->paragraphStyle.isEmpty())
+			{
+				m_missingParagraphStyle = variable->paragraphStyle;
+				m_paragraphStyle->insertItem(0, tr("Missing: %1").arg(variable->paragraphStyle), QString());
+				m_paragraphStyle->setCurrentIndex(0);
+			}
 			m_mode->setCurrentIndex(m_mode->findData(variable->runningHeaderMode));
 		}
 		updateFields();
@@ -119,10 +132,32 @@ private:
 		m_paragraphStyle->setVisible(runningHeader);
 		m_modeLabel->setVisible(runningHeader);
 		m_mode->setVisible(runningHeader);
+		m_sourceDescription->setVisible(runningHeader);
 		m_description->setText(runningHeader
 			? tr("A running header displays text from paragraphs using a chosen style and updates automatically when pages reflow.")
 			: tr("A user-defined variable stores reusable text that can be updated throughout the document."));
+		updateSourceDescription();
 		updateAcceptState();
+	}
+
+	void updateSourceDescription()
+	{
+		if (!isRunningHeader())
+			return;
+		if (paragraphStyle().isEmpty() && !m_missingParagraphStyle.isEmpty())
+		{
+			m_sourceDescription->setText(tr("The saved paragraph style “%1” is missing. Choose a replacement style to repair this running header.").arg(m_missingParagraphStyle));
+			return;
+		}
+		const QString mode = m_mode->currentData().toString();
+		if (mode == DynamicVariableResolver::FirstOnPageMode)
+			m_sourceDescription->setText(tr("Uses the first matching paragraph that begins on the current page."));
+		else if (mode == DynamicVariableResolver::LastOnPageMode)
+			m_sourceDescription->setText(tr("Uses the last matching paragraph that begins on the current page."));
+		else if (mode == DynamicVariableResolver::MostRecentMode)
+			m_sourceDescription->setText(tr("Carries forward the latest matching paragraph from this page or an earlier page."));
+		else
+			m_sourceDescription->setText(tr("The saved source mode is unsupported. Choose a supported mode to repair this running header."));
 	}
 
 	void updateAcceptState()
@@ -141,7 +176,9 @@ private:
 	QLabel* m_valueLabel {nullptr};
 	QLabel* m_styleLabel {nullptr};
 	QLabel* m_modeLabel {nullptr};
+	QLabel* m_sourceDescription {nullptr};
 	QPushButton* m_okButton {nullptr};
+	QString m_missingParagraphStyle;
 };
 }
 
@@ -206,7 +243,12 @@ void DynamicVariableManager::refresh()
 		if (builtIn)
 			value = m_doc->resolveDynamicVariable(variable.id);
 		else if (variable.type == DynamicVariableResolver::RunningHeader)
-			value = tr("%1 — %2").arg(variable.paragraphStyle, runningHeaderModeLabel(variable.runningHeaderMode));
+		{
+			const QString style = m_doc->paragraphStyles().contains(variable.paragraphStyle)
+				? variable.paragraphStyle
+				: tr("Missing style: %1").arg(variable.paragraphStyle);
+			value = tr("%1 — %2").arg(style, runningHeaderModeLabel(variable.runningHeaderMode));
+		}
 		m_table->setItem(row, 2, new QTableWidgetItem(value));
 	};
 
