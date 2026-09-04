@@ -449,6 +449,10 @@ PyDoc_STRVAR(scribus_createvariable__doc__,
 QT_TR_NOOP("createVariable(name, value) -> str\n\nCreates a user-defined dynamic variable and returns its stable ID."));
 PyObject *scribus_createvariable(PyObject *self, PyObject* args);
 
+PyDoc_STRVAR(scribus_createrunningheadervariable__doc__,
+QT_TR_NOOP("createRunningHeaderVariable(name, paragraphStyle, mode) -> str\n\nCreates a running-header variable and returns its stable ID. Mode must be 'first-on-page', 'last-on-page', or 'most-recent'."));
+PyObject *scribus_createrunningheadervariable(PyObject *self, PyObject* args);
+
 PyDoc_STRVAR(scribus_deletevariable__doc__,
 QT_TR_NOOP("deleteVariable(variable)\n\nDeletes a user-defined dynamic variable identified by name or stable ID."));
 PyObject *scribus_deletevariable(PyObject *self, PyObject* args);
@@ -472,5 +476,9 @@ PyObject *scribus_renamevariable(PyObject *self, PyObject* args);
 PyDoc_STRVAR(scribus_setvariable__doc__,
 QT_TR_NOOP("setVariable(variable, value)\n\nChanges a user-defined dynamic variable identified by name or stable ID."));
 PyObject *scribus_setvariable(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_setrunningheadervariable__doc__,
+QT_TR_NOOP("setRunningHeaderVariable(variable, name, paragraphStyle, mode)\n\nUpdates a running-header variable identified by name or stable ID."));
+PyObject *scribus_setrunningheadervariable(PyObject *self, PyObject* args);
 
 #endif

@@ -115,6 +115,42 @@ scribus.setText("LOCAL HEADING", flow_local)
 scribus.setParagraphStyle("FlowHeading", flow_local)
 scribus.gotoPage(1)
 
+step("creating and configuring a running header through the API")
+api_header_id = scribus.createRunningHeaderVariable("API Header", "ChapterTitle", "most-recent")
+check(
+    scribus.getVariable(api_header_id, third_page_context) == "Second Page Heading",
+    "created running header did not resolve",
+)
+expect_error(
+    lambda: scribus.createRunningHeaderVariable("API Header", "ChapterTitle", "last-on-page"),
+    "a duplicate running-header name was accepted",
+)
+expect_error(
+    lambda: scribus.createRunningHeaderVariable("Missing Style Header", "MissingStyle", "most-recent"),
+    "a running header with a missing paragraph style was accepted",
+)
+expect_error(
+    lambda: scribus.createRunningHeaderVariable("Bad Mode Header", "ChapterTitle", "future-mode"),
+    "a running header with an unsupported mode was accepted",
+)
+expect_error(
+    lambda: scribus.setRunningHeaderVariable(variable_id, "Wrong Type", "ChapterTitle", "most-recent"),
+    "a user-defined variable was reconfigured as a running header",
+)
+scribus.setRunningHeaderVariable(api_header_id, "API First Header", "ChapterTitle", "first-on-page")
+check(
+    scribus.getVariable("API First Header", frame_name) == "First Visual Heading",
+    "configured running header did not use its new mode",
+)
+expect_error(
+    lambda: scribus.setRunningHeaderVariable(api_header_id, "Broken Header", "ChapterTitle", "future-mode"),
+    "an unsupported running-header update mode was accepted",
+)
+check(
+    scribus.getVariable("API First Header", frame_name) == "First Visual Heading",
+    "a rejected running-header update changed the definition",
+)
+
 step("saving document")
 scribus.saveDocAs(output_path)
 with open(output_path, "rb") as saved_file:
@@ -159,6 +195,10 @@ step("reopening document")
 check(scribus.openDoc(output_path), "could not reopen the saved test document")
 check(scribus.getVariable(variable_id) == "Third Edition", "user variable did not survive save/reopen")
 check(scribus.getVariable("Edition Label") == "Third Edition", "saved name lookup failed")
+check(
+    scribus.getVariable("API First Header", frame_name) == "First Visual Heading",
+    "API-created running header did not survive save/reopen",
+)
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved built-in metadata lookup failed")
 check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
 check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
@@ -326,6 +366,7 @@ scribus.deleteVariable(future_mode_id)
 scribus.deleteVariable(recursive_header_id)
 scribus.deleteVariable(flow_first_id)
 scribus.deleteVariable(flow_recent_id)
+scribus.deleteVariable(api_header_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)
 scribus.closeDoc()

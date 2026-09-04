@@ -18145,7 +18145,7 @@ QString ScribusDoc::addRunningHeaderVariable(const QString& name, const QString&
 	DynamicVariable::RunningHeaderMode mode, const QString& id)
 {
 	const QString modeName = DynamicVariableResolver::runningHeaderModeToString(mode);
-	if (paragraphStyle.isEmpty() || modeName.isEmpty())
+	if (paragraphStyle.isEmpty() || !paragraphStyles().contains(paragraphStyle) || modeName.isEmpty())
 		return QString();
 	return addDynamicVariable(name, QString(), id, DynamicVariableResolver::RunningHeader, paragraphStyle, modeName);
 }
@@ -18186,6 +18186,54 @@ bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, c
 		state->set("OLD_VALUE", oldValue);
 		state->set("NEW_NAME", it->name);
 		state->set("NEW_VALUE", it->value);
+		m_undoManager->action(this, state);
+	}
+	return true;
+}
+
+bool ScribusDoc::updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
+	DynamicVariable::RunningHeaderMode mode)
+{
+	auto it = m_dynamicVariables.find(id);
+	const QString modeName = DynamicVariableResolver::runningHeaderModeToString(mode);
+	if (it == m_dynamicVariables.end() || it->type != DynamicVariableResolver::RunningHeader
+		|| DynamicVariableResolver::isReservedName(name) || !paragraphStyles().contains(paragraphStyle)
+		|| modeName.isEmpty())
+		return false;
+	const QString duplicateId = dynamicVariableIdByName(name.trimmed());
+	if (!duplicateId.isEmpty() && duplicateId != id)
+		return false;
+	if (it->name == name.trimmed() && it->paragraphStyle == paragraphStyle && it->runningHeaderMode == modeName)
+		return true;
+
+	const QString oldName = it->name;
+	const QString oldParagraphStyle = it->paragraphStyle;
+	const QString oldMode = it->runningHeaderMode;
+	it->name = name.trimmed();
+	it->paragraphStyle = paragraphStyle;
+	it->runningHeaderMode = modeName;
+	if (Mark* mark = getDynamicVariableMark(id))
+	{
+		QStringList otherLabels = marksLabelsList(MARKVariableTextType);
+		otherLabels.removeOne(mark->label);
+		QString markLabel = it->name;
+		getUniqueName(markLabel, otherLabels, QStringLiteral("_"));
+		mark->label = markLabel;
+		mark->clearString();
+	}
+	invalidateDynamicVariableFrames(id, false);
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new SimpleState(tr("Edit Running Header"));
+		state->set("DYNAMIC_VARIABLE");
+		state->set("ACTION", QStringLiteral("edit-running-header"));
+		state->set("ID", id);
+		state->set("OLD_NAME", oldName);
+		state->set("OLD_PARAGRAPH_STYLE", oldParagraphStyle);
+		state->set("OLD_RUNNING_HEADER_MODE", oldMode);
+		state->set("NEW_NAME", it->name);
+		state->set("NEW_PARAGRAPH_STYLE", it->paragraphStyle);
+		state->set("NEW_RUNNING_HEADER_MODE", it->runningHeaderMode);
 		m_undoManager->action(this, state);
 	}
 	return true;
@@ -18243,6 +18291,15 @@ void ScribusDoc::restoreDynamicVariable(SimpleState* state, bool isUndo)
 			updateDynamicVariable(id, state->get("OLD_NAME"), state->get("OLD_VALUE"));
 		else
 			updateDynamicVariable(id, state->get("NEW_NAME"), state->get("NEW_VALUE"));
+	}
+	else if (action == QLatin1String("edit-running-header"))
+	{
+		if (isUndo)
+			updateRunningHeaderVariable(id, state->get("OLD_NAME"), state->get("OLD_PARAGRAPH_STYLE"),
+				DynamicVariableResolver::runningHeaderModeFromString(state->get("OLD_RUNNING_HEADER_MODE")));
+		else
+			updateRunningHeaderVariable(id, state->get("NEW_NAME"), state->get("NEW_PARAGRAPH_STYLE"),
+				DynamicVariableResolver::runningHeaderModeFromString(state->get("NEW_RUNNING_HEADER_MODE")));
 	}
 	changed();
 	regionsChanged()->update(QRectF());

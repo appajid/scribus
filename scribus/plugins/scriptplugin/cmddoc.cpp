@@ -836,6 +836,30 @@ PyObject *scribus_createvariable(PyObject* /* self */, PyObject* args)
 	return PyUnicode_FromString(id.toUtf8().constData());
 }
 
+PyObject *scribus_createrunningheadervariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString paragraphStyle;
+	PyESString mode;
+	if (!PyArg_ParseTuple(args, "eseses", "utf-8", name.ptr(), "utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString variableName = QString::fromUtf8(name.c_str());
+	const QString styleName = QString::fromUtf8(paragraphStyle.c_str());
+	const auto headerMode = DynamicVariableResolver::runningHeaderModeFromString(QString::fromUtf8(mode.c_str()));
+	const QString id = currentDoc->addRunningHeaderVariable(variableName, styleName, headerMode);
+	if (id.isEmpty())
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, or mode is invalid or already in use.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	currentDoc->changed();
+	return PyUnicode_FromString(id.toUtf8().constData());
+}
+
 PyObject *scribus_deletevariable(PyObject* /* self */, PyObject* args)
 {
 	PyESString identifier;
@@ -1005,6 +1029,40 @@ PyObject *scribus_setvariable(PyObject* /* self */, PyObject* args)
 	if (!currentDoc->updateDynamicVariable(id, variable.name, QString::fromUtf8(value.c_str())))
 	{
 		PyErr_SetString(ScribusException, QObject::tr("The dynamic variable could not be updated.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	currentDoc->changed();
+	Py_RETURN_NONE;
+}
+
+PyObject *scribus_setrunningheadervariable(PyObject* /* self */, PyObject* args)
+{
+	PyESString identifier;
+	PyESString name;
+	PyESString paragraphStyle;
+	PyESString mode;
+	if (!PyArg_ParseTuple(args, "eseseses", "utf-8", identifier.ptr(), "utf-8", name.ptr(),
+		"utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requested = QString::fromUtf8(identifier.c_str());
+	const QString id = userDynamicVariableId(currentDoc, requested);
+	if (id.isEmpty())
+		return dynamicVariableNotFound(requested);
+	const DynamicVariable* variable = currentDoc->dynamicVariable(id);
+	if (!variable || variable->type != DynamicVariableResolver::RunningHeader)
+	{
+		PyErr_SetString(ScribusException, QObject::tr("Dynamic variable '%1' is not a running header.", "python error").arg(requested).toUtf8().constData());
+		return nullptr;
+	}
+	const auto headerMode = DynamicVariableResolver::runningHeaderModeFromString(QString::fromUtf8(mode.c_str()));
+	if (!currentDoc->updateRunningHeaderVariable(id, QString::fromUtf8(name.c_str()),
+		QString::fromUtf8(paragraphStyle.c_str()), headerMode))
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, or mode is invalid or already in use.", "python error").toUtf8().constData());
 		return nullptr;
 	}
 	currentDoc->changed();

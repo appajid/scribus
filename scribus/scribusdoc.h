@@ -1903,6 +1903,8 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QString addRunningHeaderVariable(const QString& name, const QString& paragraphStyle, DynamicVariable::RunningHeaderMode mode,
 			const QString& id = QString());
 		bool updateDynamicVariable(const QString& id, const QString& name, const QString& value);
+		bool updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
+			DynamicVariable::RunningHeaderMode mode);
 		bool removeDynamicVariable(const QString& id);
 		QString resolveDynamicVariable(const QString& id, const PageItem* frame = nullptr) const;
 		bool invalidateDynamicVariableFrames(const QString& id = QString(), bool forceUpdate = false);
