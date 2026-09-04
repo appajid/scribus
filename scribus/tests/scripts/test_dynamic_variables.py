@@ -49,6 +49,7 @@ check(created, "could not create the test document")
 scribus.setInfo("Test Author", "Dynamic Variables Test", "Phase 1 regression test")
 scribus.createParagraphStyle("ChapterTitle")
 scribus.createParagraphStyle("RecursiveHeading")
+scribus.createParagraphStyle("FlowHeading")
 
 step("testing variable CRUD")
 variable_id = scribus.createVariable("Edition", "Second Edition")
@@ -86,6 +87,17 @@ scribus.setParagraphStyle("ChapterTitle", second_page_heading)
 scribus.gotoPage(3)
 third_page_context = scribus.createText(40, 40, 300, 40, "ThirdPageContext")
 scribus.gotoPage(1)
+flow_heading_text = "LINKED HEADING " * 20
+flow_start = scribus.createText(360, 140, 120, 50, "FlowHeadingStart")
+scribus.setText(flow_heading_text, flow_start)
+scribus.setParagraphStyle("FlowHeading", flow_start)
+scribus.gotoPage(2)
+flow_end = scribus.createText(360, 140, 120, 200, "FlowHeadingEnd")
+scribus.linkTextFrames(flow_start, flow_end)
+flow_local = scribus.createText(360, 400, 180, 80, "FlowLocalHeading")
+scribus.setText("LOCAL HEADING", flow_local)
+scribus.setParagraphStyle("FlowHeading", flow_local)
+scribus.gotoPage(1)
 
 step("saving document")
 scribus.saveDocAs(output_path)
@@ -104,6 +116,8 @@ first_on_page_id = "running-header-first-on-page"
 last_on_page_id = "running-header-last-on-page"
 future_mode_id = "running-header-future-mode"
 recursive_header_id = "running-header-recursion-guard"
+flow_first_id = "running-header-flow-first"
+flow_recent_id = "running-header-flow-recent"
 running_header_xml = (
     b'<Variable id="running-header-test" type="running-header" name="Chapter Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="most-recent"/>'
@@ -115,6 +129,10 @@ running_header_xml = (
     b'paragraphStyle="ChapterTitle" mode="from-spread"/>'
     b'<Variable id="running-header-recursion-guard" type="running-header" name="Recursive Header" value="" '
     b'paragraphStyle="RecursiveHeading" mode="first-on-page"/>'
+    b'<Variable id="running-header-flow-first" type="running-header" name="Flow First" value="" '
+    b'paragraphStyle="FlowHeading" mode="first-on-page"/>'
+    b'<Variable id="running-header-flow-recent" type="running-header" name="Flow Recent" value="" '
+    b'paragraphStyle="FlowHeading" mode="most-recent"/>'
 )
 check(b"</DynamicVariables>" in saved_data, "dynamic variable container is incomplete")
 saved_data = saved_data.replace(b"</DynamicVariables>", running_header_xml + b"</DynamicVariables>", 1)
@@ -180,6 +198,21 @@ check(
     "last-on-page did not update after source frame moved",
 )
 check(scribus.insertVariable(running_header_id, frame_name) == running_header_id, "running-header insertion failed")
+
+step("excluding linked paragraph continuations from page-local headers")
+check(
+    scribus.getVariable(flow_first_id, second_page_context) == "LOCAL HEADING",
+    "first-on-page did not use the page-local heading",
+)
+scribus.deleteObject(flow_local)
+check(
+    scribus.getVariable(flow_first_id, second_page_context) == "",
+    "first-on-page treated a linked paragraph continuation as a new heading",
+)
+check(
+    scribus.getVariable(flow_recent_id, second_page_context) == flow_heading_text.strip(),
+    "most-recent did not carry the linked heading from its starting page",
+)
 
 step("testing a running header on an applied master page")
 master_page_name = "Running Header Master"
@@ -271,6 +304,8 @@ scribus.deleteVariable(first_on_page_id)
 scribus.deleteVariable(last_on_page_id)
 scribus.deleteVariable(future_mode_id)
 scribus.deleteVariable(recursive_header_id)
+scribus.deleteVariable(flow_first_id)
+scribus.deleteVariable(flow_recent_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)
 scribus.closeDoc()
