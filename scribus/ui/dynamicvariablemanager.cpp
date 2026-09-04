@@ -7,6 +7,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "dynamicvariablemanager.h"
 
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHeaderView>
@@ -20,38 +21,127 @@ for which a new license (GPL+exception) is in place.
 #include "dynamicvariable.h"
 #include "marks.h"
 #include "scribusdoc.h"
+#include "styles/paragraphstyle.h"
 
 namespace
 {
 constexpr int IdRole = Qt::UserRole;
 constexpr int BuiltInRole = Qt::UserRole + 1;
 
+QString runningHeaderModeLabel(const QString& mode)
+{
+	if (mode == DynamicVariableResolver::FirstOnPageMode)
+		return QObject::tr("First on Page");
+	if (mode == DynamicVariableResolver::LastOnPageMode)
+		return QObject::tr("Last on Page");
+	if (mode == DynamicVariableResolver::MostRecentMode)
+		return QObject::tr("Most Recent");
+	return QObject::tr("Unsupported");
+}
+
 class VariableEditDialog : public QDialog
 {
 public:
-	VariableEditDialog(const QString& name, const QString& value, QWidget* parent)
+	VariableEditDialog(ScribusDoc* doc, const DynamicVariable* variable, QWidget* parent)
 		: QDialog(parent)
 	{
-		setWindowTitle(name.isEmpty() ? tr("Add Variable") : tr("Edit Variable"));
+		const bool editing = variable != nullptr;
+		setWindowTitle(editing ? tr("Edit Variable") : tr("Add Variable"));
+		setMinimumWidth(440);
 		auto* layout = new QVBoxLayout(this);
+		m_description = new QLabel(this);
+		m_description->setWordWrap(true);
+		layout->addWidget(m_description);
+
 		auto* form = new QFormLayout;
-		m_name = new QLineEdit(name, this);
-		m_value = new QLineEdit(value, this);
+		m_type = new QComboBox(this);
+		m_type->addItem(tr("User Defined"), DynamicVariableResolver::UserDefined);
+		m_type->addItem(tr("Running Header"), DynamicVariableResolver::RunningHeader);
+		m_type->setEnabled(!editing);
+		m_name = new QLineEdit(variable ? variable->name : QString(), this);
+		m_value = new QLineEdit(variable ? variable->value : QString(), this);
+		m_paragraphStyle = new QComboBox(this);
+		if (doc)
+		{
+			const auto& styles = doc->paragraphStyles();
+			for (int i = 0; i < styles.count(); ++i)
+				m_paragraphStyle->addItem(styles[i].name(), styles[i].name());
+		}
+		m_mode = new QComboBox(this);
+		m_mode->addItem(tr("First matching paragraph on page"), DynamicVariableResolver::FirstOnPageMode);
+		m_mode->addItem(tr("Last matching paragraph on page"), DynamicVariableResolver::LastOnPageMode);
+		m_mode->addItem(tr("Most recent matching paragraph"), DynamicVariableResolver::MostRecentMode);
+
+		form->addRow(tr("Type:"), m_type);
 		form->addRow(tr("Name:"), m_name);
-		form->addRow(tr("Value:"), m_value);
+		m_valueLabel = new QLabel(tr("Value:"), this);
+		form->addRow(m_valueLabel, m_value);
+		m_styleLabel = new QLabel(tr("Paragraph style:"), this);
+		form->addRow(m_styleLabel, m_paragraphStyle);
+		m_modeLabel = new QLabel(tr("Use:"), this);
+		form->addRow(m_modeLabel, m_mode);
 		layout->addLayout(form);
 		auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+		m_okButton = buttons->button(QDialogButtonBox::Ok);
 		connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
 		connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+		connect(m_type, &QComboBox::currentIndexChanged, this, [this]() { updateFields(); });
+		connect(m_name, &QLineEdit::textChanged, this, [this]() { updateAcceptState(); });
+		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
 		layout->addWidget(buttons);
+
+		if (variable && variable->type == DynamicVariableResolver::RunningHeader)
+		{
+			m_type->setCurrentIndex(m_type->findData(DynamicVariableResolver::RunningHeader));
+			m_paragraphStyle->setCurrentIndex(m_paragraphStyle->findData(variable->paragraphStyle));
+			m_mode->setCurrentIndex(m_mode->findData(variable->runningHeaderMode));
+		}
+		updateFields();
+		m_name->setFocus();
 	}
 
 	QString name() const { return m_name->text().trimmed(); }
 	QString value() const { return m_value->text(); }
+	bool isRunningHeader() const { return m_type->currentData().toString() == DynamicVariableResolver::RunningHeader; }
+	QString paragraphStyle() const { return m_paragraphStyle->currentData().toString(); }
+	DynamicVariable::RunningHeaderMode runningHeaderMode() const
+	{
+		return DynamicVariableResolver::runningHeaderModeFromString(m_mode->currentData().toString());
+	}
 
 private:
+	void updateFields()
+	{
+		const bool runningHeader = isRunningHeader();
+		m_valueLabel->setVisible(!runningHeader);
+		m_value->setVisible(!runningHeader);
+		m_styleLabel->setVisible(runningHeader);
+		m_paragraphStyle->setVisible(runningHeader);
+		m_modeLabel->setVisible(runningHeader);
+		m_mode->setVisible(runningHeader);
+		m_description->setText(runningHeader
+			? tr("A running header displays text from paragraphs using a chosen style and updates automatically when pages reflow.")
+			: tr("A user-defined variable stores reusable text that can be updated throughout the document."));
+		updateAcceptState();
+	}
+
+	void updateAcceptState()
+	{
+		const bool runningHeaderFieldsValid = !isRunningHeader()
+			|| (!paragraphStyle().isEmpty() && !m_mode->currentData().toString().isEmpty());
+		m_okButton->setEnabled(!name().isEmpty() && runningHeaderFieldsValid);
+	}
+
+	QComboBox* m_type {nullptr};
 	QLineEdit* m_name {nullptr};
 	QLineEdit* m_value {nullptr};
+	QComboBox* m_paragraphStyle {nullptr};
+	QComboBox* m_mode {nullptr};
+	QLabel* m_description {nullptr};
+	QLabel* m_valueLabel {nullptr};
+	QLabel* m_styleLabel {nullptr};
+	QLabel* m_modeLabel {nullptr};
+	QPushButton* m_okButton {nullptr};
 };
 }
 
@@ -59,16 +149,20 @@ DynamicVariableManager::DynamicVariableManager(ScribusDoc* doc, QWidget* parent)
 	: QDialog(parent), m_doc(doc)
 {
 	setWindowTitle(tr("Variables"));
-	resize(640, 360);
+	resize(700, 400);
 	auto* layout = new QVBoxLayout(this);
-	layout->addWidget(new QLabel(tr("Built-in variables are resolved from the document. User-defined variables can be reused anywhere in the text."), this));
+	auto* description = new QLabel(tr("Insert reusable document values or define running headers that follow styled text. Built-in variables are resolved automatically and cannot be edited."), this);
+	description->setWordWrap(true);
+	layout->addWidget(description);
 
 	m_table = new QTableWidget(this);
 	m_table->setColumnCount(3);
-	m_table->setHorizontalHeaderLabels({tr("Name"), tr("Type"), tr("Current Value")});
+	m_table->setHorizontalHeaderLabels({tr("Name"), tr("Type"), tr("Value or Definition")});
 	m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 	m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 	m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+	m_table->verticalHeader()->setVisible(false);
+	m_table->setAlternatingRowColors(true);
 	m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -108,7 +202,12 @@ void DynamicVariableManager::refresh()
 		nameItem->setData(BuiltInRole, builtIn);
 		m_table->setItem(row, 0, nameItem);
 		m_table->setItem(row, 1, new QTableWidgetItem(DynamicVariableResolver::displayNameForType(variable.type)));
-		m_table->setItem(row, 2, new QTableWidgetItem(builtIn ? m_doc->resolveDynamicVariable(variable.id) : variable.value));
+		QString value = variable.value;
+		if (builtIn)
+			value = m_doc->resolveDynamicVariable(variable.id);
+		else if (variable.type == DynamicVariableResolver::RunningHeader)
+			value = tr("%1 — %2").arg(variable.paragraphStyle, runningHeaderModeLabel(variable.runningHeaderMode));
+		m_table->setItem(row, 2, new QTableWidgetItem(value));
 	};
 
 	for (const DynamicVariable& variable : DynamicVariableResolver::builtInVariables())
@@ -128,21 +227,25 @@ void DynamicVariableManager::updateButtons()
 
 void DynamicVariableManager::addVariable()
 {
-	VariableEditDialog dialog(QString(), QString(), this);
+	if (!m_doc)
+		return;
+	VariableEditDialog dialog(m_doc, nullptr, this);
 	while (dialog.exec() == QDialog::Accepted)
 	{
-		if (dialog.name().isEmpty())
-		{
-			QMessageBox::warning(this, tr("Invalid Variable"), tr("The variable name cannot be empty."));
-			continue;
-		}
-		if (!m_doc->addDynamicVariable(dialog.name(), dialog.value()).isEmpty())
+		QString id;
+		if (dialog.isRunningHeader())
+			id = m_doc->addRunningHeaderVariable(dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode());
+		else
+			id = m_doc->addDynamicVariable(dialog.name(), dialog.value());
+		if (!id.isEmpty())
 		{
 			m_doc->changed();
 			refresh();
 			return;
 		}
-		QMessageBox::warning(this, tr("Invalid Variable"), tr("A variable with that name already exists, or the name is reserved."));
+		QMessageBox::warning(this, tr("Invalid Variable"), dialog.isRunningHeader()
+			? tr("Choose a unique, non-reserved name, an existing paragraph style, and a supported running-header mode.")
+			: tr("Choose a unique, non-reserved variable name."));
 	}
 }
 
@@ -152,17 +255,22 @@ void DynamicVariableManager::editVariable()
 	const DynamicVariable* variable = m_doc ? m_doc->dynamicVariable(id) : nullptr;
 	if (!variable)
 		return;
-	VariableEditDialog dialog(variable->name, variable->value, this);
+	VariableEditDialog dialog(m_doc, variable, this);
 	while (dialog.exec() == QDialog::Accepted)
 	{
-		if (m_doc->updateDynamicVariable(id, dialog.name(), dialog.value()))
+		const bool updated = variable->type == DynamicVariableResolver::RunningHeader
+			? m_doc->updateRunningHeaderVariable(id, dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode())
+			: m_doc->updateDynamicVariable(id, dialog.name(), dialog.value());
+		if (updated)
 		{
 			m_doc->changed();
 			m_doc->regionsChanged()->update(QRectF());
 			refresh();
 			return;
 		}
-		QMessageBox::warning(this, tr("Invalid Variable"), tr("Variable names must be non-empty, unique, and not reserved."));
+		QMessageBox::warning(this, tr("Invalid Variable"), variable->type == DynamicVariableResolver::RunningHeader
+			? tr("Choose a unique, non-reserved name, an existing paragraph style, and a supported running-header mode.")
+			: tr("Choose a unique, non-reserved variable name."));
 	}
 }
 
