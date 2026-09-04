@@ -345,6 +345,17 @@ scribus.setParagraphStyle("RecursiveHeading", recursive_second)
 recursive_value = scribus.getVariable(recursive_header_id, third_page_context)
 check(recursive_value == "", "cyclic running-header resolution did not fail safely")
 
+step("preserving styles referenced only by running headers")
+scribus.createParagraphStyle("HeaderOnlyStyle")
+header_only_id = scribus.createRunningHeaderVariable(
+    "Header Template Dependency", "HeaderOnlyStyle", "most-recent"
+)
+scribus.removeUnusedStyles()
+check(
+    "HeaderOnlyStyle" in scribus.getParagraphStyles(),
+    "unused-style cleanup removed a running-header paragraph style",
+)
+
 step("round-tripping running-header definitions")
 scribus.saveDoc()
 with open(output_path, "rb") as saved_file:
@@ -367,6 +378,12 @@ scribus.deleteVariable(recursive_header_id)
 scribus.deleteVariable(flow_first_id)
 scribus.deleteVariable(flow_recent_id)
 scribus.deleteVariable(api_header_id)
+scribus.deleteVariable(header_only_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
+scribus.removeUnusedStyles()
+check(
+    "HeaderOnlyStyle" not in scribus.getParagraphStyles(),
+    "unused-style cleanup retained an unreferenced paragraph style",
+)
 print("DYNAMIC_VARIABLE_TEST_PASSED", flush=True)
 scribus.closeDoc()

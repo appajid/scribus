@@ -1148,6 +1148,20 @@ void ScribusDoc::getUsedStylesFromItems(ResourceCollection& lists) const
 			pa.items.at(i)->getNamedResources(lists);
 	}
 
+	// A running-header definition is a document-level reference to a
+	// paragraph style. Keep that style and its dependencies even before a
+	// matching source paragraph has been added to the document.
+	for (const DynamicVariable& variable : m_dynamicVariables)
+	{
+		if (variable.type != DynamicVariableResolver::RunningHeader || variable.paragraphStyle.isEmpty())
+			continue;
+		const int styleIndex = m_docParagraphStyles.find(variable.paragraphStyle);
+		if (styleIndex < 0)
+			continue;
+		lists.collectStyle(variable.paragraphStyle);
+		m_docParagraphStyles[styleIndex].getNamedResources(lists);
+	}
+
 	// Protect default styles
 	lists.collectStyle(CommonStrings::DefaultParagraphStyle);
 	lists.collectCharStyle(CommonStrings::DefaultCharacterStyle);
