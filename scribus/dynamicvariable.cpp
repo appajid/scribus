@@ -58,6 +58,7 @@ struct RunningHeaderCandidate
 {
 	QString text;
 	QPointF position;
+	int page { -1 };
 	int itemOrder { 0 };
 	int storyPosition { 0 };
 };
@@ -93,7 +94,9 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 	for (PageItemIterator it(doc->DocItems, PageItemIterator::IterateInGroups); *it; ++it, ++itemOrder)
 	{
 		PageItem* item = *it;
-		if (!item || item == contextFrame || !item->isTextFrame() || item->OwnPage != contextFrame->OwnPage)
+		if (!item || item == contextFrame || !item->isTextFrame() || item->OwnPage < 0
+			|| item->OwnPage > contextFrame->OwnPage
+			|| (mode != DynamicVariable::RunningHeaderMode::MostRecent && item->OwnPage != contextFrame->OwnPage))
 			continue;
 		if (item->itemText.isEmpty())
 			continue;
@@ -124,6 +127,7 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 					RunningHeaderCandidate candidate;
 					candidate.text = text;
 					candidate.position = QPointF(item->visualXPos(), item->visualYPos());
+					candidate.page = item->OwnPage;
 					candidate.itemOrder = itemOrder;
 					candidate.storyPosition = paragraphStart;
 					candidates.append(candidate);
@@ -142,6 +146,8 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 
 	std::stable_sort(candidates.begin(), candidates.end(), [](const RunningHeaderCandidate& left,
 		const RunningHeaderCandidate& right) {
+		if (left.page != right.page)
+			return left.page < right.page;
 		if (!qFuzzyCompare(left.position.y() + 1.0, right.position.y() + 1.0))
 			return left.position.y() < right.position.y();
 		if (!qFuzzyCompare(left.position.x() + 1.0, right.position.x() + 1.0))
@@ -151,9 +157,9 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 		return left.storyPosition < right.storyPosition;
 	});
 
-	return mode == DynamicVariable::RunningHeaderMode::LastOnPage
-		? candidates.constLast().text
-		: candidates.constFirst().text;
+	return mode == DynamicVariable::RunningHeaderMode::FirstOnPage
+		? candidates.constFirst().text
+		: candidates.constLast().text;
 }
 }
 
@@ -250,10 +256,16 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 			const DynamicVariable::RunningHeaderMode mode = runningHeaderModeFromString(variable->runningHeaderMode);
 			if (variable->paragraphStyle.isEmpty()
 				|| !doc->paragraphStyles().contains(variable->paragraphStyle)
-				|| mode == DynamicVariable::RunningHeaderMode::Unsupported
-				|| mode == DynamicVariable::RunningHeaderMode::MostRecent)
+				|| mode == DynamicVariable::RunningHeaderMode::Unsupported)
 				return QString();
-			return resolveRunningHeader(doc, *variable, mode, frame);
+			if (!frame || frame->OwnPage < 0 || frame->OwnPage >= doc->DocPages.count())
+				return QString();
+			QString cachedValue;
+			if (doc->runningHeaderCacheValue(variable->id, frame->OwnPage, cachedValue))
+				return cachedValue;
+			const QString value = resolveRunningHeader(doc, *variable, mode, frame);
+			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, value);
+			return value;
 		}
 		return variable->value;
 	}

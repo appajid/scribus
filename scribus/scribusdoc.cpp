@@ -18245,8 +18245,31 @@ QString ScribusDoc::resolveDynamicVariable(const QString& id, const PageItem* fr
 	return DynamicVariableResolver::resolve(this, id, frame);
 }
 
+bool ScribusDoc::runningHeaderCacheValue(const QString& id, int page, QString& value) const
+{
+	const auto variableIt = m_runningHeaderPageCache.constFind(id);
+	if (variableIt == m_runningHeaderPageCache.constEnd() || !variableIt->contains(page))
+		return false;
+	value = variableIt->value(page);
+	return true;
+}
+
+void ScribusDoc::setRunningHeaderCacheValue(const QString& id, int page, const QString& value) const
+{
+	m_runningHeaderPageCache[id].insert(page, value);
+}
+
+void ScribusDoc::clearRunningHeaderCache() const
+{
+	m_runningHeaderPageCache.clear();
+}
+
 bool ScribusDoc::invalidateDynamicVariableFrames(const QString& id, bool forceUpdate)
 {
+	if (id.isEmpty())
+		clearRunningHeaderCache();
+	else
+		m_runningHeaderPageCache.remove(id);
 	bool found = false;
 	for (Mark* mark : std::as_const(m_docMarksList))
 	{
@@ -18261,6 +18284,7 @@ bool ScribusDoc::invalidateDynamicVariableFrames(const QString& id, bool forceUp
 
 bool ScribusDoc::invalidateRunningHeaderFrames(bool forceUpdate)
 {
+	clearRunningHeaderCache();
 	bool found = false;
 	for (Mark* mark : std::as_const(m_docMarksList))
 	{

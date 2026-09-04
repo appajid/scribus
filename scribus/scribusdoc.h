@@ -1387,7 +1387,13 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QString m_documentFileName;
 		QMap<QString, DynamicVariable> m_dynamicVariables;
 		QDateTime m_dynamicVariableCreationDate {QDateTime::currentDateTime()};
+		mutable QHash<QString, QHash<int, QString>> m_runningHeaderPageCache;
 		QUuid m_uuid;
+
+		friend class DynamicVariableResolver;
+		bool runningHeaderCacheValue(const QString& id, int page, QString& value) const;
+		void setRunningHeaderCacheValue(const QString& id, int page, const QString& value) const;
+		void clearRunningHeaderCache() const;
 
 	public: // Public attributes
 		int NrItems {0};

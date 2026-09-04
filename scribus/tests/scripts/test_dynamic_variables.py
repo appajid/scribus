@@ -41,7 +41,7 @@ created = scribus.newDocument(
     scribus.UNIT_POINTS,
     scribus.PAGE_1,
     0,
-    2,
+    3,
 )
 check(created, "could not create the test document")
 scribus.setInfo("Test Author", "Dynamic Variables Test", "Phase 1 regression test")
@@ -53,7 +53,7 @@ check(variable_id, "createVariable did not return a stable ID")
 check(scribus.getVariable(variable_id) == "Second Edition", "ID lookup failed")
 check(scribus.getVariable("Edition") == "Second Edition", "name lookup failed")
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "built-in title did not resolve")
-check(scribus.getVariable("page-count") == "2", "built-in page count did not resolve")
+check(scribus.getVariable("page-count") == "3", "built-in page count did not resolve")
 
 scribus.setVariable(variable_id, "Third Edition")
 scribus.renameVariable(variable_id, "Edition Label")
@@ -80,6 +80,8 @@ second_page_context = scribus.createText(40, 40, 300, 40, "SecondPageContext")
 second_page_heading = scribus.createText(40, 140, 300, 40, "SecondPageHeading")
 scribus.setText("Second Page Heading", second_page_heading)
 scribus.setParagraphStyle("ChapterTitle", second_page_heading)
+scribus.gotoPage(3)
+third_page_context = scribus.createText(40, 40, 300, 40, "ThirdPageContext")
 scribus.gotoPage(1)
 
 step("saving document")
@@ -121,6 +123,20 @@ check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved 
 check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
 check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
 check(
+    scribus.getVariable(running_header_id, frame_name) == "Last Visual Heading",
+    "most-recent did not use the final matching paragraph on its page",
+)
+check(
+    scribus.getVariable(running_header_id, third_page_context) == "Second Page Heading",
+    "most-recent did not carry a heading forward to a later page",
+)
+scribus.setText("Updated Second Page Heading", second_page_heading)
+scribus.setParagraphStyle("ChapterTitle", second_page_heading)
+check(
+    scribus.getVariable(running_header_id, third_page_context) == "Updated Second Page Heading",
+    "most-recent cache was not invalidated after editing its source heading",
+)
+check(
     scribus.getVariable(first_on_page_id, frame_name) == "First Visual Heading",
     "first-on-page did not use visual page order",
 )
@@ -129,7 +145,7 @@ check(
     "last-on-page did not use visual page order",
 )
 check(
-    scribus.getVariable(first_on_page_id, second_page_context) == "Second Page Heading",
+    scribus.getVariable(first_on_page_id, second_page_context) == "Updated Second Page Heading",
     "first-on-page did not isolate candidates to the context page",
 )
 check(scribus.insertVariable(first_on_page_id, frame_name) == first_on_page_id, "first-on-page insertion failed")
