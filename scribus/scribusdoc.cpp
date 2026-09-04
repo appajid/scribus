@@ -18110,7 +18110,8 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 	QString variableId = id;
 	if (variableId.isEmpty())
 		variableId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-	if (m_dynamicVariables.contains(variableId) || name.trimmed().isEmpty() || !dynamicVariableIdByName(name.trimmed()).isEmpty())
+	if (m_dynamicVariables.contains(variableId) || DynamicVariableResolver::isReservedName(name)
+		|| !dynamicVariableIdByName(name.trimmed()).isEmpty())
 		return QString();
 
 	DynamicVariable variable;
@@ -18152,7 +18153,9 @@ QString ScribusDoc::addRunningHeaderVariable(const QString& name, const QString&
 bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, const QString& value)
 {
 	auto it = m_dynamicVariables.find(id);
-	if (it == m_dynamicVariables.end() || DynamicVariableResolver::isBuiltInId(id) || name.trimmed().isEmpty())
+	if (it == m_dynamicVariables.end() || DynamicVariableResolver::isBuiltInId(id)
+		|| DynamicVariableResolver::isReservedName(name)
+		|| (it->type != DynamicVariableResolver::UserDefined && it->value != value))
 		return false;
 	const QString duplicateId = dynamicVariableIdByName(name.trimmed());
 	if (!duplicateId.isEmpty() && duplicateId != id)

@@ -30,7 +30,7 @@ namespace
 QString dynamicVariableId(ScribusDoc* doc, const QString& identifier)
 {
 	if (DynamicVariableResolver::isBuiltInId(identifier))
-		return identifier;
+		return DynamicVariableResolver::isKnownBuiltInId(identifier) ? identifier : QString();
 	for (const DynamicVariable& variable : DynamicVariableResolver::builtInVariables())
 	{
 		if (variable.type == identifier)
@@ -829,7 +829,7 @@ PyObject *scribus_createvariable(PyObject* /* self */, PyObject* args)
 	const QString id = currentDoc->addDynamicVariable(variableName, QString::fromUtf8(value.c_str()));
 	if (id.isEmpty())
 	{
-		PyErr_SetString(NameExistsError, QObject::tr("A dynamic variable named '%1' already exists, or the name is empty.", "python error").arg(variableName).toUtf8().constData());
+		PyErr_SetString(NameExistsError, QObject::tr("A dynamic variable named '%1' already exists, or the name is empty or reserved.", "python error").arg(variableName).toUtf8().constData());
 		return nullptr;
 	}
 	currentDoc->changed();
@@ -997,7 +997,16 @@ PyObject *scribus_setvariable(PyObject* /* self */, PyObject* args)
 	if (id.isEmpty())
 		return dynamicVariableNotFound(requested);
 	const DynamicVariable variable = *currentDoc->dynamicVariable(id);
-	currentDoc->updateDynamicVariable(id, variable.name, QString::fromUtf8(value.c_str()));
+	if (variable.type != DynamicVariableResolver::UserDefined)
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The value of computed dynamic variable '%1' cannot be set.", "python error").arg(variable.name).toUtf8().constData());
+		return nullptr;
+	}
+	if (!currentDoc->updateDynamicVariable(id, variable.name, QString::fromUtf8(value.c_str())))
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The dynamic variable could not be updated.", "python error").toUtf8().constData());
+		return nullptr;
+	}
 	currentDoc->changed();
 	Py_RETURN_NONE;
 }

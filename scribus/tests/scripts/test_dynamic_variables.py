@@ -27,6 +27,14 @@ def check(condition, message):
         raise AssertionError(message)
 
 
+def expect_error(function, message):
+    try:
+        function()
+    except Exception:
+        return
+    raise AssertionError(message)
+
+
 output_path = os.environ.get(
     "SCRIBUS_DYNAMIC_VARIABLE_TEST_OUTPUT",
     os.path.join(tempfile.gettempdir(), "scribus_dynamic_variables_test.sla"),
@@ -58,6 +66,14 @@ check(scribus.getVariable(variable_id) == "Second Edition", "ID lookup failed")
 check(scribus.getVariable("Edition") == "Second Edition", "name lookup failed")
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "built-in title did not resolve")
 check(scribus.getVariable("page-count") == "3", "built-in page count did not resolve")
+expect_error(
+    lambda: scribus.createVariable("document-title", "Shadow Title"),
+    "a user variable was allowed to shadow a built-in type",
+)
+expect_error(
+    lambda: scribus.getVariable("builtin:not-a-real-variable"),
+    "an unknown built-in variable ID was accepted",
+)
 
 scribus.setVariable(variable_id, "Third Edition")
 scribus.renameVariable(variable_id, "Edition Label")
@@ -146,6 +162,10 @@ check(scribus.getVariable("Edition Label") == "Third Edition", "saved name looku
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved built-in metadata lookup failed")
 check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
 check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
+expect_error(
+    lambda: scribus.setVariable(running_header_id, "Manual Override"),
+    "a computed running-header value was writable",
+)
 check(
     scribus.getVariable(running_header_id, frame_name) == "Last Visual Heading",
     "most-recent did not use the final matching paragraph on its page",

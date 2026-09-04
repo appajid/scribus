@@ -142,7 +142,7 @@ void DynamicVariableManager::addVariable()
 			refresh();
 			return;
 		}
-		QMessageBox::warning(this, tr("Duplicate Variable"), tr("A variable with that name already exists."));
+		QMessageBox::warning(this, tr("Invalid Variable"), tr("A variable with that name already exists, or the name is reserved."));
 	}
 }
 
@@ -162,7 +162,7 @@ void DynamicVariableManager::editVariable()
 			refresh();
 			return;
 		}
-		QMessageBox::warning(this, tr("Invalid Variable"), tr("Variable names must be non-empty and unique."));
+		QMessageBox::warning(this, tr("Invalid Variable"), tr("Variable names must be non-empty, unique, and not reserved."));
 	}
 }
 

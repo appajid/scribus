@@ -197,6 +197,29 @@ bool DynamicVariableResolver::isBuiltInId(const QString& id)
 	return id.startsWith(BuiltInPrefix);
 }
 
+bool DynamicVariableResolver::isKnownBuiltInId(const QString& id)
+{
+	for (const DynamicVariable& variable : builtInVariables())
+	{
+		if (variable.id == id)
+			return true;
+	}
+	return false;
+}
+
+bool DynamicVariableResolver::isReservedName(const QString& name)
+{
+	const QString candidate = name.trimmed();
+	if (candidate.isEmpty() || isBuiltInId(candidate))
+		return true;
+	for (const DynamicVariable& variable : builtInVariables())
+	{
+		if (variable.type == candidate || variable.name == candidate)
+			return true;
+	}
+	return false;
+}
+
 QString DynamicVariableResolver::displayNameForType(const QString& type)
 {
 	if (type == DocumentTitle)

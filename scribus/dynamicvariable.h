@@ -52,6 +52,8 @@ public:
 
 	static QList<DynamicVariable> builtInVariables();
 	static bool isBuiltInId(const QString& id);
+	static bool isKnownBuiltInId(const QString& id);
+	static bool isReservedName(const QString& name);
 	static QString displayNameForType(const QString& type);
 	static QString idForType(const QString& type);
 	static QString typeForId(const QString& id);
