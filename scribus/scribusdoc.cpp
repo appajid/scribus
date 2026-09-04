@@ -2953,6 +2953,7 @@ void ScribusDoc::swapPage(int a, int b)
 	}
 	Pages->swapItemsAt(a, b);
 	reformPages();
+	invalidateDynamicVariableFrames(QString(), false);
 	changed();
 }
 
@@ -3006,6 +3007,7 @@ void ScribusDoc::movePage(int fromPage, int toPage, int dest, int position)
 		m_undoManager->action(this, ss);
 	}
 	reformPages();
+	invalidateDynamicVariableFrames(QString(), false);
 	if (m_View && m_ScMW)
 	{
 		m_View->reformPagesView();
