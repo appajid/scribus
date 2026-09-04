@@ -18560,6 +18560,8 @@ bool ScribusDoc::invalidateVariableTextFrames(const Mark* mrk, bool forceUpdate)
 	if (!mrk->isType(MARKVariableTextType))
 		return false;
 	bool found = false;
+
+	// Document frames use findMarkItem() because a story may span a chain.
 	PageItem* lastItem = nullptr;
 	PageItem* mItem = findMarkItem(mrk, lastItem);
 	while (mItem != nullptr)
@@ -18569,6 +18571,22 @@ bool ScribusDoc::invalidateVariableTextFrames(const Mark* mrk, bool forceUpdate)
 		if (forceUpdate)
 			mItem->layout();
 		mItem = findMarkItem(mrk, lastItem);
+	}
+
+	// Master-page text frames are shared by every page to which the master is
+	// applied. Invalidate their current page shadow as well so a redraw or
+	// export resolves contextual variables against the applied document page.
+	for (PageItemIterator it(MasterItems, PageItemIterator::IterateInGroups); *it; ++it)
+	{
+		PageItem* item = *it;
+		if (!item || !item->isTextFrame() || item->prevInChain() != nullptr || item->itemText.isEmpty())
+			continue;
+		if (item->itemText.findMark(mrk) < 0)
+			continue;
+		found = true;
+		item->asTextFrame()->invalidateLayout(false);
+		if (forceUpdate)
+			item->layout();
 	}
 	return found;
 }

@@ -12,6 +12,8 @@ for which a new license (GPL+exception) is in place.
 import os
 import tempfile
 import gzip
+import shutil
+import subprocess
 
 import scribus
 
@@ -165,6 +167,54 @@ check(
     "last-on-page did not update after source frame moved",
 )
 check(scribus.insertVariable(running_header_id, frame_name) == running_header_id, "running-header insertion failed")
+
+step("testing a running header on an applied master page")
+master_page_name = "Running Header Master"
+scribus.createMasterPage(master_page_name)
+scribus.editMasterPage(master_page_name)
+master_header = scribus.createText(40, 760, 300, 40, "MasterRunningHeader")
+scribus.setFont("Arial Regular", master_header)
+check(
+    scribus.insertVariable(running_header_id, master_header) == running_header_id,
+    "could not insert a running header on the master page",
+)
+scribus.closeMasterPage()
+for page_number in (1, 2, 3):
+    scribus.applyMasterPage(master_page_name, page_number)
+
+pdf_path = os.path.splitext(output_path)[0] + "-master.pdf"
+pdf_text_path = os.path.splitext(output_path)[0] + "-master.txt"
+for generated_path in (pdf_path, pdf_text_path):
+    if os.path.exists(generated_path):
+        os.remove(generated_path)
+
+def export_master_pdf(pages):
+    pdf = scribus.PDFfile()
+    pdf.file = pdf_path
+    pdf.pages = pages
+    pdf.save()
+
+def extract_pdf_pages():
+    pdftotext = shutil.which("pdftotext")
+    if not pdftotext:
+        return None
+    subprocess.run([pdftotext, "-layout", pdf_path, pdf_text_path], check=True)
+    with open(pdf_text_path, "r", encoding="utf-8") as text_file:
+        return text_file.read().split("\f")
+
+export_master_pdf([1, 2, 3])
+pdf_pages = extract_pdf_pages()
+if pdf_pages is not None:
+    check("Updated First Heading" in pdf_pages[0], "master header used the wrong page-one context")
+    check("Updated Second Page Heading" in pdf_pages[1], "master header used the wrong page-two context")
+    check("Updated Second Page Heading" in pdf_pages[2], "master header did not carry forward on page three")
+
+scribus.setText("Final Second Page Heading", second_page_heading)
+scribus.setParagraphStyle("ChapterTitle", second_page_heading)
+export_master_pdf([3])
+pdf_pages = extract_pdf_pages()
+if pdf_pages is not None:
+    check("Final Second Page Heading" in pdf_pages[0], "master header was stale after editing its source")
 
 step("round-tripping running-header definitions")
 scribus.saveDoc()
