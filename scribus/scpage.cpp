@@ -381,6 +381,8 @@ void ScPage::restorePageItemCreation(ScItemState<PageItem*> *state, bool isUndo)
 	if ((stateCode == 0) || (stateCode == 2))
 		update();
 	m_Doc->setMasterPageMode(oldMPMode);
+	// Redo can restore a populated text frame directly to the item list.
+	m_Doc->invalidateRunningHeaderFrames(false);
 	m_Doc->m_Selection->delaySignalsOff();
 }
 
@@ -429,6 +431,9 @@ void ScPage::restorePageItemDeletion(ScItemState< QList<PageItem*> > *state, boo
 	if ((stateCode == 0) || (stateCode == 2))
 		update();
 	m_Doc->setMasterPageMode(oldMPMode);
+	// Undo can restore a heading source directly to the document item list,
+	// bypassing the usual text and geometry invalidation paths.
+	m_Doc->invalidateRunningHeaderFrames(false);
 	m_Doc->m_Selection->delaySignalsOff();
 }
 

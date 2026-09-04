@@ -220,6 +220,18 @@ pdf_pages = extract_pdf_pages()
 if pdf_pages is not None:
     check("Final Second Page Heading" in pdf_pages[0], "master header was stale after editing its source")
 
+step("invalidating running headers after deleting a source frame")
+scribus.deleteObject(second_page_heading)
+check(
+    scribus.getVariable(running_header_id, third_page_context) == "Updated First Heading",
+    "most-recent cache was not invalidated after deleting its source heading",
+)
+export_master_pdf([3])
+pdf_pages = extract_pdf_pages()
+if pdf_pages is not None:
+    check("Updated First Heading" in pdf_pages[0], "master header was stale after deleting its source")
+    check("Final Second Page Heading" not in pdf_pages[0], "deleted heading remained in the master header")
+
 step("checking cyclic running-header layout safety")
 scribus.gotoPage(3)
 recursive_first = scribus.createText(360, 620, 180, 40, "RecursiveHeaderFirst")

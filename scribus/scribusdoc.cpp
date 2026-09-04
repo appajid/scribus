@@ -12149,6 +12149,11 @@ void ScribusDoc::itemSelection_DeleteItem(Selection* customSelection, bool force
 	
 	for (PageItem* tii : textInteractionItems)
 		tii->update();
+
+	// A deleted text frame may have supplied one or more running headers.
+	// Invalidate after removing all items so the next resolution scans the
+	// document's current item set rather than returning the previous value.
+	invalidateRunningHeaderFrames(false);
 	
 	regionsChanged()->update(QRectF());
 	if (m_View)
