@@ -277,13 +277,13 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 			if (!frame || frame->OwnPage < 0 || frame->OwnPage >= doc->DocPages.count())
 				return QString();
 			QString cachedValue;
-			if (doc->runningHeaderCacheValue(variable->id, frame->OwnPage, cachedValue))
+			if (doc->runningHeaderCacheValue(variable->id, frame->OwnPage, frame, cachedValue))
 				return cachedValue;
 			if (!doc->beginRunningHeaderResolution(variable->id, frame->OwnPage))
 				return QString();
 			const QString value = resolveRunningHeader(doc, *variable, mode, frame);
 			doc->endRunningHeaderResolution(variable->id, frame->OwnPage);
-			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, value);
+			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, frame, value);
 			return value;
 		}
 		return variable->value;

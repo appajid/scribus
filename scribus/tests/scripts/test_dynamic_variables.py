@@ -146,6 +146,15 @@ check(
     scribus.getVariable(first_on_page_id, frame_name) == "First Visual Heading",
     "first-on-page did not use visual page order",
 )
+scribus.setParagraphStyle("ChapterTitle", lower_heading)
+check(
+    scribus.getVariable(first_on_page_id, upper_heading) == "Last Visual Heading",
+    "first-on-page did not exclude its first source context",
+)
+check(
+    scribus.getVariable(first_on_page_id, lower_heading) == "First Visual Heading",
+    "first-on-page reused a value cached for a different context frame",
+)
 check(
     scribus.getVariable(last_on_page_id, frame_name) == "Last Visual Heading",
     "last-on-page did not use visual page order",

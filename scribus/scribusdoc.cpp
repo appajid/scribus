@@ -18250,18 +18250,21 @@ QString ScribusDoc::resolveDynamicVariable(const QString& id, const PageItem* fr
 	return DynamicVariableResolver::resolve(this, id, frame);
 }
 
-bool ScribusDoc::runningHeaderCacheValue(const QString& id, int page, QString& value) const
+bool ScribusDoc::runningHeaderCacheValue(const QString& id, int page, const PageItem* contextFrame, QString& value) const
 {
 	const auto variableIt = m_runningHeaderPageCache.constFind(id);
-	if (variableIt == m_runningHeaderPageCache.constEnd() || !variableIt->contains(page))
+	if (variableIt == m_runningHeaderPageCache.constEnd())
 		return false;
-	value = variableIt->value(page);
+	const auto pageIt = variableIt->constFind(page);
+	if (pageIt == variableIt->constEnd() || !pageIt->contains(contextFrame))
+		return false;
+	value = pageIt->value(contextFrame);
 	return true;
 }
 
-void ScribusDoc::setRunningHeaderCacheValue(const QString& id, int page, const QString& value) const
+void ScribusDoc::setRunningHeaderCacheValue(const QString& id, int page, const PageItem* contextFrame, const QString& value) const
 {
-	m_runningHeaderPageCache[id].insert(page, value);
+	m_runningHeaderPageCache[id][page].insert(contextFrame, value);
 }
 
 bool ScribusDoc::beginRunningHeaderResolution(const QString& id, int page) const
