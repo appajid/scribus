@@ -302,6 +302,7 @@ PyMethodDef scribus_methods[] = {
 	{ "createLayer", scribus_createlayer, METH_VARARGS, tr(scribus_createlayer__doc__)},
 	{ "createLine", scribus_createline, METH_VARARGS, tr(scribus_createline__doc__)},
 	{ "createMasterPage", scribus_createmasterpage, METH_VARARGS, tr(scribus_createmasterpage__doc__)},
+	{ "createFacingMasterPair", scribus_createfacingmasterpair, METH_VARARGS, tr(scribus_createfacingmasterpair__doc__)},
 	{ "createParagraphStyle", (PyCFunction) scribus_createparagraphstyle, METH_VARARGS|METH_KEYWORDS, tr(scribus_createparagraphstyle__doc__)},
 	{ "createPathText", scribus_createpathtext, METH_VARARGS, tr(scribus_createpathtext__doc__)},
 	{ "createPolyLine", scribus_createpolyline, METH_VARARGS, tr(scribus_createpolyline__doc__)},

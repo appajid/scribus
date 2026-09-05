@@ -363,6 +363,14 @@ editing.\n\
 "));
 PyObject* scribus_createmasterpage(PyObject* self, PyObject* args);
 
+PyDoc_STRVAR(scribus_createfacingmasterpair__doc__,
+QT_TR_NOOP("createFacingMasterPair(leftPageName, rightPageName)\n\
+\n\
+Creates coordinated left and right master pages in a facing-page document.\n\
+The two created master-page names are returned as a tuple.\n\
+"));
+PyObject* scribus_createfacingmasterpair(PyObject* self, PyObject* args);
+
 PyDoc_STRVAR(scribus_deletemasterpage__doc__,
 QT_TR_NOOP("deleteMasterPage(pageName)\n\
 \n\

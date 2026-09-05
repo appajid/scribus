@@ -2100,7 +2100,8 @@ void ScribusDoc::restoreAddMasterPage(SimpleState* ss, bool isUndo)
 	} 
 	else 
 	{
-		ScPage* Mpage = addMasterPage(pageNr, pageName);
+		const int pageSide = ss->contains("MASTERPAGE_LEFTPG") ? ss->getInt("MASTERPAGE_LEFTPG") : -1;
+		ScPage* Mpage = addMasterPage(pageNr, pageName, pageSide);
 		setCurrentPage(Mpage);
 		UndoObject *tmp = m_undoManager->replaceObject(
 					ss->getUInt("DUMMY_ID"), Pages->at(MasterNames[pageName]));
@@ -2780,7 +2781,7 @@ ScPage* ScribusDoc::addPage(int pageNumber, const QString& masterPageName, bool 
 }
 
 
-ScPage* ScribusDoc::addMasterPage(int pageNumber, const QString& pageName)
+ScPage* ScribusDoc::addMasterPage(int pageNumber, const QString& pageName, int pageSide)
 {
 	ScPage* addedPage = new ScPage(m_docPrefsData.displayPrefs.scratch.left(), m_docPrefsData.displayPrefs.scratch.top(), m_docPrefsData.docSetupPrefs.pageWidth, m_docPrefsData.docSetupPrefs.pageHeight);
 	assert(addedPage != nullptr);
@@ -2790,6 +2791,20 @@ ScPage* ScribusDoc::addMasterPage(int pageNumber, const QString& pageName)
 	addedPage->setSize(m_docPrefsData.docSetupPrefs.pageSize);
 	addedPage->setOrientation(m_docPrefsData.docSetupPrefs.pageOrientation);
 	addedPage->marginPreset = m_docPrefsData.docSetupPrefs.marginPreset;
+	if (pageSide >= 0)
+	{
+		addedPage->LeftPg = pageSide;
+		if (pageSide == 0)
+		{
+			addedPage->Margins.setLeft(addedPage->initialMargins.left());
+			addedPage->Margins.setRight(addedPage->initialMargins.right());
+		}
+		else if (pageSide == 1)
+		{
+			addedPage->Margins.setLeft(addedPage->initialMargins.right());
+			addedPage->Margins.setRight(addedPage->initialMargins.left());
+		}
+	}
 	addedPage->clearMasterPageName();
 	int pgN = pageNumber;
 	if (pageNumber > MasterPages.count())
@@ -2810,9 +2825,30 @@ ScPage* ScribusDoc::addMasterPage(int pageNumber, const QString& pageName)
 		ss->set("MASTERPAGE_ADD");
 		ss->set("MASTERPAGE_NAME", pageName);
 		ss->set("MASTERPAGE_NBR", pgN);
+		ss->set("MASTERPAGE_LEFTPG", addedPage->LeftPg);
 		m_undoManager->action(this, ss);
 	}
 	return addedPage;
+}
+
+bool ScribusDoc::addMasterPagePair(const QString& leftPageName, const QString& rightPageName)
+{
+	if (pageSets()[pagePositioning()].Columns != 2 || leftPageName.isEmpty() || rightPageName.isEmpty())
+		return false;
+	if (leftPageName == rightPageName || MasterNames.contains(leftPageName) || MasterNames.contains(rightPageName))
+		return false;
+
+	UndoTransaction transaction;
+	if (UndoManager::undoEnabled())
+		transaction = m_undoManager->beginTransaction(getUName(), Um::IDocument, tr("Create Facing Master Pair"), "", Um::ICreate);
+
+	const int firstPageNumber = MasterPages.count();
+	addMasterPage(firstPageNumber, leftPageName, 1);
+	addMasterPage(firstPageNumber + 1, rightPageName, 0);
+
+	if (transaction)
+		transaction.commit();
+	return true;
 }
 
 

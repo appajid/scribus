@@ -48,6 +48,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QToolButton" name="facingPairButton">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QToolButton" name="importButton">
        <property name="text">
         <string/>

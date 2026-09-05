@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 
 import scribus
 
@@ -59,8 +60,7 @@ def create_heading(page, name, value, y=180):
     return frame
 
 
-def create_master(name, label, variable_id):
-    scribus.createMasterPage(name)
+def populate_master(name, label, variable_id):
     scribus.editMasterPage(name)
     frame = scribus.createText(50, 35, 480, 35, name + "Frame")
     scribus.setFont("Arial Regular", frame)
@@ -100,16 +100,35 @@ last_id = scribus.createRunningHeaderVariable(
 )
 
 step("creating separate left and right master pages")
-create_master("Left Running Header", "LEFT HEADER: ", recent_id)
-create_master("Right Running Header", "RIGHT HEADER: ", recent_id)
-create_master("First On Page Header", "FIRST HEADER: ", first_id)
-create_master("Last On Page Header", "LAST HEADER: ", last_id)
+created_pair = scribus.createFacingMasterPair("Left Running Header", "Right Running Header")
+check(
+    created_pair == ("Left Running Header", "Right Running Header"),
+    "facing master-pair API returned unexpected names",
+)
+try:
+    scribus.createFacingMasterPair("Left Running Header", "Another Right Master")
+    raise AssertionError("duplicate facing master-page names were accepted")
+except ValueError:
+    pass
+populate_master("Left Running Header", "LEFT HEADER: ", recent_id)
+populate_master("Right Running Header", "RIGHT HEADER: ", recent_id)
+scribus.createMasterPage("First On Page Header")
+populate_master("First On Page Header", "FIRST HEADER: ", first_id)
+scribus.createMasterPage("Last On Page Header")
+populate_master("Last On Page Header", "LAST HEADER: ", last_id)
 for page in range(1, 9):
     master = "Left Running Header" if page % 2 == 0 else "Right Running Header"
     scribus.applyMasterPage(master, page)
     check(scribus.getMasterPage(page) == master, "master assignment was not retained")
 
 scribus.saveDocAs(document_path)
+
+master_sides = {
+    page.get("PageName"): page.get("LeftPage")
+    for page in ET.parse(document_path).getroot().iter("MasterPage")
+}
+check(master_sides.get("Left Running Header") == "1", "left master has the wrong page side")
+check(master_sides.get("Right Running Header") == "0", "right master has the wrong page side")
 
 step("checking page-specific master rendering")
 pages = export_pages(list(range(1, 9)))
@@ -185,5 +204,26 @@ check("RIGHT HEADER: BRAVO CHAPTER REVISED" in pages[0], "reopened source header
 check("LEFT HEADER: BRAVO CHAPTER REVISED" in pages[1], "reopened facing header was incorrect")
 check("LAST HEADER: DELTA CHAPTER" in pages[2], "reopened reassigned master was incorrect")
 
-print("RUNNING_HEADER_MASTERS_QA_PASSED", flush=True)
 scribus.closeDoc()
+
+step("rejecting facing-pair creation in a single-page document")
+check(
+    scribus.newDocument(
+        scribus.PAPER_A4,
+        (36, 36, 36, 36),
+        scribus.PORTRAIT,
+        1,
+        scribus.UNIT_POINTS,
+        scribus.PAGE_1,
+        0,
+        1,
+    ),
+    "could not create the single-page validation document",
+)
+try:
+    scribus.createFacingMasterPair("Invalid Left", "Invalid Right")
+    raise AssertionError("a facing master pair was accepted in a single-page document")
+except ValueError:
+    pass
+scribus.closeDoc()
+print("RUNNING_HEADER_MASTERS_QA_PASSED", flush=True)

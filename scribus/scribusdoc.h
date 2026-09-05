@@ -265,7 +265,9 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		ScPage* addPage(int pageNumber, const QString& masterPageName = QString(), bool addAutoFrame = false);
 		void deletePage(int);
 		//! @brief Add a master page with this function, do not use addPage
-		ScPage* addMasterPage(int, const QString&);
+		ScPage* addMasterPage(int, const QString&, int pageSide = -1);
+		//! @brief Add coordinated left and right master pages to a facing-page document
+		bool addMasterPagePair(const QString& leftPageName, const QString& rightPageName);
 		void deleteMasterPage(int);
 		//! @brief Rebuild master name list
 		void rebuildMasterNames();

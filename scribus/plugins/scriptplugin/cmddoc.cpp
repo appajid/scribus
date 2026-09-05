@@ -520,6 +520,44 @@ PyObject* scribus_createmasterpage(PyObject* /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject* scribus_createfacingmasterpair(PyObject* /* self */, PyObject* args)
+{
+	PyESString leftNameUtf8;
+	PyESString rightNameUtf8;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", leftNameUtf8.ptr(), "utf-8", rightNameUtf8.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	const QString leftName = QString::fromUtf8(leftNameUtf8.c_str()).trimmed();
+	const QString rightName = QString::fromUtf8(rightNameUtf8.c_str()).trimmed();
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	if (currentDoc->pageSets()[currentDoc->pagePositioning()].Columns != 2)
+	{
+		PyErr_SetString(PyExc_ValueError, "Facing master pairs require a facing-page document");
+		return nullptr;
+	}
+	if (leftName.isEmpty() || rightName.isEmpty() || leftName == rightName)
+	{
+		PyErr_SetString(PyExc_ValueError, "Left and right master page names must be different and non-empty");
+		return nullptr;
+	}
+	if (currentDoc->MasterNames.contains(leftName) || currentDoc->MasterNames.contains(rightName))
+	{
+		PyErr_SetString(PyExc_ValueError, "A master page with one of these names already exists");
+		return nullptr;
+	}
+	if (!currentDoc->addMasterPagePair(leftName, rightName))
+	{
+		PyErr_SetString(PyExc_RuntimeError, "Could not create the facing master pair");
+		return nullptr;
+	}
+
+	PyObject* leftNameObject = PyUnicode_FromString(leftName.toUtf8().constData());
+	PyObject* rightNameObject = PyUnicode_FromString(rightName.toUtf8().constData());
+	return Py_BuildValue("(NN)", leftNameObject, rightNameObject);
+}
+
 PyObject* scribus_deletemasterpage(PyObject* /* self */, PyObject* args)
 {
 	PyESString name;

@@ -11,6 +11,7 @@ for which a new license (GPL+exception) is in place.
 #include <QCursor>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QMessageBox>
@@ -50,6 +51,7 @@ PagePalette_MasterPages::PagePalette_MasterPages( QWidget* parent, ScribusView *
 	iconSetChange();
 
 	masterPageListBox->setSelectionMode(QAbstractItemView::ExtendedSelection);
+	facingPairButton->setEnabled(m_doc->pageSets()[m_doc->pagePositioning()].Columns == 2);
 	styleChange();
 	languageChange();
 
@@ -81,6 +83,7 @@ void PagePalette_MasterPages::setView(ScribusView* view, const QString& masterPa
 		this->setEnabled(false);
 		return;
 	}
+	facingPairButton->setEnabled(m_doc->pageSets()[m_doc->pagePositioning()].Columns == 2);
 
 	if (masterPageName.isEmpty() && m_doc->masterPageMode())
 		m_currentPage = m_doc->currentPage()->pageName();
@@ -103,6 +106,7 @@ void PagePalette_MasterPages::connectSignals()
 {
 	connect(duplicateButton, SIGNAL(clicked()), this, SLOT(duplicateMasterPage()));
 	connect(deleteButton   , SIGNAL(clicked()), this, SLOT(deleteMasterPage()));
+	connect(facingPairButton, SIGNAL(clicked()), this, SLOT(createFacingMasterPair()));
 	connect(newButton      , SIGNAL(clicked()), this, SLOT(newMasterPage()));
 	connect(importButton   , SIGNAL(clicked()), this, SLOT(importPage()));
 	connect(masterPageListBox, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(selectMasterPage(QListWidgetItem*)));
@@ -114,6 +118,7 @@ void PagePalette_MasterPages::disconnectSignals()
 {
 	disconnect(duplicateButton, SIGNAL(clicked()), this, SLOT(duplicateMasterPage()));
 	disconnect(deleteButton   , SIGNAL(clicked()), this, SLOT(deleteMasterPage()));
+	disconnect(facingPairButton, SIGNAL(clicked()), this, SLOT(createFacingMasterPair()));
 	disconnect(newButton      , SIGNAL(clicked()), this, SLOT(newMasterPage()));
 	disconnect(importButton   , SIGNAL(clicked()), this, SLOT(importPage()));
 	disconnect(masterPageListBox, SIGNAL(itemClicked(QListWidgetItem*)),
@@ -129,6 +134,7 @@ void PagePalette_MasterPages::iconSetChange()
 
 	importButton->setIcon(iconManager.loadIcon("document-open"));
 	newButton->setIcon(iconManager.loadIcon("document-new"));
+	facingPairButton->setIcon(iconManager.loadIcon("page-doublesided"));
 	duplicateButton->setIcon(iconManager.loadIcon("edit-copy"));
 	deleteButton->setIcon(iconManager.loadIcon("edit-delete"));
 }
@@ -139,6 +145,8 @@ void PagePalette_MasterPages::languageChange()
 	duplicateButton->setToolTip( tr( "Duplicate the selected master page" ) );
 	deleteButton->setToolTip( tr( "Delete the selected master page" ) );
 	newButton->setToolTip( tr( "Add a new master page" ) );
+	facingPairButton->setAccessibleName( tr( "Create Facing Master Pair" ) );
+	facingPairButton->setToolTip( tr( "Create a coordinated L/R master-page pair" ) );
 	importButton->setToolTip( tr( "Import master pages from another document" ) );
 }
 
@@ -226,18 +234,18 @@ void PagePalette_MasterPages::duplicateMasterPage()
 	int inde = m_doc->MasterNames.value(m_currentPage);
 	int nr = m_doc->Pages->count();
 	ScPage* from = m_doc->Pages->at(inde);
-	ScPage* destination = m_doc->addMasterPage(nr, name);
+	int pageSide = -1;
 	if (m_doc->pagePositioning() != singlePage)
 	{
-		int lp = dia->Links->currentIndex();
-		if (lp == 0)
-			lp = 1;
-		else if (lp == static_cast<int>(dia->Links->count()-1))
-			lp = 0;
+		pageSide = dia->Links->currentIndex();
+		if (pageSide == 0)
+			pageSide = 1;
+		else if (pageSide == static_cast<int>(dia->Links->count()-1))
+			pageSide = 0;
 		else
-			lp++;
-		destination->LeftPg = lp;
+			pageSide++;
 	}
+	ScPage* destination = m_doc->addMasterPage(nr, name, pageSide);
 	destination->initialMargins.setTop(from->initialMargins.top());
 	destination->initialMargins.setBottom(from->initialMargins.bottom());
 	if (m_doc->pageSets()[m_doc->pagePositioning()].Columns == 1)
@@ -331,23 +339,63 @@ void PagePalette_MasterPages::newMasterPage()
 	name = getNonReservedName(name);
 	name = getUniqueName(name, m_doc->MasterNames);
 
-	m_doc->setCurrentPage(m_doc->addMasterPage(nr, name));
+	int pageSide = -1;
 	if (m_doc->pagePositioning() != singlePage)
 	{
-		int lp = dia->Links->currentIndex();
-		if (lp == 0)
-			lp = 1;
-		else if (lp == static_cast<int>(dia->Links->count()-1))
-			lp = 0;
+		pageSide = dia->Links->currentIndex();
+		if (pageSide == 0)
+			pageSide = 1;
+		else if (pageSide == static_cast<int>(dia->Links->count()-1))
+			pageSide = 0;
 		else
-			lp++;
-		m_doc->Pages->at(nr)->LeftPg = lp;
+			pageSide++;
 	}
+	m_doc->setCurrentPage(m_doc->addMasterPage(nr, name, pageSide));
 	updateMasterPageList(name);
 	//#8321 : incorrect selection of master page on new mp creation/duplictation
 	//m_view->showMasterPage(m_doc->MasterNames[name]);
 	selectMasterPage(name);
 	m_view->reformPages();
+}
+
+void PagePalette_MasterPages::createFacingMasterPair()
+{
+	if (!m_doc || !m_view || m_doc->pageSets()[m_doc->pagePositioning()].Columns != 2)
+		return;
+
+	bool accepted = false;
+	const QString baseName = QInputDialog::getText(this, tr("Create Facing Master Pair"), tr("Pair name:"),
+		QLineEdit::Normal, tr("New Master Pair"), &accepted).trimmed();
+	if (!accepted || baseName.isEmpty())
+		return;
+
+	QString leftName;
+	QString rightName;
+	int suffix = 1;
+	do
+	{
+		const QString candidateBase = suffix == 1 ? baseName : tr("%1 %2").arg(baseName).arg(suffix);
+		leftName = tr("%1 L").arg(candidateBase);
+		rightName = tr("%1 R").arg(candidateBase);
+		++suffix;
+	}
+	while (isReservedName(leftName) || isReservedName(rightName)
+		|| m_doc->MasterNames.contains(leftName) || m_doc->MasterNames.contains(rightName));
+
+	if (m_doc->appMode == modeEditClip)
+		m_view->requestMode(submodeEndNodeEdit);
+
+	if (!m_doc->addMasterPagePair(leftName, rightName))
+	{
+		ScMessageBox::warning(this, CommonStrings::trWarning, tr("The facing master-page pair could not be created."), QMessageBox::Ok);
+		return;
+	}
+
+	m_doc->setCurrentPage(m_doc->MasterPages.at(m_doc->MasterNames.value(leftName)));
+	updateMasterPageList(leftName);
+	selectMasterPage(leftName);
+	m_view->reformPages();
+	m_view->DrawNew();
 }
 
 void PagePalette_MasterPages::importPage()
@@ -453,6 +501,7 @@ void PagePalette_MasterPages::updateMasterPageList(QString masterPageName)
 {
 	if (!m_doc || !m_view)
 		return;
+	facingPairButton->setEnabled(m_doc->pageSets()[m_doc->pagePositioning()].Columns == 2);
 
 	masterPageListBox->clear();
 	for (auto it = m_doc->MasterNames.cbegin(); it != m_doc->MasterNames.cend(); ++it)

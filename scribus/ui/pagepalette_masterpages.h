@@ -64,6 +64,7 @@ protected:
 private slots:
 	void duplicateMasterPage();
 	void deleteMasterPage();
+	void createFacingMasterPair();
 	void newMasterPage();
 	void renameMasterPage(QListWidgetItem * item);
 	void importPage();
