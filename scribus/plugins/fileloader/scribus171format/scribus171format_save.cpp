@@ -19,7 +19,6 @@ for which a new license (GPL+exception) is in place.
 
 #include "../../formatidlist.h"
 
-#include "api/api_application.h"
 #include "commonstrings.h"
 #include "hyphenator.h"
 #include "notesstyles.h"
@@ -49,6 +48,11 @@ for which a new license (GPL+exception) is in place.
 #include "util_color.h"
 #include "util_text.h"
 
+namespace
+{
+const QString s_slaVersion = QStringLiteral("1.7.4");
+}
+
 QString Scribus171Format::saveElements(double xp, double yp, double wp, double hp, Selection* selection, QByteArray &prevData)
 {
 	ResourceCollection lists;
@@ -67,7 +71,7 @@ QString Scribus171Format::saveElements(double xp, double yp, double wp, double h
 	writer.writeAttribute("Width", wp);
 	writer.writeAttribute("Height", hp);
 	writer.writeAttribute("Count", selection->count());
-	writer.writeAttribute("Version", ScribusAPI::getVersion());
+	writer.writeAttribute("Version", s_slaVersion);
 	writer.writeAttribute("previewData", QString(prevData));
 	writeColors(writer, true);
 	writeGradients(writer, true);
@@ -178,7 +182,7 @@ bool Scribus171Format::saveStory(StoryText& story, PageItem* item, QByteArray& d
 	ScXmlStreamWriter writer(&documentStr);
 	writer.setAutoFormatting(true);
 	writer.writeStartElement("ScribusStory");
-	writer.writeAttribute("Version", ScribusAPI::getVersion());
+	writer.writeAttribute("Version", s_slaVersion);
 
 	writeColors(writer, lists.colorNames());
 	writeGradients(writer, lists.gradientNames());
@@ -322,7 +326,7 @@ bool Scribus171Format::saveFile(const QString & fileName, const FileFormat & /* 
 	docu.setDevice(outputFile.data());
 	docu.writeStartDocument();
 	docu.writeStartElement("SCRIBUSUTF8NEW");
-	docu.writeAttribute("Version", ScribusAPI::getVersion());
+	docu.writeAttribute("Version", s_slaVersion);
 
 	docu.writeStartElement("Document");
 	docu.writeAttribute("PageCount", m_Doc->DocPages.count());
