@@ -12,6 +12,7 @@ for which a new license (GPL+exception) is in place.
 #include <QLocale>
 #include <QObject>
 #include <QPointF>
+#include <QRegularExpression>
 #include <QVector>
 
 #include <algorithm>
@@ -36,6 +37,10 @@ const QString DynamicVariableResolver::RunningHeader = QStringLiteral("running-h
 const QString DynamicVariableResolver::FirstOnPageMode = QStringLiteral("first-on-page");
 const QString DynamicVariableResolver::LastOnPageMode = QStringLiteral("last-on-page");
 const QString DynamicVariableResolver::MostRecentMode = QStringLiteral("most-recent");
+const QString DynamicVariableResolver::AsEnteredCase = QStringLiteral("as-entered");
+const QString DynamicVariableResolver::UppercaseCase = QStringLiteral("uppercase");
+const QString DynamicVariableResolver::LowercaseCase = QStringLiteral("lowercase");
+const QString DynamicVariableResolver::TitleCaseCase = QStringLiteral("title-case");
 
 namespace
 {
@@ -82,6 +87,54 @@ QString runningHeaderText(const StoryText& story, int paragraphStart, int paragr
 	text.remove(SpecialChars::FRAMEBREAK);
 	text.replace(SpecialChars::LINEBREAK, QLatin1Char(' '));
 	return text.trimmed();
+}
+
+QString titleCase(const QString& text)
+{
+	static const QRegularExpression wordPattern(QStringLiteral("(\\p{L})([\\p{L}\\p{M}'\\x{2019}]*)"));
+	QString result;
+	result.reserve(text.size());
+	qsizetype previousEnd = 0;
+	auto matches = wordPattern.globalMatch(text);
+	while (matches.hasNext())
+	{
+		const QRegularExpressionMatch match = matches.next();
+		result += text.mid(previousEnd, match.capturedStart() - previousEnd);
+		result += match.captured(1).toUpper();
+		result += match.captured(2).toLower();
+		previousEnd = match.capturedEnd();
+	}
+	result += text.mid(previousEnd);
+	return result;
+}
+
+QString formatRunningHeaderText(const QString& text, const DynamicVariable& variable,
+	DynamicVariable::RunningHeaderTextCase textCase)
+{
+	QString result = text;
+	if (variable.removeTrailingPunctuation)
+	{
+		static const QRegularExpression trailingPunctuation(QStringLiteral("[\\p{P}\\s]+$"));
+		result.remove(trailingPunctuation);
+	}
+
+	switch (textCase)
+	{
+	case DynamicVariable::RunningHeaderTextCase::AsEntered:
+		break;
+	case DynamicVariable::RunningHeaderTextCase::Uppercase:
+		result = result.toUpper();
+		break;
+	case DynamicVariable::RunningHeaderTextCase::Lowercase:
+		result = result.toLower();
+		break;
+	case DynamicVariable::RunningHeaderTextCase::TitleCase:
+		result = titleCase(result);
+		break;
+	case DynamicVariable::RunningHeaderTextCase::Unsupported:
+		return QString();
+	}
+	return result;
 }
 
 bool containsRunningHeaderVariable(const StoryText& story, int paragraphStart, int paragraphEnd,
@@ -280,6 +333,37 @@ QString DynamicVariableResolver::runningHeaderModeToString(DynamicVariable::Runn
 	return QString();
 }
 
+DynamicVariable::RunningHeaderTextCase DynamicVariableResolver::runningHeaderTextCaseFromString(const QString& textCase)
+{
+	if (textCase == AsEnteredCase)
+		return DynamicVariable::RunningHeaderTextCase::AsEntered;
+	if (textCase == UppercaseCase)
+		return DynamicVariable::RunningHeaderTextCase::Uppercase;
+	if (textCase == LowercaseCase)
+		return DynamicVariable::RunningHeaderTextCase::Lowercase;
+	if (textCase == TitleCaseCase)
+		return DynamicVariable::RunningHeaderTextCase::TitleCase;
+	return DynamicVariable::RunningHeaderTextCase::Unsupported;
+}
+
+QString DynamicVariableResolver::runningHeaderTextCaseToString(DynamicVariable::RunningHeaderTextCase textCase)
+{
+	switch (textCase)
+	{
+	case DynamicVariable::RunningHeaderTextCase::AsEntered:
+		return AsEnteredCase;
+	case DynamicVariable::RunningHeaderTextCase::Uppercase:
+		return UppercaseCase;
+	case DynamicVariable::RunningHeaderTextCase::Lowercase:
+		return LowercaseCase;
+	case DynamicVariable::RunningHeaderTextCase::TitleCase:
+		return TitleCaseCase;
+	case DynamicVariable::RunningHeaderTextCase::Unsupported:
+		break;
+	}
+	return QString();
+}
+
 QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame)
 {
 	if (!doc || variableId.isEmpty())
@@ -293,9 +377,11 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 		if (variable->type == RunningHeader)
 		{
 			const DynamicVariable::RunningHeaderMode mode = runningHeaderModeFromString(variable->runningHeaderMode);
+			const DynamicVariable::RunningHeaderTextCase textCase = runningHeaderTextCaseFromString(variable->runningHeaderTextCase);
 			if (variable->paragraphStyle.isEmpty()
 				|| !doc->paragraphStyles().contains(variable->paragraphStyle)
-				|| mode == DynamicVariable::RunningHeaderMode::Unsupported)
+				|| mode == DynamicVariable::RunningHeaderMode::Unsupported
+				|| textCase == DynamicVariable::RunningHeaderTextCase::Unsupported)
 				return QString();
 			if (!frame || frame->OwnPage < 0 || frame->OwnPage >= doc->DocPages.count())
 				return QString();
@@ -304,7 +390,7 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 				return cachedValue;
 			if (!doc->beginRunningHeaderResolution(variable->id, frame->OwnPage))
 				return QString();
-			const QString value = resolveRunningHeader(doc, *variable, mode, frame);
+			const QString value = formatRunningHeaderText(resolveRunningHeader(doc, *variable, mode, frame), *variable, textCase);
 			doc->endRunningHeaderResolution(variable->id, frame->OwnPage);
 			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, frame, value);
 			return value;

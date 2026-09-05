@@ -18121,7 +18121,8 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 }
 
 QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type,
-	const QString& paragraphStyle, const QString& runningHeaderMode)
+	const QString& paragraphStyle, const QString& runningHeaderMode, const QString& runningHeaderTextCase,
+	bool removeTrailingPunctuation)
 {
 	QString variableId = id;
 	if (variableId.isEmpty())
@@ -18139,6 +18140,9 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 	{
 		variable.paragraphStyle = paragraphStyle;
 		variable.runningHeaderMode = runningHeaderMode;
+		variable.runningHeaderTextCase = runningHeaderTextCase.isEmpty()
+			? DynamicVariableResolver::AsEnteredCase : runningHeaderTextCase;
+		variable.removeTrailingPunctuation = removeTrailingPunctuation;
 	}
 	m_dynamicVariables.insert(variableId, variable);
 	if (UndoManager::undoEnabled())
@@ -18152,6 +18156,8 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 		state->set("VALUE", variable.value);
 		state->set("PARAGRAPH_STYLE", variable.paragraphStyle);
 		state->set("RUNNING_HEADER_MODE", variable.runningHeaderMode);
+		state->set("RUNNING_HEADER_TEXT_CASE", variable.runningHeaderTextCase);
+		state->set("REMOVE_TRAILING_PUNCTUATION", variable.removeTrailingPunctuation);
 		m_undoManager->action(this, state);
 	}
 	return variableId;
@@ -18160,10 +18166,20 @@ QString ScribusDoc::addDynamicVariable(const QString& name, const QString& value
 QString ScribusDoc::addRunningHeaderVariable(const QString& name, const QString& paragraphStyle,
 	DynamicVariable::RunningHeaderMode mode, const QString& id)
 {
+	return addRunningHeaderVariable(name, paragraphStyle, mode,
+		DynamicVariable::RunningHeaderTextCase::AsEntered, false, id);
+}
+
+QString ScribusDoc::addRunningHeaderVariable(const QString& name, const QString& paragraphStyle,
+	DynamicVariable::RunningHeaderMode mode, DynamicVariable::RunningHeaderTextCase textCase,
+	bool removeTrailingPunctuation, const QString& id)
+{
 	const QString modeName = DynamicVariableResolver::runningHeaderModeToString(mode);
-	if (paragraphStyle.isEmpty() || !paragraphStyles().contains(paragraphStyle) || modeName.isEmpty())
+	const QString textCaseName = DynamicVariableResolver::runningHeaderTextCaseToString(textCase);
+	if (paragraphStyle.isEmpty() || !paragraphStyles().contains(paragraphStyle) || modeName.isEmpty() || textCaseName.isEmpty())
 		return QString();
-	return addDynamicVariable(name, QString(), id, DynamicVariableResolver::RunningHeader, paragraphStyle, modeName);
+	return addDynamicVariable(name, QString(), id, DynamicVariableResolver::RunningHeader, paragraphStyle, modeName,
+		textCaseName, removeTrailingPunctuation);
 }
 
 bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, const QString& value)
@@ -18210,24 +18226,43 @@ bool ScribusDoc::updateDynamicVariable(const QString& id, const QString& name, c
 bool ScribusDoc::updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
 	DynamicVariable::RunningHeaderMode mode)
 {
+	const DynamicVariable* variable = dynamicVariable(id);
+	if (!variable || variable->type != DynamicVariableResolver::RunningHeader)
+		return false;
+	return updateRunningHeaderVariable(id, name, paragraphStyle, mode,
+		DynamicVariableResolver::runningHeaderTextCaseFromString(variable->runningHeaderTextCase),
+		variable->removeTrailingPunctuation);
+}
+
+bool ScribusDoc::updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
+	DynamicVariable::RunningHeaderMode mode, DynamicVariable::RunningHeaderTextCase textCase,
+	bool removeTrailingPunctuation)
+{
 	auto it = m_dynamicVariables.find(id);
 	const QString modeName = DynamicVariableResolver::runningHeaderModeToString(mode);
+	const QString textCaseName = DynamicVariableResolver::runningHeaderTextCaseToString(textCase);
 	if (it == m_dynamicVariables.end() || it->type != DynamicVariableResolver::RunningHeader
 		|| DynamicVariableResolver::isReservedName(name) || !paragraphStyles().contains(paragraphStyle)
-		|| modeName.isEmpty())
+		|| modeName.isEmpty() || textCaseName.isEmpty())
 		return false;
 	const QString duplicateId = dynamicVariableIdByName(name.trimmed());
 	if (!duplicateId.isEmpty() && duplicateId != id)
 		return false;
-	if (it->name == name.trimmed() && it->paragraphStyle == paragraphStyle && it->runningHeaderMode == modeName)
+	if (it->name == name.trimmed() && it->paragraphStyle == paragraphStyle && it->runningHeaderMode == modeName
+		&& it->runningHeaderTextCase == textCaseName
+		&& it->removeTrailingPunctuation == removeTrailingPunctuation)
 		return true;
 
 	const QString oldName = it->name;
 	const QString oldParagraphStyle = it->paragraphStyle;
 	const QString oldMode = it->runningHeaderMode;
+	const QString oldTextCase = it->runningHeaderTextCase;
+	const bool oldRemoveTrailingPunctuation = it->removeTrailingPunctuation;
 	it->name = name.trimmed();
 	it->paragraphStyle = paragraphStyle;
 	it->runningHeaderMode = modeName;
+	it->runningHeaderTextCase = textCaseName;
+	it->removeTrailingPunctuation = removeTrailingPunctuation;
 	if (Mark* mark = getDynamicVariableMark(id))
 	{
 		QStringList otherLabels = marksLabelsList(MARKVariableTextType);
@@ -18247,9 +18282,13 @@ bool ScribusDoc::updateRunningHeaderVariable(const QString& id, const QString& n
 		state->set("OLD_NAME", oldName);
 		state->set("OLD_PARAGRAPH_STYLE", oldParagraphStyle);
 		state->set("OLD_RUNNING_HEADER_MODE", oldMode);
+		state->set("OLD_RUNNING_HEADER_TEXT_CASE", oldTextCase);
+		state->set("OLD_REMOVE_TRAILING_PUNCTUATION", oldRemoveTrailingPunctuation);
 		state->set("NEW_NAME", it->name);
 		state->set("NEW_PARAGRAPH_STYLE", it->paragraphStyle);
 		state->set("NEW_RUNNING_HEADER_MODE", it->runningHeaderMode);
+		state->set("NEW_RUNNING_HEADER_TEXT_CASE", it->runningHeaderTextCase);
+		state->set("NEW_REMOVE_TRAILING_PUNCTUATION", it->removeTrailingPunctuation);
 		m_undoManager->action(this, state);
 	}
 	return true;
@@ -18276,6 +18315,8 @@ bool ScribusDoc::removeDynamicVariable(const QString& id)
 		state->set("VALUE", removed.value);
 		state->set("PARAGRAPH_STYLE", removed.paragraphStyle);
 		state->set("RUNNING_HEADER_MODE", removed.runningHeaderMode);
+		state->set("RUNNING_HEADER_TEXT_CASE", removed.runningHeaderTextCase);
+		state->set("REMOVE_TRAILING_PUNCTUATION", removed.removeTrailingPunctuation);
 		m_undoManager->action(this, state);
 	}
 	return true;
@@ -18291,13 +18332,15 @@ void ScribusDoc::restoreDynamicVariable(SimpleState* state, bool isUndo)
 			removeDynamicVariable(id);
 		else
 			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"),
-				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"));
+				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"),
+				state->get("RUNNING_HEADER_TEXT_CASE"), state->getBool("REMOVE_TRAILING_PUNCTUATION"));
 	}
 	else if (action == QLatin1String("delete"))
 	{
 		if (isUndo)
 			addDynamicVariable(state->get("NAME"), state->get("VALUE"), id, state->get("TYPE"),
-				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"));
+				state->get("PARAGRAPH_STYLE"), state->get("RUNNING_HEADER_MODE"),
+				state->get("RUNNING_HEADER_TEXT_CASE"), state->getBool("REMOVE_TRAILING_PUNCTUATION"));
 		else
 			removeDynamicVariable(id);
 	}
@@ -18312,10 +18355,14 @@ void ScribusDoc::restoreDynamicVariable(SimpleState* state, bool isUndo)
 	{
 		if (isUndo)
 			updateRunningHeaderVariable(id, state->get("OLD_NAME"), state->get("OLD_PARAGRAPH_STYLE"),
-				DynamicVariableResolver::runningHeaderModeFromString(state->get("OLD_RUNNING_HEADER_MODE")));
+				DynamicVariableResolver::runningHeaderModeFromString(state->get("OLD_RUNNING_HEADER_MODE")),
+				DynamicVariableResolver::runningHeaderTextCaseFromString(state->get("OLD_RUNNING_HEADER_TEXT_CASE")),
+				state->getBool("OLD_REMOVE_TRAILING_PUNCTUATION"));
 		else
 			updateRunningHeaderVariable(id, state->get("NEW_NAME"), state->get("NEW_PARAGRAPH_STYLE"),
-				DynamicVariableResolver::runningHeaderModeFromString(state->get("NEW_RUNNING_HEADER_MODE")));
+				DynamicVariableResolver::runningHeaderModeFromString(state->get("NEW_RUNNING_HEADER_MODE")),
+				DynamicVariableResolver::runningHeaderTextCaseFromString(state->get("NEW_RUNNING_HEADER_TEXT_CASE")),
+				state->getBool("NEW_REMOVE_TRAILING_PUNCTUATION"));
 	}
 	changed();
 	regionsChanged()->update(QRectF());

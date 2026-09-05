@@ -26,12 +26,23 @@ struct SCRIBUS_API DynamicVariable
 		Unsupported
 	};
 
+	enum class RunningHeaderTextCase
+	{
+		AsEntered,
+		Uppercase,
+		Lowercase,
+		TitleCase,
+		Unsupported
+	};
+
 	QString id;
 	QString type;
 	QString name;
 	QString value;
 	QString paragraphStyle;
 	QString runningHeaderMode;
+	QString runningHeaderTextCase;
+	bool removeTrailingPunctuation { false };
 };
 
 class SCRIBUS_API DynamicVariableResolver
@@ -49,6 +60,10 @@ public:
 	static const QString FirstOnPageMode;
 	static const QString LastOnPageMode;
 	static const QString MostRecentMode;
+	static const QString AsEnteredCase;
+	static const QString UppercaseCase;
+	static const QString LowercaseCase;
+	static const QString TitleCaseCase;
 
 	static QList<DynamicVariable> builtInVariables();
 	static bool isBuiltInId(const QString& id);
@@ -59,6 +74,8 @@ public:
 	static QString typeForId(const QString& id);
 	static DynamicVariable::RunningHeaderMode runningHeaderModeFromString(const QString& mode);
 	static QString runningHeaderModeToString(DynamicVariable::RunningHeaderMode mode);
+	static DynamicVariable::RunningHeaderTextCase runningHeaderTextCaseFromString(const QString& textCase);
+	static QString runningHeaderTextCaseToString(DynamicVariable::RunningHeaderTextCase textCase);
 	static QString resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame = nullptr);
 };
 

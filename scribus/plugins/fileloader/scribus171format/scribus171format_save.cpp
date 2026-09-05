@@ -1571,6 +1571,8 @@ void Scribus171Format::writeDynamicVariables(ScXmlStreamWriter& docu) const
 		{
 			docu.writeAttribute("paragraphStyle", variable.paragraphStyle);
 			docu.writeAttribute("mode", variable.runningHeaderMode);
+			docu.writeAttribute("textCase", variable.runningHeaderTextCase);
+			docu.writeAttribute("removeTrailingPunctuation", variable.removeTrailingPunctuation ? 1 : 0);
 		}
 	}
 	docu.writeEndElement();

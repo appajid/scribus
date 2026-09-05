@@ -58,6 +58,7 @@ scribus.setInfo("Test Author", "Dynamic Variables Test", "Phase 1 regression tes
 scribus.createParagraphStyle("ChapterTitle")
 scribus.createParagraphStyle("RecursiveHeading")
 scribus.createParagraphStyle("FlowHeading")
+scribus.createParagraphStyle("TransformHeading")
 
 step("testing variable CRUD")
 variable_id = scribus.createVariable("Edition", "Second Edition")
@@ -95,6 +96,9 @@ scribus.setParagraphStyle("ChapterTitle", lower_heading)
 upper_heading = scribus.createText(40, 140, 300, 40, "UpperChapterHeading")
 scribus.setText("First Visual Heading", upper_heading)
 scribus.setParagraphStyle("ChapterTitle", upper_heading)
+transform_heading = scribus.createText(40, 360, 300, 40, "TransformHeading")
+scribus.setText("mIXeD cASE heading!", transform_heading)
+scribus.setParagraphStyle("TransformHeading", transform_heading)
 scribus.gotoPage(2)
 second_page_context = scribus.createText(40, 40, 300, 40, "SecondPageContext")
 second_page_heading = scribus.createText(40, 140, 300, 40, "SecondPageHeading")
@@ -170,6 +174,10 @@ future_mode_id = "running-header-future-mode"
 recursive_header_id = "running-header-recursion-guard"
 flow_first_id = "running-header-flow-first"
 flow_recent_id = "running-header-flow-recent"
+uppercase_header_id = "running-header-uppercase"
+lowercase_header_id = "running-header-lowercase"
+title_case_header_id = "running-header-title-case"
+unsupported_case_id = "running-header-unsupported-case"
 running_header_xml = (
     b'<Variable id="running-header-test" type="running-header" name="Chapter Header" value="" '
     b'paragraphStyle="ChapterTitle" mode="most-recent"/>'
@@ -185,6 +193,14 @@ running_header_xml = (
     b'paragraphStyle="FlowHeading" mode="first-on-page"/>'
     b'<Variable id="running-header-flow-recent" type="running-header" name="Flow Recent" value="" '
     b'paragraphStyle="FlowHeading" mode="most-recent"/>'
+    b'<Variable id="running-header-uppercase" type="running-header" name="Uppercase Header" value="" '
+    b'paragraphStyle="TransformHeading" mode="most-recent" textCase="uppercase" removeTrailingPunctuation="1"/>'
+    b'<Variable id="running-header-lowercase" type="running-header" name="Lowercase Header" value="" '
+    b'paragraphStyle="TransformHeading" mode="most-recent" textCase="lowercase" removeTrailingPunctuation="0"/>'
+    b'<Variable id="running-header-title-case" type="running-header" name="Title Case Header" value="" '
+    b'paragraphStyle="TransformHeading" mode="most-recent" textCase="title-case" removeTrailingPunctuation="1"/>'
+    b'<Variable id="running-header-unsupported-case" type="running-header" name="Unsupported Case Header" value="" '
+    b'paragraphStyle="TransformHeading" mode="most-recent" textCase="small-caps"/>'
 )
 check(b"</DynamicVariables>" in saved_data, "dynamic variable container is incomplete")
 saved_data = saved_data.replace(b"</DynamicVariables>", running_header_xml + b"</DynamicVariables>", 1)
@@ -202,6 +218,22 @@ check(
 check(scribus.getVariable("document-title") == "Dynamic Variables Test", "saved built-in metadata lookup failed")
 check(scribus.getVariable(running_header_id) == "", "unresolved running header did not fail safely")
 check(scribus.getVariable(future_mode_id) == "", "unknown running-header mode did not fail safely")
+check(
+    scribus.getVariable(uppercase_header_id, frame_name) == "MIXED CASE HEADING",
+    "uppercase transformation or trailing-punctuation removal failed",
+)
+check(
+    scribus.getVariable(lowercase_header_id, frame_name) == "mixed case heading!",
+    "lowercase transformation changed punctuation or casing incorrectly",
+)
+check(
+    scribus.getVariable(title_case_header_id, frame_name) == "Mixed Case Heading",
+    "title-case transformation failed",
+)
+check(
+    scribus.getVariable(unsupported_case_id, frame_name) == "",
+    "unknown running-header text case did not fail safely",
+)
 expect_error(
     lambda: scribus.setVariable(running_header_id, "Manual Override"),
     "a computed running-header value was writable",
@@ -366,6 +398,9 @@ check(b'type="running-header"' in round_trip_data, "running-header type was not 
 check(b'paragraphStyle="ChapterTitle"' in round_trip_data, "running-header style was not preserved")
 check(b'mode="most-recent"' in round_trip_data, "running-header mode was not preserved")
 check(b'mode="from-spread"' in round_trip_data, "unknown future mode was not preserved")
+check(b'textCase="uppercase"' in round_trip_data, "running-header text case was not preserved")
+check(b'removeTrailingPunctuation="1"' in round_trip_data, "punctuation option was not preserved")
+check(b'textCase="small-caps"' in round_trip_data, "unknown future text case was not preserved")
 check(b'variableId="running-header-test"' in round_trip_data, "running-header mark reference was not serialized")
 
 step("deleting variable")
@@ -377,6 +412,10 @@ scribus.deleteVariable(future_mode_id)
 scribus.deleteVariable(recursive_header_id)
 scribus.deleteVariable(flow_first_id)
 scribus.deleteVariable(flow_recent_id)
+scribus.deleteVariable(uppercase_header_id)
+scribus.deleteVariable(lowercase_header_id)
+scribus.deleteVariable(title_case_header_id)
+scribus.deleteVariable(unsupported_case_id)
 scribus.deleteVariable(api_header_id)
 scribus.deleteVariable(header_only_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
