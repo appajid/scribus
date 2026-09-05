@@ -35,6 +35,10 @@ QString runningHeaderModeLabel(const QString& mode)
 		return QObject::tr("First on Page");
 	if (mode == DynamicVariableResolver::LastOnPageMode)
 		return QObject::tr("Last on Page");
+	if (mode == DynamicVariableResolver::FirstOnSpreadMode)
+		return QObject::tr("First on Spread");
+	if (mode == DynamicVariableResolver::LastOnSpreadMode)
+		return QObject::tr("Last on Spread");
 	if (mode == DynamicVariableResolver::MostRecentMode)
 		return QObject::tr("Most Recent");
 	return QObject::tr("Unsupported");
@@ -84,6 +88,8 @@ public:
 		m_mode = new QComboBox(this);
 		m_mode->addItem(tr("First matching paragraph on page"), DynamicVariableResolver::FirstOnPageMode);
 		m_mode->addItem(tr("Last matching paragraph on page"), DynamicVariableResolver::LastOnPageMode);
+		m_mode->addItem(tr("First matching paragraph on spread"), DynamicVariableResolver::FirstOnSpreadMode);
+		m_mode->addItem(tr("Last matching paragraph on spread"), DynamicVariableResolver::LastOnSpreadMode);
 		m_mode->addItem(tr("Most recent matching paragraph"), DynamicVariableResolver::MostRecentMode);
 		m_textCase = new QComboBox(this);
 		m_textCase->addItem(tr("As entered"), DynamicVariableResolver::AsEnteredCase);
@@ -198,6 +204,10 @@ private:
 			m_sourceDescription->setText(tr("Uses the first matching paragraph that begins on the current page."));
 		else if (mode == DynamicVariableResolver::LastOnPageMode)
 			m_sourceDescription->setText(tr("Uses the last matching paragraph that begins on the current page."));
+		else if (mode == DynamicVariableResolver::FirstOnSpreadMode)
+			m_sourceDescription->setText(tr("Uses the first matching paragraph in reading order across the current spread."));
+		else if (mode == DynamicVariableResolver::LastOnSpreadMode)
+			m_sourceDescription->setText(tr("Uses the last matching paragraph in reading order across the current spread."));
 		else if (mode == DynamicVariableResolver::MostRecentMode)
 			m_sourceDescription->setText(tr("Carries forward the latest matching paragraph from this page or an earlier page."));
 		else

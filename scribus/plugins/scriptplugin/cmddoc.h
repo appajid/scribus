@@ -458,7 +458,7 @@ QT_TR_NOOP("createVariable(name, value) -> str\n\nCreates a user-defined dynamic
 PyObject *scribus_createvariable(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_createrunningheadervariable__doc__,
-QT_TR_NOOP("createRunningHeaderVariable(name, paragraphStyle, mode, [textCase='as-entered', removeTrailingPunctuation=False]) -> str\n\nCreates a running-header variable and returns its stable ID. Mode must be 'first-on-page', 'last-on-page', or 'most-recent'. Text case may be 'as-entered', 'uppercase', 'lowercase', or 'title-case'."));
+QT_TR_NOOP("createRunningHeaderVariable(name, paragraphStyle, mode, [textCase='as-entered', removeTrailingPunctuation=False]) -> str\n\nCreates a running-header variable and returns its stable ID. Mode must be 'first-on-page', 'last-on-page', 'first-on-spread', 'last-on-spread', or 'most-recent'. Text case may be 'as-entered', 'uppercase', 'lowercase', or 'title-case'."));
 PyObject *scribus_createrunningheadervariable(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_deletevariable__doc__,

@@ -22,6 +22,8 @@ struct SCRIBUS_API DynamicVariable
 	{
 		FirstOnPage,
 		LastOnPage,
+		FirstOnSpread,
+		LastOnSpread,
 		MostRecent,
 		Unsupported
 	};
@@ -59,6 +61,8 @@ public:
 	static const QString RunningHeader;
 	static const QString FirstOnPageMode;
 	static const QString LastOnPageMode;
+	static const QString FirstOnSpreadMode;
+	static const QString LastOnSpreadMode;
 	static const QString MostRecentMode;
 	static const QString AsEnteredCase;
 	static const QString UppercaseCase;

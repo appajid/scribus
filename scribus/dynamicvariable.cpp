@@ -36,6 +36,8 @@ const QString DynamicVariableResolver::ModificationDate = QStringLiteral("modifi
 const QString DynamicVariableResolver::RunningHeader = QStringLiteral("running-header");
 const QString DynamicVariableResolver::FirstOnPageMode = QStringLiteral("first-on-page");
 const QString DynamicVariableResolver::LastOnPageMode = QStringLiteral("last-on-page");
+const QString DynamicVariableResolver::FirstOnSpreadMode = QStringLiteral("first-on-spread");
+const QString DynamicVariableResolver::LastOnSpreadMode = QStringLiteral("last-on-spread");
 const QString DynamicVariableResolver::MostRecentMode = QStringLiteral("most-recent");
 const QString DynamicVariableResolver::AsEnteredCase = QStringLiteral("as-entered");
 const QString DynamicVariableResolver::UppercaseCase = QStringLiteral("uppercase");
@@ -157,14 +159,26 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 	if (!contextFrame || contextFrame->OwnPage < 0 || contextFrame->OwnPage >= doc->DocPages.count())
 		return QString();
 
+	int firstCandidatePage = contextFrame->OwnPage;
+	int lastCandidatePage = contextFrame->OwnPage;
+	if (mode == DynamicVariable::RunningHeaderMode::MostRecent)
+		firstCandidatePage = 0;
+	else if (mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
+		|| mode == DynamicVariable::RunningHeaderMode::LastOnSpread)
+	{
+		const int columns = qMax(1, doc->pageSets()[doc->pagePositioning()].Columns);
+		const int spreadStart = contextFrame->OwnPage - doc->columnOfPage(contextFrame->OwnPage);
+		firstCandidatePage = qMax(0, spreadStart);
+		lastCandidatePage = qMin(doc->DocPages.count() - 1, spreadStart + columns - 1);
+	}
+
 	QVector<RunningHeaderCandidate> candidates;
 	int itemOrder = 0;
 	for (PageItemIterator it(doc->DocItems, PageItemIterator::IterateInGroups); *it; ++it, ++itemOrder)
 	{
 		PageItem* item = *it;
-		if (!item || item == contextFrame || !item->isTextFrame() || item->OwnPage < 0
-			|| item->OwnPage > contextFrame->OwnPage
-			|| (mode != DynamicVariable::RunningHeaderMode::MostRecent && item->OwnPage != contextFrame->OwnPage))
+		if (!item || item == contextFrame || !item->isTextFrame()
+			|| item->OwnPage < firstCandidatePage || item->OwnPage > lastCandidatePage)
 			continue;
 		if (item->itemText.isEmpty())
 			continue;
@@ -227,6 +241,7 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 	});
 
 	return mode == DynamicVariable::RunningHeaderMode::FirstOnPage
+		|| mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
 		? candidates.constFirst().text
 		: candidates.constLast().text;
 }
@@ -312,6 +327,10 @@ DynamicVariable::RunningHeaderMode DynamicVariableResolver::runningHeaderModeFro
 		return DynamicVariable::RunningHeaderMode::FirstOnPage;
 	if (mode == LastOnPageMode)
 		return DynamicVariable::RunningHeaderMode::LastOnPage;
+	if (mode == FirstOnSpreadMode)
+		return DynamicVariable::RunningHeaderMode::FirstOnSpread;
+	if (mode == LastOnSpreadMode)
+		return DynamicVariable::RunningHeaderMode::LastOnSpread;
 	if (mode == MostRecentMode)
 		return DynamicVariable::RunningHeaderMode::MostRecent;
 	return DynamicVariable::RunningHeaderMode::Unsupported;
@@ -325,6 +344,10 @@ QString DynamicVariableResolver::runningHeaderModeToString(DynamicVariable::Runn
 		return FirstOnPageMode;
 	case DynamicVariable::RunningHeaderMode::LastOnPage:
 		return LastOnPageMode;
+	case DynamicVariable::RunningHeaderMode::FirstOnSpread:
+		return FirstOnSpreadMode;
+	case DynamicVariable::RunningHeaderMode::LastOnSpread:
+		return LastOnSpreadMode;
 	case DynamicVariable::RunningHeaderMode::MostRecent:
 		return MostRecentMode;
 	case DynamicVariable::RunningHeaderMode::Unsupported:

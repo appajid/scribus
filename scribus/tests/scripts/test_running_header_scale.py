@@ -27,8 +27,8 @@ scribus.newDocument(
     scribus.PORTRAIT,
     1,
     scribus.UNIT_POINTS,
-    scribus.PAGE_1,
-    0,
+    scribus.PAGE_2,
+    scribus.FIRSTPAGELEFT,
     page_total,
 )
 scribus.createParagraphStyle("ScaleHeading")
@@ -52,6 +52,8 @@ if compressed:
 definition = (
     b'<Variable id="scale-recent" type="running-header" name="Scale Recent" value="" '
     b'paragraphStyle="ScaleHeading" mode="most-recent"/>'
+    b'<Variable id="scale-spread-first" type="running-header" name="Scale Spread First" value="" '
+    b'paragraphStyle="ScaleHeading" mode="first-on-spread"/>'
 )
 data = data.replace(b"</DynamicVariables>", definition + b"</DynamicVariables>", 1)
 with open(path, "wb") as target_file:
@@ -65,19 +67,33 @@ for page, context in enumerate(contexts, 1):
     expected = "HEADING {:03d}".format(source_page)
     actual = scribus.getVariable("scale-recent", context)
     if actual != expected:
-        failures.append((page, actual, expected))
+        failures.append(("most-recent", page, actual, expected))
+    spread_start = page if page % 2 else page - 1
+    spread_heading = next(
+        (
+            candidate
+            for candidate in range(spread_start, min(page_total, spread_start + 1) + 1)
+            if (candidate - 1) % heading_interval == 0
+        ),
+        None,
+    )
+    expected_spread = "" if spread_heading is None else "HEADING {:03d}".format(spread_heading)
+    actual_spread = scribus.getVariable("scale-spread-first", context)
+    if actual_spread != expected_spread:
+        failures.append(("first-on-spread", page, actual_spread, expected_spread))
 cold_seconds = time.perf_counter() - cold_start
 
 warm_start = time.perf_counter()
 for context in contexts:
     scribus.getVariable("scale-recent", context)
+    scribus.getVariable("scale-spread-first", context)
 warm_seconds = time.perf_counter() - warm_start
 
 print("SCALE_QA|pages={}|headings={}|failures={}|cold_seconds={:.6f}|warm_seconds={:.6f}".format(
     page_total, page_total // heading_interval, len(failures), cold_seconds, warm_seconds
 ), flush=True)
 for failure in failures[:10]:
-    print("SCALE_QA_FAILURE|{}|{!r}|{!r}".format(*failure), flush=True)
+    print("SCALE_QA_FAILURE|{}|{}|{!r}|{!r}".format(*failure), flush=True)
 if failures:
     raise AssertionError("{} running headers resolved incorrectly".format(len(failures)))
 if cold_seconds > 5.0:
