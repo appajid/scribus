@@ -7,6 +7,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "dynamicvariablemanager.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -36,6 +37,19 @@ QString runningHeaderModeLabel(const QString& mode)
 		return QObject::tr("Last on Page");
 	if (mode == DynamicVariableResolver::MostRecentMode)
 		return QObject::tr("Most Recent");
+	return QObject::tr("Unsupported");
+}
+
+QString runningHeaderTextCaseLabel(const QString& textCase)
+{
+	if (textCase == DynamicVariableResolver::AsEnteredCase)
+		return QObject::tr("As Entered");
+	if (textCase == DynamicVariableResolver::UppercaseCase)
+		return QObject::tr("UPPERCASE");
+	if (textCase == DynamicVariableResolver::LowercaseCase)
+		return QObject::tr("lowercase");
+	if (textCase == DynamicVariableResolver::TitleCaseCase)
+		return QObject::tr("Title Case");
 	return QObject::tr("Unsupported");
 }
 
@@ -71,6 +85,12 @@ public:
 		m_mode->addItem(tr("First matching paragraph on page"), DynamicVariableResolver::FirstOnPageMode);
 		m_mode->addItem(tr("Last matching paragraph on page"), DynamicVariableResolver::LastOnPageMode);
 		m_mode->addItem(tr("Most recent matching paragraph"), DynamicVariableResolver::MostRecentMode);
+		m_textCase = new QComboBox(this);
+		m_textCase->addItem(tr("As entered"), DynamicVariableResolver::AsEnteredCase);
+		m_textCase->addItem(tr("UPPERCASE"), DynamicVariableResolver::UppercaseCase);
+		m_textCase->addItem(tr("lowercase"), DynamicVariableResolver::LowercaseCase);
+		m_textCase->addItem(tr("Title Case"), DynamicVariableResolver::TitleCaseCase);
+		m_removeTrailingPunctuation = new QCheckBox(tr("Remove trailing punctuation"), this);
 
 		form->addRow(tr("Type:"), m_type);
 		form->addRow(tr("Name:"), m_name);
@@ -80,6 +100,10 @@ public:
 		form->addRow(m_styleLabel, m_paragraphStyle);
 		m_modeLabel = new QLabel(tr("Use:"), this);
 		form->addRow(m_modeLabel, m_mode);
+		m_textCaseLabel = new QLabel(tr("Case:"), this);
+		form->addRow(m_textCaseLabel, m_textCase);
+		m_optionsLabel = new QLabel(tr("Options:"), this);
+		form->addRow(m_optionsLabel, m_removeTrailingPunctuation);
 		layout->addLayout(form);
 		auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
 		m_okButton = buttons->button(QDialogButtonBox::Ok);
@@ -89,7 +113,9 @@ public:
 		connect(m_name, &QLineEdit::textChanged, this, [this]() { updateAcceptState(); });
 		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
 		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
+		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
 		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
+		connect(m_textCase, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
 		m_sourceDescription = new QLabel(this);
 		m_sourceDescription->setWordWrap(true);
 		layout->addWidget(m_sourceDescription);
@@ -108,6 +134,15 @@ public:
 				m_paragraphStyle->setCurrentIndex(0);
 			}
 			m_mode->setCurrentIndex(m_mode->findData(variable->runningHeaderMode));
+			const int textCaseIndex = m_textCase->findData(variable->runningHeaderTextCase);
+			if (textCaseIndex >= 0)
+				m_textCase->setCurrentIndex(textCaseIndex);
+			else if (!variable->runningHeaderTextCase.isEmpty())
+			{
+				m_textCase->insertItem(0, tr("Unsupported: %1").arg(variable->runningHeaderTextCase), QString());
+				m_textCase->setCurrentIndex(0);
+			}
+			m_removeTrailingPunctuation->setChecked(variable->removeTrailingPunctuation);
 		}
 		updateFields();
 		m_name->setFocus();
@@ -121,6 +156,11 @@ public:
 	{
 		return DynamicVariableResolver::runningHeaderModeFromString(m_mode->currentData().toString());
 	}
+	DynamicVariable::RunningHeaderTextCase runningHeaderTextCase() const
+	{
+		return DynamicVariableResolver::runningHeaderTextCaseFromString(m_textCase->currentData().toString());
+	}
+	bool removeTrailingPunctuation() const { return m_removeTrailingPunctuation->isChecked(); }
 
 private:
 	void updateFields()
@@ -132,6 +172,10 @@ private:
 		m_paragraphStyle->setVisible(runningHeader);
 		m_modeLabel->setVisible(runningHeader);
 		m_mode->setVisible(runningHeader);
+		m_textCaseLabel->setVisible(runningHeader);
+		m_textCase->setVisible(runningHeader);
+		m_optionsLabel->setVisible(runningHeader);
+		m_removeTrailingPunctuation->setVisible(runningHeader);
 		m_sourceDescription->setVisible(runningHeader);
 		m_description->setText(runningHeader
 			? tr("A running header displays text from paragraphs using a chosen style and updates automatically when pages reflow.")
@@ -163,7 +207,8 @@ private:
 	void updateAcceptState()
 	{
 		const bool runningHeaderFieldsValid = !isRunningHeader()
-			|| (!paragraphStyle().isEmpty() && !m_mode->currentData().toString().isEmpty());
+			|| (!paragraphStyle().isEmpty() && !m_mode->currentData().toString().isEmpty()
+				&& !m_textCase->currentData().toString().isEmpty());
 		m_okButton->setEnabled(!name().isEmpty() && runningHeaderFieldsValid);
 	}
 
@@ -172,10 +217,14 @@ private:
 	QLineEdit* m_value {nullptr};
 	QComboBox* m_paragraphStyle {nullptr};
 	QComboBox* m_mode {nullptr};
+	QComboBox* m_textCase {nullptr};
+	QCheckBox* m_removeTrailingPunctuation {nullptr};
 	QLabel* m_description {nullptr};
 	QLabel* m_valueLabel {nullptr};
 	QLabel* m_styleLabel {nullptr};
 	QLabel* m_modeLabel {nullptr};
+	QLabel* m_textCaseLabel {nullptr};
+	QLabel* m_optionsLabel {nullptr};
 	QLabel* m_sourceDescription {nullptr};
 	QPushButton* m_okButton {nullptr};
 	QString m_missingParagraphStyle;
@@ -247,7 +296,10 @@ void DynamicVariableManager::refresh()
 			const QString style = m_doc->paragraphStyles().contains(variable.paragraphStyle)
 				? variable.paragraphStyle
 				: tr("Missing style: %1").arg(variable.paragraphStyle);
-			value = tr("%1 — %2").arg(style, runningHeaderModeLabel(variable.runningHeaderMode));
+			value = tr("%1 — %2 — %3").arg(style, runningHeaderModeLabel(variable.runningHeaderMode),
+				runningHeaderTextCaseLabel(variable.runningHeaderTextCase));
+			if (variable.removeTrailingPunctuation)
+				value += tr(" — Remove trailing punctuation");
 		}
 		m_table->setItem(row, 2, new QTableWidgetItem(value));
 	};
@@ -276,7 +328,8 @@ void DynamicVariableManager::addVariable()
 	{
 		QString id;
 		if (dialog.isRunningHeader())
-			id = m_doc->addRunningHeaderVariable(dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode());
+			id = m_doc->addRunningHeaderVariable(dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode(),
+				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation());
 		else
 			id = m_doc->addDynamicVariable(dialog.name(), dialog.value());
 		if (!id.isEmpty())
@@ -286,7 +339,7 @@ void DynamicVariableManager::addVariable()
 			return;
 		}
 		QMessageBox::warning(this, tr("Invalid Variable"), dialog.isRunningHeader()
-			? tr("Choose a unique, non-reserved name, an existing paragraph style, and a supported running-header mode.")
+			? tr("Choose a unique, non-reserved name, an existing paragraph style, and supported running-header options.")
 			: tr("Choose a unique, non-reserved variable name."));
 	}
 }
@@ -301,7 +354,8 @@ void DynamicVariableManager::editVariable()
 	while (dialog.exec() == QDialog::Accepted)
 	{
 		const bool updated = variable->type == DynamicVariableResolver::RunningHeader
-			? m_doc->updateRunningHeaderVariable(id, dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode())
+			? m_doc->updateRunningHeaderVariable(id, dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode(),
+				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation())
 			: m_doc->updateDynamicVariable(id, dialog.name(), dialog.value());
 		if (updated)
 		{
@@ -311,7 +365,7 @@ void DynamicVariableManager::editVariable()
 			return;
 		}
 		QMessageBox::warning(this, tr("Invalid Variable"), variable->type == DynamicVariableResolver::RunningHeader
-			? tr("Choose a unique, non-reserved name, an existing paragraph style, and a supported running-header mode.")
+			? tr("Choose a unique, non-reserved name, an existing paragraph style, and supported running-header options.")
 			: tr("Choose a unique, non-reserved variable name."));
 	}
 }

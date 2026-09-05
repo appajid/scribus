@@ -841,7 +841,10 @@ PyObject *scribus_createrunningheadervariable(PyObject* /* self */, PyObject* ar
 	PyESString name;
 	PyESString paragraphStyle;
 	PyESString mode;
-	if (!PyArg_ParseTuple(args, "eseses", "utf-8", name.ptr(), "utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr()))
+	PyESString textCase;
+	int removeTrailingPunctuation = 0;
+	if (!PyArg_ParseTuple(args, "eseses|esp", "utf-8", name.ptr(), "utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr(),
+		"utf-8", textCase.ptr(), &removeTrailingPunctuation))
 		return nullptr;
 	if (!checkHaveDocument())
 		return nullptr;
@@ -850,10 +853,15 @@ PyObject *scribus_createrunningheadervariable(PyObject* /* self */, PyObject* ar
 	const QString variableName = QString::fromUtf8(name.c_str());
 	const QString styleName = QString::fromUtf8(paragraphStyle.c_str());
 	const auto headerMode = DynamicVariableResolver::runningHeaderModeFromString(QString::fromUtf8(mode.c_str()));
-	const QString id = currentDoc->addRunningHeaderVariable(variableName, styleName, headerMode);
+	QString textCaseName = QString::fromUtf8(textCase.c_str());
+	if (textCaseName.isEmpty())
+		textCaseName = DynamicVariableResolver::AsEnteredCase;
+	const auto headerTextCase = DynamicVariableResolver::runningHeaderTextCaseFromString(textCaseName);
+	const QString id = currentDoc->addRunningHeaderVariable(variableName, styleName, headerMode, headerTextCase,
+		removeTrailingPunctuation != 0);
 	if (id.isEmpty())
 	{
-		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, or mode is invalid or already in use.", "python error").toUtf8().constData());
+		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, mode, or text formatting is invalid or already in use.", "python error").toUtf8().constData());
 		return nullptr;
 	}
 	currentDoc->changed();
@@ -1041,8 +1049,10 @@ PyObject *scribus_setrunningheadervariable(PyObject* /* self */, PyObject* args)
 	PyESString name;
 	PyESString paragraphStyle;
 	PyESString mode;
-	if (!PyArg_ParseTuple(args, "eseseses", "utf-8", identifier.ptr(), "utf-8", name.ptr(),
-		"utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr()))
+	PyESString textCase;
+	int removeTrailingPunctuation = -1;
+	if (!PyArg_ParseTuple(args, "eseseses|esp", "utf-8", identifier.ptr(), "utf-8", name.ptr(),
+		"utf-8", paragraphStyle.ptr(), "utf-8", mode.ptr(), "utf-8", textCase.ptr(), &removeTrailingPunctuation))
 		return nullptr;
 	if (!checkHaveDocument())
 		return nullptr;
@@ -1059,10 +1069,16 @@ PyObject *scribus_setrunningheadervariable(PyObject* /* self */, PyObject* args)
 		return nullptr;
 	}
 	const auto headerMode = DynamicVariableResolver::runningHeaderModeFromString(QString::fromUtf8(mode.c_str()));
+	QString textCaseName = QString::fromUtf8(textCase.c_str());
+	if (textCaseName.isEmpty())
+		textCaseName = variable->runningHeaderTextCase;
+	const auto headerTextCase = DynamicVariableResolver::runningHeaderTextCaseFromString(textCaseName);
+	const bool removePunctuation = removeTrailingPunctuation < 0
+		? variable->removeTrailingPunctuation : removeTrailingPunctuation != 0;
 	if (!currentDoc->updateRunningHeaderVariable(id, QString::fromUtf8(name.c_str()),
-		QString::fromUtf8(paragraphStyle.c_str()), headerMode))
+		QString::fromUtf8(paragraphStyle.c_str()), headerMode, headerTextCase, removePunctuation))
 	{
-		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, or mode is invalid or already in use.", "python error").toUtf8().constData());
+		PyErr_SetString(ScribusException, QObject::tr("The running header name, paragraph style, mode, or text formatting is invalid or already in use.", "python error").toUtf8().constData());
 		return nullptr;
 	}
 	currentDoc->changed();

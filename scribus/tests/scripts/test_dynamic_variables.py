@@ -125,6 +125,13 @@ check(
     scribus.getVariable(api_header_id, third_page_context) == "Second Page Heading",
     "created running header did not resolve",
 )
+api_formatted_header_id = scribus.createRunningHeaderVariable(
+    "API Formatted Header", "TransformHeading", "most-recent", "uppercase", True
+)
+check(
+    scribus.getVariable(api_formatted_header_id, frame_name) == "MIXED CASE HEADING",
+    "formatted running header creation options were not applied",
+)
 expect_error(
     lambda: scribus.createRunningHeaderVariable("API Header", "ChapterTitle", "last-on-page"),
     "a duplicate running-header name was accepted",
@@ -153,6 +160,31 @@ expect_error(
 check(
     scribus.getVariable("API First Header", frame_name) == "First Visual Heading",
     "a rejected running-header update changed the definition",
+)
+scribus.setRunningHeaderVariable(
+    api_formatted_header_id,
+    "API Lowercase Header",
+    "TransformHeading",
+    "most-recent",
+    "lowercase",
+    False,
+)
+check(
+    scribus.getVariable(api_formatted_header_id, frame_name) == "mixed case heading!",
+    "formatted running header update options were not applied",
+)
+scribus.setRunningHeaderVariable(
+    api_formatted_header_id, "API Lowercase Header Renamed", "TransformHeading", "most-recent"
+)
+check(
+    scribus.getVariable(api_formatted_header_id, frame_name) == "mixed case heading!",
+    "legacy running-header update reset omitted formatting options",
+)
+expect_error(
+    lambda: scribus.createRunningHeaderVariable(
+        "Bad Case Header", "TransformHeading", "most-recent", "small-caps", False
+    ),
+    "an unsupported running-header text case was accepted",
 )
 
 step("saving document")
@@ -417,6 +449,7 @@ scribus.deleteVariable(lowercase_header_id)
 scribus.deleteVariable(title_case_header_id)
 scribus.deleteVariable(unsupported_case_id)
 scribus.deleteVariable(api_header_id)
+scribus.deleteVariable(api_formatted_header_id)
 scribus.deleteVariable(header_only_id)
 check(scribus.listVariables() == [], "deleteVariable failed")
 scribus.removeUnusedStyles()
