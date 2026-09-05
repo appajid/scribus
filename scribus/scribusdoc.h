@@ -254,6 +254,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		HyphenatorPrefs& hyphenatorPrefs() { return m_docPrefsData.hyphPrefs; }
 		void setDocumentInfo(DocumentInformation di);
 		DocumentSectionMap& sections() { return m_docPrefsData.docSectionMap; }
+		const DocumentSectionMap& sections() const { return m_docPrefsData.docSectionMap; }
 		void setSections(DocumentSectionMap dsm) { m_docPrefsData.docSectionMap = std::move(dsm); }
 		const QMap<QString, int> & usedFonts() const { return UsedFonts; }
 
@@ -1903,16 +1904,25 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QString addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type,
 			const QString& paragraphStyle, const QString& runningHeaderMode,
 			const QString& runningHeaderTextCase = QString(), bool removeTrailingPunctuation = false);
+		QString addDynamicVariable(const QString& name, const QString& value, const QString& id, const QString& type,
+			const QString& paragraphStyle, const QString& runningHeaderMode,
+			const QString& runningHeaderTextCase, bool removeTrailingPunctuation, const QString& runningHeaderFallback);
 		QString addRunningHeaderVariable(const QString& name, const QString& paragraphStyle, DynamicVariable::RunningHeaderMode mode,
 			const QString& id = QString());
 		QString addRunningHeaderVariable(const QString& name, const QString& paragraphStyle, DynamicVariable::RunningHeaderMode mode,
 			DynamicVariable::RunningHeaderTextCase textCase, bool removeTrailingPunctuation, const QString& id = QString());
+		QString addRunningHeaderVariable(const QString& name, const QString& paragraphStyle, DynamicVariable::RunningHeaderMode mode,
+			DynamicVariable::RunningHeaderTextCase textCase, bool removeTrailingPunctuation,
+			DynamicVariable::RunningHeaderFallback fallback, const QString& id = QString());
 		bool updateDynamicVariable(const QString& id, const QString& name, const QString& value);
 		bool updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
 			DynamicVariable::RunningHeaderMode mode);
 		bool updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
 			DynamicVariable::RunningHeaderMode mode, DynamicVariable::RunningHeaderTextCase textCase,
 			bool removeTrailingPunctuation);
+		bool updateRunningHeaderVariable(const QString& id, const QString& name, const QString& paragraphStyle,
+			DynamicVariable::RunningHeaderMode mode, DynamicVariable::RunningHeaderTextCase textCase,
+			bool removeTrailingPunctuation, DynamicVariable::RunningHeaderFallback fallback);
 		bool removeDynamicVariable(const QString& id);
 		QString resolveDynamicVariable(const QString& id, const PageItem* frame = nullptr) const;
 		bool invalidateDynamicVariableFrames(const QString& id = QString(), bool forceUpdate = false);

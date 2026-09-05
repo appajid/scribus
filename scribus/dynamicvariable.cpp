@@ -43,6 +43,9 @@ const QString DynamicVariableResolver::AsEnteredCase = QStringLiteral("as-entere
 const QString DynamicVariableResolver::UppercaseCase = QStringLiteral("uppercase");
 const QString DynamicVariableResolver::LowercaseCase = QStringLiteral("lowercase");
 const QString DynamicVariableResolver::TitleCaseCase = QStringLiteral("title-case");
+const QString DynamicVariableResolver::NoFallback = QStringLiteral("none");
+const QString DynamicVariableResolver::SectionFallback = QStringLiteral("section");
+const QString DynamicVariableResolver::DocumentFallback = QStringLiteral("document");
 
 namespace
 {
@@ -153,26 +156,12 @@ bool containsRunningHeaderVariable(const StoryText& story, int paragraphStart, i
 	return false;
 }
 
-QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& variable,
-	DynamicVariable::RunningHeaderMode mode, const PageItem* contextFrame)
+QVector<RunningHeaderCandidate> runningHeaderCandidates(const ScribusDoc* doc, const DynamicVariable& variable,
+	const PageItem* contextFrame, int firstCandidatePage, int lastCandidatePage)
 {
-	if (!contextFrame || contextFrame->OwnPage < 0 || contextFrame->OwnPage >= doc->DocPages.count())
-		return QString();
-
-	int firstCandidatePage = contextFrame->OwnPage;
-	int lastCandidatePage = contextFrame->OwnPage;
-	if (mode == DynamicVariable::RunningHeaderMode::MostRecent)
-		firstCandidatePage = 0;
-	else if (mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
-		|| mode == DynamicVariable::RunningHeaderMode::LastOnSpread)
-	{
-		const int columns = qMax(1, doc->pageSets()[doc->pagePositioning()].Columns);
-		const int spreadStart = contextFrame->OwnPage - doc->columnOfPage(contextFrame->OwnPage);
-		firstCandidatePage = qMax(0, spreadStart);
-		lastCandidatePage = qMin(doc->DocPages.count() - 1, spreadStart + columns - 1);
-	}
-
 	QVector<RunningHeaderCandidate> candidates;
+	if (firstCandidatePage > lastCandidatePage)
+		return candidates;
 	int itemOrder = 0;
 	for (PageItemIterator it(doc->DocItems, PageItemIterator::IterateInGroups); *it; ++it, ++itemOrder)
 	{
@@ -224,9 +213,6 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 		}
 	}
 
-	if (candidates.isEmpty())
-		return QString();
-
 	std::stable_sort(candidates.begin(), candidates.end(), [](const RunningHeaderCandidate& left,
 		const RunningHeaderCandidate& right) {
 		if (left.page != right.page)
@@ -240,10 +226,62 @@ QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& varia
 		return left.storyPosition < right.storyPosition;
 	});
 
-	return mode == DynamicVariable::RunningHeaderMode::FirstOnPage
-		|| mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
-		? candidates.constFirst().text
-		: candidates.constLast().text;
+	return candidates;
+}
+
+QString resolveRunningHeader(const ScribusDoc* doc, const DynamicVariable& variable,
+	DynamicVariable::RunningHeaderMode mode, DynamicVariable::RunningHeaderFallback fallback,
+	const PageItem* contextFrame)
+{
+	if (!contextFrame || contextFrame->OwnPage < 0 || contextFrame->OwnPage >= doc->DocPages.count())
+		return QString();
+
+	int firstCandidatePage = contextFrame->OwnPage;
+	int lastCandidatePage = contextFrame->OwnPage;
+	if (mode == DynamicVariable::RunningHeaderMode::MostRecent)
+		firstCandidatePage = 0;
+	else if (mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
+		|| mode == DynamicVariable::RunningHeaderMode::LastOnSpread)
+	{
+		const int columns = qMax(1, doc->pageSets()[doc->pagePositioning()].Columns);
+		const int spreadStart = contextFrame->OwnPage - doc->columnOfPage(contextFrame->OwnPage);
+		firstCandidatePage = qMax(0, spreadStart);
+		lastCandidatePage = qMin(doc->DocPages.count() - 1, spreadStart + columns - 1);
+	}
+
+	int sectionStart = contextFrame->OwnPage;
+	int sectionEnd = contextFrame->OwnPage;
+	if (fallback == DynamicVariable::RunningHeaderFallback::Section)
+	{
+		const int sectionKey = doc->getSectionKeyForPageIndex(contextFrame->OwnPage);
+		const auto sectionIt = doc->sections().constFind(sectionKey);
+		if (sectionKey < 0 || sectionIt == doc->sections().constEnd())
+			return QString();
+		sectionStart = static_cast<int>(sectionIt->fromindex);
+		sectionEnd = static_cast<int>(sectionIt->toindex);
+		firstCandidatePage = qMax(firstCandidatePage, sectionStart);
+		lastCandidatePage = qMin(lastCandidatePage, sectionEnd);
+	}
+
+	const QVector<RunningHeaderCandidate> candidates = runningHeaderCandidates(doc, variable, contextFrame,
+		firstCandidatePage, lastCandidatePage);
+	if (!candidates.isEmpty())
+	{
+		return mode == DynamicVariable::RunningHeaderMode::FirstOnPage
+			|| mode == DynamicVariable::RunningHeaderMode::FirstOnSpread
+			? candidates.constFirst().text
+			: candidates.constLast().text;
+	}
+
+	if (mode == DynamicVariable::RunningHeaderMode::MostRecent
+		|| fallback == DynamicVariable::RunningHeaderFallback::NoFallback)
+		return QString();
+
+	const int fallbackFirstPage = fallback == DynamicVariable::RunningHeaderFallback::Section ? sectionStart : 0;
+	const int fallbackLastPage = firstCandidatePage - 1;
+	const QVector<RunningHeaderCandidate> fallbackCandidates = runningHeaderCandidates(doc, variable, contextFrame,
+		fallbackFirstPage, fallbackLastPage);
+	return fallbackCandidates.isEmpty() ? QString() : fallbackCandidates.constLast().text;
 }
 }
 
@@ -387,6 +425,33 @@ QString DynamicVariableResolver::runningHeaderTextCaseToString(DynamicVariable::
 	return QString();
 }
 
+DynamicVariable::RunningHeaderFallback DynamicVariableResolver::runningHeaderFallbackFromString(const QString& fallback)
+{
+	if (fallback.isEmpty() || fallback == NoFallback)
+		return DynamicVariable::RunningHeaderFallback::NoFallback;
+	if (fallback == SectionFallback)
+		return DynamicVariable::RunningHeaderFallback::Section;
+	if (fallback == DocumentFallback)
+		return DynamicVariable::RunningHeaderFallback::Document;
+	return DynamicVariable::RunningHeaderFallback::Unsupported;
+}
+
+QString DynamicVariableResolver::runningHeaderFallbackToString(DynamicVariable::RunningHeaderFallback fallback)
+{
+	switch (fallback)
+	{
+	case DynamicVariable::RunningHeaderFallback::NoFallback:
+		return NoFallback;
+	case DynamicVariable::RunningHeaderFallback::Section:
+		return SectionFallback;
+	case DynamicVariable::RunningHeaderFallback::Document:
+		return DocumentFallback;
+	case DynamicVariable::RunningHeaderFallback::Unsupported:
+		break;
+	}
+	return QString();
+}
+
 QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame)
 {
 	if (!doc || variableId.isEmpty())
@@ -401,10 +466,14 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 		{
 			const DynamicVariable::RunningHeaderMode mode = runningHeaderModeFromString(variable->runningHeaderMode);
 			const DynamicVariable::RunningHeaderTextCase textCase = runningHeaderTextCaseFromString(variable->runningHeaderTextCase);
+			const DynamicVariable::RunningHeaderFallback fallback = runningHeaderFallbackFromString(variable->runningHeaderFallback);
 			if (variable->paragraphStyle.isEmpty()
 				|| !doc->paragraphStyles().contains(variable->paragraphStyle)
 				|| mode == DynamicVariable::RunningHeaderMode::Unsupported
-				|| textCase == DynamicVariable::RunningHeaderTextCase::Unsupported)
+				|| textCase == DynamicVariable::RunningHeaderTextCase::Unsupported
+				|| fallback == DynamicVariable::RunningHeaderFallback::Unsupported
+				|| (mode == DynamicVariable::RunningHeaderMode::MostRecent
+					&& fallback != DynamicVariable::RunningHeaderFallback::NoFallback))
 				return QString();
 			if (!frame || frame->OwnPage < 0 || frame->OwnPage >= doc->DocPages.count())
 				return QString();
@@ -413,7 +482,7 @@ QString DynamicVariableResolver::resolve(const ScribusDoc* doc, const QString& v
 				return cachedValue;
 			if (!doc->beginRunningHeaderResolution(variable->id, frame->OwnPage))
 				return QString();
-			const QString value = formatRunningHeaderText(resolveRunningHeader(doc, *variable, mode, frame), *variable, textCase);
+			const QString value = formatRunningHeaderText(resolveRunningHeader(doc, *variable, mode, fallback, frame), *variable, textCase);
 			doc->endRunningHeaderResolution(variable->id, frame->OwnPage);
 			doc->setRunningHeaderCacheValue(variable->id, frame->OwnPage, frame, value);
 			return value;

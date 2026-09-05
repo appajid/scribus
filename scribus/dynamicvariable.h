@@ -37,6 +37,14 @@ struct SCRIBUS_API DynamicVariable
 		Unsupported
 	};
 
+	enum class RunningHeaderFallback
+	{
+		NoFallback,
+		Section,
+		Document,
+		Unsupported
+	};
+
 	QString id;
 	QString type;
 	QString name;
@@ -44,6 +52,7 @@ struct SCRIBUS_API DynamicVariable
 	QString paragraphStyle;
 	QString runningHeaderMode;
 	QString runningHeaderTextCase;
+	QString runningHeaderFallback;
 	bool removeTrailingPunctuation { false };
 };
 
@@ -68,6 +77,9 @@ public:
 	static const QString UppercaseCase;
 	static const QString LowercaseCase;
 	static const QString TitleCaseCase;
+	static const QString NoFallback;
+	static const QString SectionFallback;
+	static const QString DocumentFallback;
 
 	static QList<DynamicVariable> builtInVariables();
 	static bool isBuiltInId(const QString& id);
@@ -80,6 +92,8 @@ public:
 	static QString runningHeaderModeToString(DynamicVariable::RunningHeaderMode mode);
 	static DynamicVariable::RunningHeaderTextCase runningHeaderTextCaseFromString(const QString& textCase);
 	static QString runningHeaderTextCaseToString(DynamicVariable::RunningHeaderTextCase textCase);
+	static DynamicVariable::RunningHeaderFallback runningHeaderFallbackFromString(const QString& fallback);
+	static QString runningHeaderFallbackToString(DynamicVariable::RunningHeaderFallback fallback);
 	static QString resolve(const ScribusDoc* doc, const QString& variableId, const PageItem* frame = nullptr);
 };
 

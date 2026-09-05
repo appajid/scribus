@@ -57,6 +57,17 @@ QString runningHeaderTextCaseLabel(const QString& textCase)
 	return QObject::tr("Unsupported");
 }
 
+QString runningHeaderFallbackLabel(const QString& fallback)
+{
+	if (fallback.isEmpty() || fallback == DynamicVariableResolver::NoFallback)
+		return QObject::tr("No fallback");
+	if (fallback == DynamicVariableResolver::SectionFallback)
+		return QObject::tr("Previous in Section");
+	if (fallback == DynamicVariableResolver::DocumentFallback)
+		return QObject::tr("Previous in Document");
+	return QObject::tr("Unsupported");
+}
+
 class VariableEditDialog : public QDialog
 {
 public:
@@ -96,6 +107,10 @@ public:
 		m_textCase->addItem(tr("UPPERCASE"), DynamicVariableResolver::UppercaseCase);
 		m_textCase->addItem(tr("lowercase"), DynamicVariableResolver::LowercaseCase);
 		m_textCase->addItem(tr("Title Case"), DynamicVariableResolver::TitleCaseCase);
+		m_fallback = new QComboBox(this);
+		m_fallback->addItem(tr("Leave blank"), DynamicVariableResolver::NoFallback);
+		m_fallback->addItem(tr("Previous matching paragraph in current section"), DynamicVariableResolver::SectionFallback);
+		m_fallback->addItem(tr("Previous matching paragraph in document"), DynamicVariableResolver::DocumentFallback);
 		m_removeTrailingPunctuation = new QCheckBox(tr("Remove trailing punctuation"), this);
 
 		form->addRow(tr("Type:"), m_type);
@@ -108,6 +123,8 @@ public:
 		form->addRow(m_modeLabel, m_mode);
 		m_textCaseLabel = new QLabel(tr("Case:"), this);
 		form->addRow(m_textCaseLabel, m_textCase);
+		m_fallbackLabel = new QLabel(tr("If no match:"), this);
+		form->addRow(m_fallbackLabel, m_fallback);
 		m_optionsLabel = new QLabel(tr("Options:"), this);
 		form->addRow(m_optionsLabel, m_removeTrailingPunctuation);
 		layout->addLayout(form);
@@ -119,9 +136,11 @@ public:
 		connect(m_name, &QLineEdit::textChanged, this, [this]() { updateAcceptState(); });
 		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
 		connect(m_paragraphStyle, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
-		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
+		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateFields(); });
 		connect(m_mode, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
 		connect(m_textCase, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
+		connect(m_fallback, &QComboBox::currentIndexChanged, this, [this]() { updateAcceptState(); });
+		connect(m_fallback, &QComboBox::currentIndexChanged, this, [this]() { updateSourceDescription(); });
 		m_sourceDescription = new QLabel(this);
 		m_sourceDescription->setWordWrap(true);
 		layout->addWidget(m_sourceDescription);
@@ -140,6 +159,14 @@ public:
 				m_paragraphStyle->setCurrentIndex(0);
 			}
 			m_mode->setCurrentIndex(m_mode->findData(variable->runningHeaderMode));
+			const int fallbackIndex = m_fallback->findData(variable->runningHeaderFallback);
+			if (fallbackIndex >= 0)
+				m_fallback->setCurrentIndex(fallbackIndex);
+			else if (!variable->runningHeaderFallback.isEmpty())
+			{
+				m_fallback->insertItem(0, tr("Unsupported: %1").arg(variable->runningHeaderFallback), QString());
+				m_fallback->setCurrentIndex(0);
+			}
 			const int textCaseIndex = m_textCase->findData(variable->runningHeaderTextCase);
 			if (textCaseIndex >= 0)
 				m_textCase->setCurrentIndex(textCaseIndex);
@@ -166,12 +193,20 @@ public:
 	{
 		return DynamicVariableResolver::runningHeaderTextCaseFromString(m_textCase->currentData().toString());
 	}
+	DynamicVariable::RunningHeaderFallback runningHeaderFallback() const
+	{
+		return DynamicVariableResolver::runningHeaderFallbackFromString(m_fallback->currentData().toString());
+	}
 	bool removeTrailingPunctuation() const { return m_removeTrailingPunctuation->isChecked(); }
 
 private:
 	void updateFields()
 	{
 		const bool runningHeader = isRunningHeader();
+		const bool supportsFallback = runningHeader
+			&& m_mode->currentData().toString() != DynamicVariableResolver::MostRecentMode;
+		if (runningHeader && !supportsFallback)
+			m_fallback->setCurrentIndex(m_fallback->findData(DynamicVariableResolver::NoFallback));
 		m_valueLabel->setVisible(!runningHeader);
 		m_value->setVisible(!runningHeader);
 		m_styleLabel->setVisible(runningHeader);
@@ -180,6 +215,8 @@ private:
 		m_mode->setVisible(runningHeader);
 		m_textCaseLabel->setVisible(runningHeader);
 		m_textCase->setVisible(runningHeader);
+		m_fallbackLabel->setVisible(supportsFallback);
+		m_fallback->setVisible(supportsFallback);
 		m_optionsLabel->setVisible(runningHeader);
 		m_removeTrailingPunctuation->setVisible(runningHeader);
 		m_sourceDescription->setVisible(runningHeader);
@@ -200,25 +237,47 @@ private:
 			return;
 		}
 		const QString mode = m_mode->currentData().toString();
+		QString description;
 		if (mode == DynamicVariableResolver::FirstOnPageMode)
-			m_sourceDescription->setText(tr("Uses the first matching paragraph that begins on the current page."));
+			description = tr("Uses the first matching paragraph that begins on the current page.");
 		else if (mode == DynamicVariableResolver::LastOnPageMode)
-			m_sourceDescription->setText(tr("Uses the last matching paragraph that begins on the current page."));
+			description = tr("Uses the last matching paragraph that begins on the current page.");
 		else if (mode == DynamicVariableResolver::FirstOnSpreadMode)
-			m_sourceDescription->setText(tr("Uses the first matching paragraph in reading order across the current spread."));
+			description = tr("Uses the first matching paragraph in reading order across the current spread.");
 		else if (mode == DynamicVariableResolver::LastOnSpreadMode)
-			m_sourceDescription->setText(tr("Uses the last matching paragraph in reading order across the current spread."));
+			description = tr("Uses the last matching paragraph in reading order across the current spread.");
 		else if (mode == DynamicVariableResolver::MostRecentMode)
-			m_sourceDescription->setText(tr("Carries forward the latest matching paragraph from this page or an earlier page."));
+			description = tr("Carries forward the latest matching paragraph from this page or an earlier page.");
 		else
+		{
 			m_sourceDescription->setText(tr("The saved source mode is unsupported. Choose a supported mode to repair this running header."));
+			return;
+		}
+
+		if (mode != DynamicVariableResolver::MostRecentMode)
+		{
+			const QString fallback = m_fallback->currentData().toString();
+			if (fallback == DynamicVariableResolver::NoFallback)
+				description += QStringLiteral(" ") + tr("Leaves the header blank when the local range has no match.");
+			else if (fallback == DynamicVariableResolver::SectionFallback)
+				description += QStringLiteral(" ") + tr("Otherwise uses the latest matching paragraph in the current document section.");
+			else if (fallback == DynamicVariableResolver::DocumentFallback)
+				description += QStringLiteral(" ") + tr("Otherwise uses the latest matching paragraph earlier in the document.");
+			else
+			{
+				m_sourceDescription->setText(tr("The saved fallback is unsupported. Choose a supported fallback to repair this running header."));
+				return;
+			}
+		}
+		m_sourceDescription->setText(description);
 	}
 
 	void updateAcceptState()
 	{
 		const bool runningHeaderFieldsValid = !isRunningHeader()
 			|| (!paragraphStyle().isEmpty() && !m_mode->currentData().toString().isEmpty()
-				&& !m_textCase->currentData().toString().isEmpty());
+				&& !m_textCase->currentData().toString().isEmpty()
+				&& !m_fallback->currentData().toString().isEmpty());
 		m_okButton->setEnabled(!name().isEmpty() && runningHeaderFieldsValid);
 	}
 
@@ -228,12 +287,14 @@ private:
 	QComboBox* m_paragraphStyle {nullptr};
 	QComboBox* m_mode {nullptr};
 	QComboBox* m_textCase {nullptr};
+	QComboBox* m_fallback {nullptr};
 	QCheckBox* m_removeTrailingPunctuation {nullptr};
 	QLabel* m_description {nullptr};
 	QLabel* m_valueLabel {nullptr};
 	QLabel* m_styleLabel {nullptr};
 	QLabel* m_modeLabel {nullptr};
 	QLabel* m_textCaseLabel {nullptr};
+	QLabel* m_fallbackLabel {nullptr};
 	QLabel* m_optionsLabel {nullptr};
 	QLabel* m_sourceDescription {nullptr};
 	QPushButton* m_okButton {nullptr};
@@ -308,6 +369,9 @@ void DynamicVariableManager::refresh()
 				: tr("Missing style: %1").arg(variable.paragraphStyle);
 			value = tr("%1 — %2 — %3").arg(style, runningHeaderModeLabel(variable.runningHeaderMode),
 				runningHeaderTextCaseLabel(variable.runningHeaderTextCase));
+			if (!variable.runningHeaderFallback.isEmpty()
+				&& variable.runningHeaderFallback != DynamicVariableResolver::NoFallback)
+				value += tr(" — %1").arg(runningHeaderFallbackLabel(variable.runningHeaderFallback));
 			if (variable.removeTrailingPunctuation)
 				value += tr(" — Remove trailing punctuation");
 		}
@@ -339,7 +403,7 @@ void DynamicVariableManager::addVariable()
 		QString id;
 		if (dialog.isRunningHeader())
 			id = m_doc->addRunningHeaderVariable(dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode(),
-				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation());
+				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation(), dialog.runningHeaderFallback());
 		else
 			id = m_doc->addDynamicVariable(dialog.name(), dialog.value());
 		if (!id.isEmpty())
@@ -365,7 +429,7 @@ void DynamicVariableManager::editVariable()
 	{
 		const bool updated = variable->type == DynamicVariableResolver::RunningHeader
 			? m_doc->updateRunningHeaderVariable(id, dialog.name(), dialog.paragraphStyle(), dialog.runningHeaderMode(),
-				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation())
+				dialog.runningHeaderTextCase(), dialog.removeTrailingPunctuation(), dialog.runningHeaderFallback())
 			: m_doc->updateDynamicVariable(id, dialog.name(), dialog.value());
 		if (updated)
 		{

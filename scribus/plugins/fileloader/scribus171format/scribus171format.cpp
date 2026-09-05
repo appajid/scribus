@@ -4700,11 +4700,13 @@ bool Scribus171Format::readDynamicVariables(ScribusDoc* doc, ScXmlStreamReader& 
 		const QString runningHeaderTextCase = attrs.hasAttribute("textCase")
 			? attrs.valueAsString("textCase") : DynamicVariableResolver::AsEnteredCase;
 		const bool removeTrailingPunctuation = attrs.valueAsBool("removeTrailingPunctuation", false);
+		const QString runningHeaderFallback = attrs.hasAttribute("fallback")
+			? attrs.valueAsString("fallback") : DynamicVariableResolver::NoFallback;
 		if (id.isEmpty() || name.isEmpty() || DynamicVariableResolver::isBuiltInId(id))
 			continue;
 		if (!doc->dynamicVariable(id))
 			doc->addDynamicVariable(name, value, id, type, paragraphStyle, runningHeaderMode,
-				runningHeaderTextCase, removeTrailingPunctuation);
+				runningHeaderTextCase, removeTrailingPunctuation, runningHeaderFallback);
 	}
 	return !reader.hasError();
 }

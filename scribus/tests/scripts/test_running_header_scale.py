@@ -54,6 +54,8 @@ definition = (
     b'paragraphStyle="ScaleHeading" mode="most-recent"/>'
     b'<Variable id="scale-spread-first" type="running-header" name="Scale Spread First" value="" '
     b'paragraphStyle="ScaleHeading" mode="first-on-spread"/>'
+    b'<Variable id="scale-section-fallback" type="running-header" name="Scale Section Fallback" value="" '
+    b'paragraphStyle="ScaleHeading" mode="first-on-page" fallback="section"/>'
 )
 data = data.replace(b"</DynamicVariables>", definition + b"</DynamicVariables>", 1)
 with open(path, "wb") as target_file:
@@ -68,6 +70,9 @@ for page, context in enumerate(contexts, 1):
     actual = scribus.getVariable("scale-recent", context)
     if actual != expected:
         failures.append(("most-recent", page, actual, expected))
+    actual_section = scribus.getVariable("scale-section-fallback", context)
+    if actual_section != expected:
+        failures.append(("section-fallback", page, actual_section, expected))
     spread_start = page if page % 2 else page - 1
     spread_heading = next(
         (
@@ -87,6 +92,7 @@ warm_start = time.perf_counter()
 for context in contexts:
     scribus.getVariable("scale-recent", context)
     scribus.getVariable("scale-spread-first", context)
+    scribus.getVariable("scale-section-fallback", context)
 warm_seconds = time.perf_counter() - warm_start
 
 print("SCALE_QA|pages={}|headings={}|failures={}|cold_seconds={:.6f}|warm_seconds={:.6f}".format(
