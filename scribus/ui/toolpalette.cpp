@@ -13,16 +13,21 @@ for which a new license (GPL+exception) is in place.
 #include "toolpalette.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QEnterEvent>
 #include <QEvent>
 #include <QFrame>
 #include <QIcon>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPalette>
 #include <QPointer>
 #include <QStatusBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+
+#include <utility>
 
 #include "autoformbuttongroup.h"
 #include "modetoolbar.h"
@@ -76,8 +81,10 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 	ShapeVals = AutoShapes0;
 
 	QWidget* content = new QWidget(this);
+	content->setObjectName(QStringLiteral("toolPaletteContent"));
+	content->setFixedWidth(56);
 	QVBoxLayout* vbox = new QVBoxLayout(content);
-	vbox->setContentsMargins(4, 4, 4, 4);
+	vbox->setContentsMargins(8, 6, 8, 6);
 	vbox->setSpacing(2);
 	vbox->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
@@ -163,6 +170,11 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 	for (auto it = m_buttons.constBegin(); it != m_buttons.constEnd(); ++it)
 		m_ScMW->scrActions[it.key()]->setChecked(false);
 	m_ScMW->scrActions["toolsSelect"]->setChecked(true);
+
+	connect(ScQApp, &ScribusQApp::iconSetChanged, this, [this]() {
+		for (QToolButton* button : std::as_const(m_buttons))
+			refreshToolIcon(button);
+	});
 
 	languageChange();
 }
@@ -282,9 +294,11 @@ QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, QVBoxLay
 	ToolPaletteButton* btn = new ToolPaletteButton(this);
 	btn->setObjectName("toolButton");
 	btn->setDefaultAction(action);
-	btn->setIconSize(QSize(22, 22));
+	btn->setIconSize(QSize(24, 24));
 	btn->setToolButtonStyle(Qt::ToolButtonIconOnly);
-	btn->setFixedSize(42, 34);
+	btn->setFixedSize(40, 40);
+	btn->setAccessibleName(action ? action->text().remove('&') : QString());
+	refreshToolIcon(btn);
 	layout->addWidget(btn, 0, Qt::AlignHCenter);
 	m_buttons.insert(actionName, btn);
 	connect(action, &QAction::toggled, this, [this, action](bool on) {
@@ -311,10 +325,36 @@ QMenu* ToolPalette::configureToolGroup(QToolButton* button, const QStringList &a
 			button->setDefaultAction(action);
 			button->setMenu(menu);
 			button->setPopupMode(QToolButton::MenuButtonPopup);
+			button->setAccessibleName(action->text().remove('&'));
+			refreshToolIcon(button);
 			updateToolHelp(action);
 		});
 	}
 	button->setMenu(menu);
 	button->setPopupMode(QToolButton::MenuButtonPopup);
 	return menu;
+}
+
+void ToolPalette::refreshToolIcon(QToolButton* button)
+{
+	if (!button || !button->defaultAction())
+		return;
+
+	const QSize iconSize(24, 24);
+	QPixmap normal = button->defaultAction()->icon().pixmap(iconSize, QIcon::Normal, QIcon::On);
+	if (normal.isNull())
+		return;
+
+	QPixmap selected = normal;
+	QPainter painter(&selected);
+	painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+	painter.fillRect(selected.rect(), QApplication::palette().color(QPalette::HighlightedText));
+	painter.end();
+
+	QIcon icon;
+	icon.addPixmap(normal, QIcon::Normal, QIcon::Off);
+	icon.addPixmap(normal, QIcon::Active, QIcon::Off);
+	icon.addPixmap(selected, QIcon::Normal, QIcon::On);
+	icon.addPixmap(selected, QIcon::Active, QIcon::On);
+	button->setIcon(icon);
 }

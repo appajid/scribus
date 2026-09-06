@@ -40,11 +40,14 @@ for which a new license (GPL+exception) is in place.
 EditToolBar::EditToolBar(ScribusMainWindow* parent) : ScToolBar(tr("Context"), "Context", parent),
 	m_mainWindow(parent)
 {
+	setProperty("contextToolbar", true);
+	setMinimumHeight(44);
 	setAllowedAreas(Qt::TopToolBarArea);
 	setFloatable(false);
 	setMovable(false);
 
 	m_contextLabel = new QLabel(this);
+	m_contextLabel->setObjectName(QStringLiteral("contextToolbarTitle"));
 	QFont labelFont(m_contextLabel->font());
 	labelFont.setBold(true);
 	m_contextLabel->setFont(labelFont);
@@ -83,7 +86,10 @@ void EditToolBar::addContextAction(const QString& actionName, int contexts)
 		return;
 
 	auto* button = new QToolButton(this);
+	button->setObjectName(QStringLiteral("contextToolButton"));
 	button->setAutoRaise(true);
+	button->setIconSize(QSize(20, 20));
+	button->setFixedSize(36, 32);
 	button->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	button->setDefaultAction(action);
 	addWidget(button);

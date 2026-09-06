@@ -45,6 +45,7 @@ for which a new license (GPL+exception) is in place.
 #include "scpaths.h"
 #include "scrspinbox.h"
 #include "units.h"
+#include "util.h"
 #include "ui/widgets/pagesizelist.h"
 
 
@@ -53,6 +54,25 @@ NewDocDialog::NewDocDialog(QWidget* parent, const QStringList& recentDocs, bool 
 	m_onStartup(startUp)
 {
 	setupUi(this);
+	setProperty("modernDialog", true);
+	setAttribute(Qt::WA_StyledBackground, true);
+	setMinimumSize(820, 580);
+
+	QByteArray applicationStyle;
+	if (loadRawText(ScPaths::instance().libDir() + "scribus.css", applicationStyle))
+		setStyleSheet(QString::fromUtf8(applicationStyle));
+
+	for (SectionContainer* section : findChildren<SectionContainer*>())
+	{
+		section->setProperty("dialogSection", true);
+		section->setAttribute(Qt::WA_StyledBackground, true);
+	}
+	if (QPushButton* primaryButton = buttonBox->button(QDialogButtonBox::Ok))
+	{
+		primaryButton->setProperty("primaryAction", true);
+		primaryButton->setText(tr("Create"));
+		primaryButton->setDefault(true);
+	}
 
 	IconManager &iconManager = IconManager::instance();
 
@@ -188,6 +208,8 @@ void NewDocDialog::createNewDocPage()
 	PageCollectionInfo pciPreferred = PagePresetManager::instance().categoryInfoPreferred();
 
 	listPageFormats->setValues(QSizeF(pageWidth, pageHeight), m_orientation, pciPreferred.id, PageSizeList::NameAsc);
+	listPageFormats->setIconSize(QSize(64, 64));
+	listPageFormats->setGridSize(QSize(132, 124));
 
 	QString name;
 	if (listPageFormats->currentIndex().isValid())
@@ -755,16 +777,37 @@ void NewDocDialog::recentDocListBox_doubleClicked()
 
 void NewDocDialog::adjustTitles(int tab)
 {
+	QPushButton* primaryButton = buttonBox->button(QDialogButtonBox::Ok);
 	if (tab == 0)
+	{
 		setWindowTitle(tr("New Document"));
+		if (primaryButton)
+			primaryButton->setText(tr("Create"));
+	}
 	else if (tab == 1)
+	{
 		setWindowTitle(tr("New from Template"));
+		if (primaryButton)
+			primaryButton->setText(tr("Create"));
+	}
 	else if (tab == 2)
+	{
 		setWindowTitle(tr("Open Existing Document"));
+		if (primaryButton)
+			primaryButton->setText(tr("Open"));
+	}
 	else if (tab == 3)
+	{
 		setWindowTitle(tr("Open Recent Document"));
+		if (primaryButton)
+			primaryButton->setText(tr("Open"));
+	}
 	else
+	{
 		setWindowTitle(tr("New Document"));
+		if (primaryButton)
+			primaryButton->setText(tr("Create"));
+	}
 	//okButton->setEnabled(tab!=2);
 }
 

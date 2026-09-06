@@ -32,6 +32,8 @@ for which a new license (GPL+exception) is in place.
 FileToolBar::FileToolBar(ScribusMainWindow* p) : ScToolBar( tr("Main"), "Main", p)
 {
 	parent = p;
+	setProperty("mainToolbar", true);
+	setMinimumHeight(44);
 	setAllowedAreas(Qt::TopToolBarArea);
 	setFloatable(false);
 	setMovable(false);

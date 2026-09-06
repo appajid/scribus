@@ -68,6 +68,8 @@ protected:
 	QToolButton* addToolButtonEntry(const QString &actionName, QVBoxLayout* layout);
 	/** @brief Attach related shared actions as a segmented flyout. */
 	QMenu* configureToolGroup(QToolButton* button, const QStringList &actionNames);
+	/** @brief Apply the normal and selected artwork for a palette button. */
+	void refreshToolIcon(QToolButton* button);
 	/** @brief Add a visual separator between tool families. */
 	void addToolSeparator(QVBoxLayout* layout);
 	/** @brief Set the number of polygon corners from a flyout preset. */

@@ -50,6 +50,7 @@ for which a new license (GPL+exception) is in place.
 	#include "svnversion.h"
 #endif
 #include "util_ghostscript.h"
+#include "util.h"
 #include "iconmanager.h"
 #include "upgradechecker.h"
 #include "langmgr.h"
@@ -107,41 +108,45 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 {
 	m_mode = diaMode;
 	m_firstShow = true;
+	setObjectName(QStringLiteral("aboutDialog"));
+	setProperty("modernDialog", true);
+	setAttribute(Qt::WA_StyledBackground, true);
 	setWindowTitle( tr("About Scribus %1").arg(ScribusAPI::getVersion()) );
 	setWindowIcon(IconManager::instance().loadIcon("app-icon"));
 	setModal(true);
+	QByteArray applicationStyle;
+	if (loadRawText(ScPaths::instance().libDir() + "scribus.css", applicationStyle))
+		setStyleSheet(QString::fromUtf8(applicationStyle));
 	aboutLayout = new QVBoxLayout( this );
-	aboutLayout->setSpacing(6);
-	aboutLayout->setContentsMargins(9, 9, 9, 9);
+	aboutLayout->setSpacing(14);
+	aboutLayout->setContentsMargins(22, 20, 22, 18);
 	tabWidget2 = new QTabWidget( this );
+	tabWidget2->setObjectName(QStringLiteral("aboutTabs"));
 	tab = new QWidget( tabWidget2 );
 	tabLayout1 = new QVBoxLayout( tab );
-	tabLayout1->setSpacing(6);
-	tabLayout1->setContentsMargins(9, 9, 9, 9);
-
-	double pixelRatio = devicePixelRatioF();
-	QPixmap splashPixmap = IconManager::instance().splashScreen();
-	double splashPixmapW = splashPixmap.width();
-	double splashPixmapH = splashPixmap.height();
-	if (pixelRatio != 1.0)
-	{
-		int w = qRound(splashPixmap.width() * pixelRatio);
-		int h = qRound(splashPixmap.height() * pixelRatio);
-		double integralPart = 0;
-		bool isIntegerRatio = (modf(pixelRatio, &integralPart) == 0.0);
-		splashPixmap = splashPixmap.scaled(w, h, Qt::IgnoreAspectRatio, isIntegerRatio ? Qt::FastTransformation : Qt::SmoothTransformation);
-		splashPixmap.setDevicePixelRatio(pixelRatio);
-	}
+	tabLayout1->setSpacing(12);
+	tabLayout1->setContentsMargins(28, 24, 28, 24);
+	tabLayout1->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
 	pixmapLabel1 = new QLabel( tab );
-	pixmapLabel1->setPixmap(splashPixmap);
-	pixmapLabel1->setFixedSize(QSize(splashPixmapW, splashPixmapH));
+	pixmapLabel1->setObjectName(QStringLiteral("aboutAppIcon"));
+	pixmapLabel1->setPixmap(IconManager::instance().loadPixmap("app-icon", 96));
+	pixmapLabel1->setFixedSize(QSize(112, 112));
 	pixmapLabel1->setAlignment(Qt::AlignCenter);
-	tabLayout1->addWidget( pixmapLabel1 );
+	tabLayout1->addWidget( pixmapLabel1, 0, Qt::AlignHCenter );
 	buildID = new QLabel( tab );
+	buildID->setObjectName(QStringLiteral("aboutSummary"));
 	buildID->setAlignment(Qt::AlignCenter);
+	buildID->setWordWrap(true);
 	buildID->setTextInteractionFlags(Qt::TextSelectableByMouse);
-	buildID->setText( tr("<p align=\"center\"><b>%1 %2</b></p>").arg( tr("Scribus Version"), ScribusAPI::getVersion()));
+	buildID->setText(tr(
+		"<div align=\"center\">"
+		"<span style=\"font-size:28pt;font-weight:700\">Scribus</span><br>"
+		"<span style=\"font-size:11pt\">Version %1</span>"
+		"<p><span style=\"font-size:16pt;font-weight:600\">Publish beautifully.</span></p>"
+		"<p>An open-source workspace for books, magazines,<br>"
+		"and print-ready documents.</p>"
+		"</div>").arg(ScribusAPI::getVersion()));
 	tabLayout1->addWidget( buildID, 0, Qt::AlignHCenter );
 	tabWidget2->addTab( tab, tr("&About") );
 
@@ -227,10 +232,11 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 	QSpacerItem* spacer = new QSpacerItem( 20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum );
 	layout2->addItem( spacer );
 	okButton = new QPushButton( tr("&Close"), this );
+	okButton->setProperty("primaryAction", true);
 	okButton->setDefault( true );
 	layout2->addWidget( okButton );
 	aboutLayout->addLayout( layout2 );
-	setMaximumSize(sizeHint());
+	setMinimumSize(640, 560);
 
 
 	//tooltips
@@ -238,7 +244,7 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 	// signals and slots connections
 	connect( okButton, SIGNAL( clicked() ), this, SLOT( accept() ) );
 	connect( checkForUpdateButton, SIGNAL( clicked() ), this, SLOT( runUpdateCheck() ) );
-	resize(minimumSizeHint());
+	resize(680, 600);
 }
 
 void About::showEvent (QShowEvent * event)
