@@ -772,6 +772,109 @@ QDialog[modernDialogRole="preferences"] QStackedWidget[modernContent="true"] {
    border-radius: 9px;
 }
 
+/* Pages, Masters, Styles and Colours follow the approved library-card language. */
+QWidget[modernPagesPanel="true"],
+QWidget[modernMastersPanel="true"] {
+   background: palette(base);
+}
+
+QWidget[modernPagesPanel="true"] QLabel#masterPageLabel,
+QWidget[modernPagesPanel="true"] QLabel#pageViewLabel {
+   color: palette(text);
+   font-weight: 600;
+   padding: 3px 1px;
+}
+
+QWidget[modernPagesPanel="true"] QListWidget#masterPageList,
+QWidget[modernMastersPanel="true"] QListWidget[masterPageCards="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   padding: 5px;
+}
+
+QWidget[modernPagesPanel="true"] QListWidget#masterPageList::item,
+QWidget[modernMastersPanel="true"] QListWidget[masterPageCards="true"]::item {
+   border: 1px solid transparent;
+   border-radius: 7px;
+   padding: 5px;
+}
+
+QWidget[modernPagesPanel="true"] QListWidget#masterPageList::item:hover,
+QWidget[modernMastersPanel="true"] QListWidget[masterPageCards="true"]::item:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QWidget[modernPagesPanel="true"] QListWidget#masterPageList::item:selected,
+QWidget[modernMastersPanel="true"] QListWidget[masterPageCards="true"]::item:selected {
+   color: palette(text);
+   background: palette(button);
+   border-color: palette(highlight);
+}
+
+QWidget[modernPagesPanel="true"] QToolButton[panelAction="true"],
+QWidget[modernMastersPanel="true"] QToolButton[panelAction="true"] {
+   min-width: 30px;
+   min-height: 30px;
+   border: 1px solid transparent;
+   border-radius: 6px;
+   background: transparent;
+}
+
+QWidget[modernPagesPanel="true"] QToolButton[panelAction="true"]:hover,
+QWidget[modernMastersPanel="true"] QToolButton[panelAction="true"]:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QDialog[modernDialogRole="styles"] QFrame[navigationPanel="true"] {
+   background: palette(window);
+   border: none;
+}
+
+QDialog[modernDialogRole="styles"] QFrame[contentPanel="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   padding: 10px;
+}
+
+QDialog[modernDialogRole="styles"] QTreeWidget[modernNavigation="true"],
+QDialog[modernDialogRole="colours"] QTreeWidget[colourLibrary="true"] {
+   show-decoration-selected: 1;
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   padding: 5px;
+}
+
+QDialog[modernDialogRole="styles"] QTreeWidget[modernNavigation="true"]::item,
+QDialog[modernDialogRole="colours"] QTreeWidget[colourLibrary="true"]::item {
+   min-height: 30px;
+   border: 1px solid transparent;
+   border-radius: 6px;
+   padding: 3px 6px;
+}
+
+QDialog[modernDialogRole="styles"] QTreeWidget[modernNavigation="true"]::item:hover,
+QDialog[modernDialogRole="colours"] QTreeWidget[colourLibrary="true"]::item:hover {
+   background: palette(midlight);
+}
+
+QDialog[modernDialogRole="styles"] QTreeWidget[modernNavigation="true"]::item:selected,
+QDialog[modernDialogRole="colours"] QTreeWidget[colourLibrary="true"]::item:selected {
+   color: palette(text);
+   background: palette(button);
+   border-color: palette(highlight);
+}
+
+QDialog[modernDialogRole="styles"] QPushButton[compactAction="true"] {
+   text-align: left;
+}
+
 /* Preflight remains dockable while using the same modern form and report language. */
 QWidget[modernPanel="true"] {
    background: palette(window);

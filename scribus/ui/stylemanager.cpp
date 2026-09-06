@@ -15,6 +15,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "commonstrings.h"
 #include "fileloader.h"
+#include "iconmanager.h"
 #include "prefsfile.h"
 #include "prefsmanager.h"
 #include "scraction.h"
@@ -40,6 +41,27 @@ StyleManager::StyleManager(QWidget *parent, const char *name)
 	: ScrPaletteBase(parent, name)
 {
 	setupUi(this);
+	setProperty("modernDialog", true);
+	setProperty("modernDialogRole", "styles");
+	setAttribute(Qt::WA_StyledBackground, true);
+	setMinimumSize(860, 560);
+	styleView->setProperty("modernNavigation", true);
+	styleView->setMinimumWidth(250);
+	leftFrame->setProperty("navigationPanel", true);
+	editFrame->setProperty("contentPanel", true);
+	newButton->setProperty("primaryAction", true);
+	okButton->setProperty("primaryAction", true);
+	const QList<QPushButton*> styleButtons { newButton, cloneButton, importButton, deleteButton, deleteUnusedButton, resetButton, applyButton };
+	for (QPushButton* button : styleButtons)
+		button->setProperty("compactAction", true);
+	IconManager& iconManager = IconManager::instance();
+	newButton->setIcon(iconManager.loadIcon("document-new"));
+	cloneButton->setIcon(iconManager.loadIcon("edit-copy"));
+	importButton->setIcon(iconManager.loadIcon("document-open"));
+	deleteButton->setIcon(iconManager.loadIcon("edit-delete"));
+	deleteUnusedButton->setIcon(iconManager.loadIcon("edit-clear"));
+	resetButton->setIcon(iconManager.loadIcon("reset"));
+	applyButton->setIcon(iconManager.loadIcon("ok"));
 	styleView->hideColumn(SHORTCUT_COL);
 	styleView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	uniqueLabel->hide();
@@ -123,9 +145,9 @@ void StyleManager::languageChange()
 	m_doneText= tr("&Done");
 	m_editText= tr("&Edit");
 	setOkButtonText();
-	newButton->setText( tr("&New"));
+	newButton->setText( tr("&Add Style"));
 	importButton->setText( tr("&Import"));
-	cloneButton->setText( tr("&Clone"));
+	cloneButton->setText( tr("&Duplicate"));
 	deleteButton->setText( tr("&Delete"));
 
 	if (m_isEditMode)

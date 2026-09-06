@@ -39,16 +39,33 @@ PagePalette_Pages::PagePalette_Pages(QWidget *parent)
 	m_scMW = ScCore->primaryMainWindow();
 
 	setupUi(this);
+	setProperty("modernPagesPanel", true);
+	setAttribute(Qt::WA_StyledBackground, true);
 
 	setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding));
 
-	masterPageList->setMinimumSize(QSize(200, 40));
+	splitter->setHandleWidth(1);
+	masterPageList->setMinimumSize(QSize(200, 108));
 	masterPageList->setIconSize(QSize(64, 64));
+	masterPageList->setViewMode(QListView::IconMode);
+	masterPageList->setFlow(QListView::LeftToRight);
+	masterPageList->setResizeMode(QListView::Adjust);
+	masterPageList->setMovement(QListView::Static);
+	masterPageList->setSpacing(6);
 
 	pageLayout->setHideLabelsPermanently(true);
 
-	trash->setMinimumSize(QSize(24, 24));
-	trash->setMaximumSize(QSize(24, 24));
+	trash->setMinimumSize(QSize(32, 32));
+	trash->setMaximumSize(QSize(32, 32));
+
+	const QList<QToolButton*> pageButtons { buttonPageInsert, buttonPageImport, buttonPageDuplicate, buttonPageMove };
+	for (QToolButton* button : pageButtons)
+	{
+		button->setProperty("panelAction", true);
+		button->setAutoRaise(true);
+		button->setIconSize(QSize(18, 18));
+		button->setFixedSize(QSize(32, 32));
+	}
 
 	PageGrid *pageGrid = pageViewWidget->pageGrid();
 
@@ -542,4 +559,10 @@ void PagePalette_Pages::languageChange()
 	buttonPageImport->setToolTip( tr( "Import pages from another document" ) );
 
 	retranslateUi(this);
+	masterPageLabel->setText(tr("Masters"));
+	pageViewLabel->setText(tr("Pages"));
+	buttonPageDuplicate->setAccessibleName(tr("Duplicate selected page"));
+	buttonPageMove->setAccessibleName(tr("Move selected page"));
+	buttonPageInsert->setAccessibleName(tr("Add page"));
+	buttonPageImport->setAccessibleName(tr("Import pages"));
 }

@@ -76,11 +76,27 @@ ColorsAndFillsDialog::ColorsAndFillsDialog(QWidget* parent, QHash<QString, VGrad
 	m_colorList(colorlist)
 {
 	setupUi(this);
+	setProperty("modernDialog", true);
+	setProperty("modernDialogRole", "colours");
+	setAttribute(Qt::WA_StyledBackground, true);
+	setMinimumSize(820, 540);
 	setModal(true);
 
-	setWindowIcon(IconManager::instance().loadIcon("app-icon"));
+	IconManager& iconManager = IconManager::instance();
+	setWindowIcon(iconManager.loadIcon("app-icon"));
+	dataTree->setProperty("colourLibrary", true);
+	newButton->setProperty("primaryAction", true);
+	okButton->setProperty("primaryAction", true);
+	groupBox_3->setProperty("modernSection", true);
+	newButton->setIcon(iconManager.loadIcon("document-new"));
+	importButton->setIcon(iconManager.loadIcon("document-open"));
+	editButton->setIcon(iconManager.loadIcon("editdoc"));
+	duplicateButton->setIcon(iconManager.loadIcon("edit-copy"));
+	deleteButton->setIcon(iconManager.loadIcon("edit-delete"));
+	deleteUnusedButton->setIcon(iconManager.loadIcon("edit-clear"));
+	SaveColSet->setIcon(iconManager.loadIcon("save"));
 	dataTree->setContextMenuPolicy(Qt::CustomContextMenu);
-	dataTree->setIconSize(QSize(60, 48));
+	dataTree->setIconSize(QSize(44, 36));
 	colorItems = new QTreeWidgetItem(dataTree);
 	colorItems->setText(0, tr("Solid Colors"));
 	gradientItems = new QTreeWidgetItem(dataTree);

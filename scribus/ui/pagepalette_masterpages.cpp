@@ -48,6 +48,20 @@ PagePalette_MasterPages::PagePalette_MasterPages( QWidget* parent, ScribusView *
 	m_view = pCurrentView;
 
 	setupUi(this);
+	setProperty("modernMastersPanel", true);
+	setAttribute(Qt::WA_StyledBackground, true);
+	masterPageListBox->setProperty("masterPageCards", true);
+	masterPageListBox->setSpacing(4);
+	masterPageListBox->setAlternatingRowColors(false);
+	const QList<QToolButton*> masterButtons { newButton, facingPairButton, importButton, duplicateButton, deleteButton };
+	for (QToolButton* button : masterButtons)
+	{
+		button->setProperty("panelAction", true);
+		button->setAutoRaise(true);
+		button->setIconSize(QSize(18, 18));
+		button->setFixedSize(QSize(32, 32));
+	}
+	finishButton->setProperty("secondaryAction", true);
 	iconSetChange();
 
 	masterPageListBox->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -148,6 +162,10 @@ void PagePalette_MasterPages::languageChange()
 	facingPairButton->setAccessibleName( tr( "Create Facing Master Pair" ) );
 	facingPairButton->setToolTip( tr( "Create a coordinated L/R master-page pair" ) );
 	importButton->setToolTip( tr( "Import master pages from another document" ) );
+	newButton->setAccessibleName(tr("Add master page"));
+	duplicateButton->setAccessibleName(tr("Duplicate selected master page"));
+	deleteButton->setAccessibleName(tr("Delete selected master page"));
+	importButton->setAccessibleName(tr("Import master pages"));
 }
 
 void PagePalette_MasterPages::styleChange()
