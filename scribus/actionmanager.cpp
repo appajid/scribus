@@ -904,7 +904,7 @@ void ActionManager::initToolsMenuActions()
 	name = "toolsInsertTable";
 	scrActions->insert(name, new ScrAction(ScrAction::DataInt, "tool-insert-table", "tool-insert-table", "", defaultKey(name), mainWindow, modeDrawTable2));
 	name = "toolsInsertShape";
-	scrActions->insert(name, new ScrAction(ScrAction::DataInt, QString(), QString(), "", defaultKey(name), mainWindow, modeDrawShapes));
+	scrActions->insert(name, new ScrAction(ScrAction::DataInt, "tool-insert-shape", "tool-insert-shape", "", defaultKey(name), mainWindow, modeDrawShapes));
 	name = "toolsInsertPolygon";
 	scrActions->insert(name, new ScrAction(ScrAction::DataInt, "tool-insert-polygon", "tool-insert-polygon", "", defaultKey(name), mainWindow, modeDrawRegularPolygon));
 	name = "toolsInsertArc";

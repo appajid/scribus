@@ -588,6 +588,7 @@ On Dark:  #e580ff; rgb(229, 128, 255); hsl(288, 100, 75)
 		<icon id="tool-insert-line" file="16/tool-insert-line.svg" />
 		<icon id="tool-insert-polygon" file="16/tool-insert-polygon.svg" />
 		<icon id="tool-insert-render-frame" file="16/tool-insert-render-frame.svg" />
+		<icon id="tool-insert-shape" file="16/tool-insert-shape.svg" />
 		<icon id="tool-insert-spiral" file="16/tool-insert-spiral.svg" />
 		<icon id="tool-insert-table" file="16/tool-insert-table.svg" />
 		<icon id="tool-insert-text-frame" file="16/tool-insert-text-frame.svg" />

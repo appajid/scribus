@@ -329,10 +329,15 @@ QWidget#toolPaletteContent {
 }
 
 QToolButton#toolButton {
+   min-width: 40px;
+   max-width: 40px;
+   min-height: 40px;
+   max-height: 40px;
    border: 1px solid transparent;
    border-radius: 6px;
    background: transparent;
-   padding: 7px;
+   margin: 0px;
+   padding: 0px;
 }
 
 QToolButton#toolButton:hover {
@@ -351,20 +356,23 @@ QToolButton#toolButton:checked:hover {
 }
 
 QToolButton#toolButton:focus {
-   border: 2px solid palette(highlight);
+   border: 1px solid palette(highlight);
 }
 
 QToolButton#toolButton::menu-indicator {
    image: url(___tb_menu_arrow___);
-   subcontrol-origin: padding;
+   subcontrol-origin: border;
    subcontrol-position: bottom right;
-   width: 7px;
-   height: 7px;
+   width: 6px;
+   height: 6px;
+   right: 3px;
+   bottom: 3px;
 }
 
 QFrame#toolSeparator {
-   color: palette(mid);
-   margin: 2px 3px;
+   background: palette(mid);
+   border: none;
+   margin: 0px;
 }
 
 /*

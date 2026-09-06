@@ -1,7 +1,8 @@
 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 <style>@import '../colors.css';</style>
-<g class="line" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-<circle cx="10.5" cy="10.5" r="6.3"/>
-<path d="m15.2 15.2 4.6 4.6M7.5 10.5h6M10.5 7.5v6"/>
+<g class="line" stroke-linecap="round">
+  <circle cx="10" cy="10" r="6" stroke-width="1.6"/>
+  <path d="m14.5 14.5 5.5 5.5" stroke-width="1.8"/>
+  <path d="M7 10h6M10 7v6" stroke-width="1.2"/>
 </g>
 </svg>

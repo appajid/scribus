@@ -56,7 +56,6 @@ ModeToolBar::ModeToolBar(ScribusMainWindow* parent) : ScToolBar( tr("Tools"), "T
 	m_ScMW->scrActions["toolsInsertShape"]->setMenu(autoFormButtonGroup);
 	QToolButton* tb = dynamic_cast<QToolButton*>(this->widgetForAction(m_ScMW->scrActions["toolsInsertShape"]));
 	tb->setPopupMode(QToolButton::DelayedPopup);
-	m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(0,16)));
 
 	this->addAction(m_ScMW->scrActions["toolsInsertPolygon"]);
 	insertPolygonButtonMenu = new QMenu();
@@ -138,7 +137,7 @@ void ModeToolBar::GetPolyProps()
 
 void ModeToolBar::SelShape(int s, int c, qreal *vals)
 {
-	m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(s, 16)));
+	m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(s, 24)));
 	SubMode = s;
 	ValCount = c;
 	ShapeVals = vals;

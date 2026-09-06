@@ -23,6 +23,7 @@ for which a new license (GPL+exception) is in place.
 #include <QPainter>
 #include <QPalette>
 #include <QPointer>
+#include <QSizePolicy>
 #include <QStatusBar>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -121,7 +122,6 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 		if (autoFormButtonGroup)
 		{
 			m_ScMW->scrActions["toolsInsertShape"]->setMenu(nullptr);
-			m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(0, 24)));
 			refreshToolIcon(shapeBtn);
 			connect( autoFormButtonGroup, SIGNAL(FormSel(int,int,qreal*)), this, SLOT(SelShape(int,int,qreal*)) );
 		}
@@ -284,9 +284,8 @@ void ToolPalette::addToolSeparator(QVBoxLayout* layout)
 {
 	QFrame* separator = new QFrame(this);
 	separator->setObjectName("toolSeparator");
-	separator->setFrameShape(QFrame::HLine);
-	separator->setFrameShadow(QFrame::Sunken);
-	separator->setFixedWidth(34);
+	separator->setFrameShape(QFrame::NoFrame);
+	separator->setFixedSize(24, 1);
 	layout->addWidget(separator, 0, Qt::AlignHCenter);
 }
 
@@ -296,9 +295,11 @@ QToolButton* ToolPalette::addToolButtonEntry(const QString &actionName, QVBoxLay
 	ToolPaletteButton* btn = new ToolPaletteButton(this);
 	btn->setObjectName("toolButton");
 	btn->setDefaultAction(action);
+	btn->setAutoRaise(true);
 	btn->setIconSize(QSize(24, 24));
 	btn->setToolButtonStyle(Qt::ToolButtonIconOnly);
 	btn->setFixedSize(40, 40);
+	btn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	btn->setAccessibleName(action ? action->text().remove('&') : QString());
 	refreshToolIcon(btn);
 	layout->addWidget(btn, 0, Qt::AlignHCenter);
@@ -326,14 +327,14 @@ QMenu* ToolPalette::configureToolGroup(QToolButton* button, const QStringList &a
 				return;
 			button->setDefaultAction(action);
 			button->setMenu(menu);
-			button->setPopupMode(QToolButton::MenuButtonPopup);
+			button->setPopupMode(QToolButton::DelayedPopup);
 			button->setAccessibleName(action->text().remove('&'));
 			refreshToolIcon(button);
 			updateToolHelp(action);
 		});
 	}
 	button->setMenu(menu);
-	button->setPopupMode(QToolButton::MenuButtonPopup);
+	button->setPopupMode(QToolButton::DelayedPopup);
 	return menu;
 }
 

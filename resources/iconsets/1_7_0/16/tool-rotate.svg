@@ -1,7 +1,4 @@
 <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 <style>@import '../colors.css';</style>
-<g class="line" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M19.5 8.5A8 8 0 1 0 20 14M15.5 4.5h4v4"/>
-<rect x="8.2" y="8.2" width="7.6" height="7.6" rx="1"/>
-</g>
+<path class="line" d="M20 7V2l-3 3a8 8 0 1 0 3 8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
