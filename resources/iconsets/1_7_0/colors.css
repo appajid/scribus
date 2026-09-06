@@ -1,7 +1,18 @@
 /*
-* Change only colors, do not add more class, order or remove 
-* also dont change selectors definition
+* Keep semantic selector names stable: IconManager resolves these classes at
+* runtime for light and dark appearances.
 */
+
+/* Theme-aware outline used by the 24 px tool family. */
+.onDark .line {
+    fill: none;
+    stroke: #F5F5F7;
+}
+
+.line {
+    fill: none;
+    stroke: #202124;
+}
 
 /* Green */
 .onDark .success {

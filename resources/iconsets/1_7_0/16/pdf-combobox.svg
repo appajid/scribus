@@ -1,5 +1,8 @@
-<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 <style>@import '../colors.css';</style>
-<path fill-rule="evenodd" d="M1 2h14v12H1V2Zm2 2v8h7V4H3Zm8 0v8h2V4h-2ZM4 6h5v1.5H4V6Z"/>
-<path class="info" d="m11.25 7 1.5 0-0.75 2-0.75-2Z"/>
+<g class="line" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 3.5h9l3 3V20.5H6z"/><path d="M15 3.5v3h3"/>
+  <rect x="8" y="10" width="8" height="6" rx="1"/><path d="M13 10v6"/>
+</g>
+<path class="info" d="m14 12 1 1.2L16 12z"/>
 </svg>

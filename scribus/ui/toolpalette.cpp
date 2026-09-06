@@ -121,6 +121,8 @@ ToolPalette::ToolPalette(QWidget* parent) : DockPanelBase( tr("Tools"), "tool-se
 		if (autoFormButtonGroup)
 		{
 			m_ScMW->scrActions["toolsInsertShape"]->setMenu(nullptr);
+			m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(0, 24)));
+			refreshToolIcon(shapeBtn);
 			connect( autoFormButtonGroup, SIGNAL(FormSel(int,int,qreal*)), this, SLOT(SelShape(int,int,qreal*)) );
 		}
 
@@ -236,7 +238,7 @@ void ToolPalette::setPolygonSides(int sides)
 void ToolPalette::SelShape(int s, int c, qreal *vals)
 {
 	if (autoFormButtonGroup)
-		m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(s, 16)));
+		m_ScMW->scrActions["toolsInsertShape"]->setIcon(QIcon(autoFormButtonGroup->getIconPixmap(s, 24)));
 	SubMode = s;
 	ValCount = c;
 	ShapeVals = vals;

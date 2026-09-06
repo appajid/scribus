@@ -1,6 +1,6 @@
-<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 <style>@import '../colors.css';</style>
-<path d="m2.2 12.4 10.2-10.2 1.4 1.4L3.6 13.8l-1.4-1.4Z"/>
-<path class="info" d="M0 11h5v5H0zm11-11h5v5h-5z"/>
-<path d="M1.5 12.5h2v2h-2zm11-11h2v2h-2z"/>
+<path class="line" stroke-width="1.8" stroke-linecap="round" d="M5 19 19 5"/>
+<circle class="info" cx="5" cy="19" r="1.7"/>
+<circle class="info" cx="19" cy="5" r="1.7"/>
 </svg>
