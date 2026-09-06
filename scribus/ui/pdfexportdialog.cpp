@@ -41,6 +41,7 @@ for which a new license (GPL+exception) is in place.
 #include "scpaths.h"
 #include "scribusdoc.h"
 #include "scribusview.h"
+#include "ui/modernui.h"
 #include "ui/scmessagebox.h"
 #include "ui/scrspinbox.h"
 #include "util.h"
@@ -60,6 +61,7 @@ PDFExportDialog::PDFExportDialog( QWidget* parent, const QString & docFileName,
 	setModal(true);
 	setWindowTitle( tr( "Save as PDF" ) );
 	setWindowIcon(IconManager::instance().loadIcon("app-icon"));
+	ModernUI::applySurfaceStyle(this, "pdfExport");
 	PDFExportLayout = new QVBoxLayout( this );
 	PDFExportLayout->setSpacing(6);
 	PDFExportLayout->setContentsMargins(9, 9, 9, 9);
@@ -123,6 +125,9 @@ PDFExportDialog::PDFExportDialog( QWidget* parent, const QString & docFileName,
 	cancelButton = new QPushButton( CommonStrings::tr_Cancel, this );
 	Layout7->addWidget( cancelButton );
 	PDFExportLayout->addLayout( Layout7 );
+	ModernUI::setPrimaryAction(okButton);
+	ModernUI::markSections(this);
+	setMinimumSize(900, 650);
 	if ((m_opts.Version == PDFVersion::PDF_X3) && (Options->InfoString->text().isEmpty()))
 		okButton->setEnabled(false);
 	resize(sizeHint());

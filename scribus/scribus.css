@@ -592,6 +592,142 @@ QDialog[modernDialog="true"] QPushButton[primaryAction="true"] {
    font-weight: 600;
 }
 
+QDialog[modernDialog="true"] QPushButton:focus,
+QDialog[modernDialog="true"] QToolButton:focus,
+QDialog[modernDialog="true"] QComboBox:focus,
+QDialog[modernDialog="true"] QLineEdit:focus,
+QDialog[modernDialog="true"] QSpinBox:focus,
+QDialog[modernDialog="true"] QDoubleSpinBox:focus {
+   border: 2px solid palette(highlight);
+}
+
+QDialog[modernDialog="true"] QPushButton:disabled,
+QDialog[modernDialog="true"] QToolButton:disabled,
+QDialog[modernDialog="true"] QComboBox:disabled,
+QDialog[modernDialog="true"] QLineEdit:disabled,
+QDialog[modernDialog="true"] QSpinBox:disabled,
+QDialog[modernDialog="true"] QDoubleSpinBox:disabled {
+   color: palette(mid);
+   background: palette(window);
+}
+
+QDialog[modernDialog="true"] QGroupBox[modernSection="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   margin-top: 14px;
+   padding: 10px 8px 8px 8px;
+}
+
+QDialog[modernDialog="true"] QGroupBox[modernSection="true"]::title {
+   subcontrol-origin: margin;
+   subcontrol-position: top left;
+   left: 10px;
+   padding: 0px 5px;
+   color: palette(text);
+   background: palette(window);
+   font-weight: 600;
+}
+
+QDialog[modernDialog="true"] QListWidget,
+QDialog[modernDialog="true"] QTreeWidget,
+QDialog[modernDialog="true"] QTableWidget,
+QDialog[modernDialog="true"] QTableView {
+   background: palette(base);
+   alternate-background-color: palette(window);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   selection-background-color: palette(highlight);
+   selection-color: palette(highlighted-text);
+}
+
+QDialog[modernDialog="true"] QHeaderView::section {
+   background: palette(window);
+   color: palette(text);
+   border: none;
+   border-bottom: 1px solid palette(mid);
+   border-right: 1px solid palette(midlight);
+   min-height: 26px;
+   padding: 3px 7px;
+   font-weight: 600;
+}
+
+/* Preferences and Document Setup share the same searchable navigation shell. */
+QDialog[modernDialogRole="preferences"] QListWidget[modernNavigation="true"] {
+   min-width: 216px;
+   max-width: 248px;
+   padding: 6px;
+}
+
+QDialog[modernDialogRole="preferences"] QListWidget[modernNavigation="true"]::item {
+   min-height: 30px;
+   border: 1px solid transparent;
+   border-radius: 6px;
+   padding: 3px 7px;
+}
+
+QDialog[modernDialogRole="preferences"] QListWidget[modernNavigation="true"]::item:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QDialog[modernDialogRole="preferences"] QListWidget[modernNavigation="true"]::item:selected {
+   color: palette(highlighted-text);
+   background: palette(highlight);
+   border-color: palette(highlight);
+}
+
+QDialog[modernDialogRole="preferences"] QStackedWidget[modernContent="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 9px;
+}
+
+/* Preflight remains dockable while using the same modern form and report language. */
+QWidget[modernPanel="true"] {
+   background: palette(window);
+}
+
+QWidget[modernPanelRole="preflight"] QComboBox,
+QWidget[modernPanelRole="preflight"] QPushButton {
+   min-height: 28px;
+   border: 1px solid palette(mid);
+   border-radius: 6px;
+   background: palette(base);
+   padding: 2px 8px;
+}
+
+QWidget[modernPanelRole="preflight"] QPushButton:hover {
+   background: palette(midlight);
+}
+
+QWidget[modernPanelRole="preflight"] QComboBox:focus,
+QWidget[modernPanelRole="preflight"] QPushButton:focus {
+   border: 2px solid palette(highlight);
+}
+
+QTreeWidget#preflightReport {
+   background: palette(base);
+   alternate-background-color: palette(window);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   selection-background-color: palette(highlight);
+   selection-color: palette(highlighted-text);
+}
+
+QTreeWidget#preflightReport QHeaderView::section {
+   background: palette(window);
+   color: palette(text);
+   border: none;
+   border-bottom: 1px solid palette(mid);
+   border-right: 1px solid palette(midlight);
+   min-height: 26px;
+   padding: 3px 7px;
+   font-weight: 600;
+}
+
 /* About screen */
 QDialog#aboutDialog QTabWidget#aboutTabs::pane {
    background: palette(base);

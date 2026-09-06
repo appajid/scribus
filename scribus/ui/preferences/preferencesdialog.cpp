@@ -19,6 +19,7 @@ for which a new license (GPL+exception) is in place.
 #include "scplugin.h"
 #include "scribuscore.h"
 #include "scribusdoc.h"
+#include "ui/modernui.h"
 #include "ui/preferences/preferencesdialog.h"
 #include "units.h"
 
@@ -27,6 +28,16 @@ PreferencesDialog::PreferencesDialog(QWidget* parent, ApplicationPrefs& prefsDat
 	m_Doc(doc)
 {
 	setupUi(this);
+	setMinimumSize(920, 640);
+	verticalLayout->removeWidget(searchField);
+	verticalLayout->insertWidget(0, searchField);
+	preferencesTypeList->setProperty("modernNavigation", true);
+	preferencesTypeList->setAlternatingRowColors(false);
+	preferencesTypeList->setIconSize(QSize(20, 20));
+	preferencesTypeList->setSpacing(2);
+	prefsStackWidget->setProperty("modernContent", true);
+	ModernUI::applySurfaceStyle(this, "preferences");
+	ModernUI::setPrimaryAction(buttonBox, QDialogButtonBox::Ok);
 
 	exportButton->hide();
 
@@ -78,6 +89,7 @@ PreferencesDialog::PreferencesDialog(QWidget* parent, ApplicationPrefs& prefsDat
 	if (!m_Doc)
 		addPluginsToStackWidgetList();
 	addWidgetsToStack();
+	ModernUI::markSections(this);
 
 	//**********
 
@@ -434,5 +446,3 @@ void PreferencesDialog::getResizeDocumentPages(bool &resizePages, bool &resizeMa
 {
 	prefs_DocumentSetup->getResizeDocumentPages(resizePages, resizeMasterPages, resizePageMargins, resizeMasterPageMargins);
 }
-
-

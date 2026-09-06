@@ -32,6 +32,7 @@ for which a new license (GPL+exception) is in place.
 #include "scribusdoc.h"
 #include "scrspinbox.h"
 #include "ui/createrange.h"
+#include "ui/modernui.h"
 #include "units.h"
 #include "usertaskstructs.h"
 #include "util.h"
@@ -48,6 +49,10 @@ PrintDialog::PrintDialog( QWidget* parent, ScribusDoc* doc, const PrintOptions& 
 {
 	setupUi(this);
 	setModal(true);
+	ModernUI::applySurfaceStyle(this, "print");
+	ModernUI::setPrimaryAction(okButton);
+	ModernUI::markSections(this);
+	setMinimumSize(680, 620);
 
 	m_unitRatio = unitGetRatioFromIndex(doc->unitIndex());
 	prefs = PrefsManager::instance().prefsFile->getContext("print_options");
@@ -139,7 +144,7 @@ PrintDialog::PrintDialog( QWidget* parent, ScribusDoc* doc, const PrintOptions& 
 		altComCheckBox->setEnabled(false);
 	}
 
-	setMaximumSize(sizeHint());
+	resize(sizeHint().expandedTo(minimumSize()));
 	PrintDest->setFocus();
 
 	// signals and slots connections

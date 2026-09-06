@@ -29,6 +29,7 @@ for which a new license (GPL+exception) is in place.
 #include "scribuscore.h"
 #include "scribusdoc.h"
 #include "iconmanager.h"
+#include "ui/modernui.h"
 #include "util.h"
 
 // readable constants for QTreeWidgetItem column ids
@@ -39,14 +40,15 @@ constexpr int COLUMN_LAYER = 2;
 CheckDocument::CheckDocument( QWidget* parent, bool modal )
 	: ScrPaletteBase( parent, "checkDocument", modal )
 {
+	ModernUI::applySurfaceStyle(this, "preflight", false);
 	showPagesWithoutErrors = PrefsManager::instance().appPrefs.verifierPrefs.showPagesWithoutErrors;
 	showNonPrintingLayerErrors = PrefsManager::instance().appPrefs.verifierPrefs.showNonPrintingLayerErrors;
 
 	iconSetChange();
 
 	checkDocumentLayout = new QVBoxLayout( this );
-	checkDocumentLayout->setContentsMargins(9, 9, 9, 9);
-	checkDocumentLayout->setSpacing(6);
+	checkDocumentLayout->setContentsMargins(12, 12, 12, 12);
+	checkDocumentLayout->setSpacing(10);
 
 	layout1 = new QHBoxLayout;
 	layout1->setContentsMargins(0, 0, 0, 0);
@@ -54,10 +56,12 @@ CheckDocument::CheckDocument( QWidget* parent, bool modal )
 	textLabel1 = new QLabel( this );
 	layout1->addWidget( textLabel1 );
 	curCheckProfile = new QComboBox( this );
+	curCheckProfile->setObjectName(QStringLiteral("preflightProfile"));
 	layout1->addWidget( curCheckProfile );
 	checkDocumentLayout->addLayout( layout1 );
 
 	reportDisplay = new QTreeWidget( this );
+	reportDisplay->setObjectName(QStringLiteral("preflightReport"));
 	reportDisplay->header()->setSectionsClickable(false );
 	reportDisplay->header()->setSectionsMovable( false );
 	reportDisplay->setSortingEnabled(false);
@@ -68,10 +72,12 @@ CheckDocument::CheckDocument( QWidget* parent, bool modal )
 	layout2->setContentsMargins(0, 0, 0, 0);
 	layout2->setSpacing(6);
 	reScan = new QPushButton(this );
+	reScan->setObjectName(QStringLiteral("preflightRescan"));
 	layout2->addWidget( reScan );
 	QSpacerItem* spacer = new QSpacerItem( 2, 2, QSizePolicy::Expanding, QSizePolicy::Minimum );
 	layout2->addItem( spacer );
 	ignoreErrors = new QPushButton(this );
+	ignoreErrors->setObjectName(QStringLiteral("preflightIgnore"));
 	layout2->addWidget( ignoreErrors );
 	checkDocumentLayout->addLayout( layout2 );
 	setIgnoreEnabled(false);
@@ -82,7 +88,8 @@ CheckDocument::CheckDocument( QWidget* parent, bool modal )
 	pageMap.clear();
 	masterPageMap.clear();
 	masterPageItemMap.clear();
-	resize( QSize(320, 260).expandedTo(minimumSizeHint()) );
+	setMinimumSize(420, 320);
+	resize(QSize(480, 420).expandedTo(minimumSizeHint()));
 
 	connect(ScQApp, SIGNAL(iconSetChanged()), this, SLOT(iconSetChange()));
 
