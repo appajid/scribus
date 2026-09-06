@@ -31,7 +31,7 @@ On Dark:  #e580ff; rgb(229, 128, 255); hsl(288, 100, 75)
 	<license>Apache 2.0</license>
 	<path default="yes">1_7_0</path>
 	<activeversion>1.7.0</activeversion>
-	<splashscreen left="0" top="0" width="476" height="410" imageDark="images/scribus_splash_dark.png" imageLight="images/scribus_splash_light.png"></splashscreen>
+	<splashscreen left="0" top="0" width="720" height="360" imageDark="images/scribus_splash_dark.png" imageLight="images/scribus_splash_light.png"></splashscreen>
 <!--	<variant>Dark</variant>-->
 	<nametext lang="en_US">Scribus 1.7.0</nametext>
 	<nametext lang="fr">Scribus 1.7.0</nametext>

@@ -14,16 +14,24 @@ for which a new license (GPL+exception) is in place.
 ***************************************************************************/
 #include <iostream> // only for debugging
 
+#include <QApplication>
+#include <QClipboard>
+#include <QDate>
 #include <QFile>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QMenu>
 #include <QPixmap>
 #include <QPushButton>
 #include <QShowEvent>
 #include <QString>
 #include <QStringList>
 #include <QTabWidget>
+#include <QTabBar>
 #include <QTextStream>
 #include <QToolTip>
+#include <QToolButton>
 #include <QWidget>
 
 #include "scconfig.h"
@@ -143,11 +151,58 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 		"<div align=\"center\">"
 		"<span style=\"font-size:28pt;font-weight:700\">Scribus</span><br>"
 		"<span style=\"font-size:11pt\">Version %1</span>"
-		"<p><span style=\"font-size:16pt;font-weight:600\">Publish beautifully.</span></p>"
+		"<p><span style=\"font-size:16pt;font-weight:600;color:#0a84ff\">Publish beautifully.</span></p>"
 		"<p>An open-source workspace for books, magazines,<br>"
 		"and print-ready documents.</p>"
 		"</div>").arg(ScribusAPI::getVersion()));
 	tabLayout1->addWidget( buildID, 0, Qt::AlignHCenter );
+
+	auto* projectNote = new QFrame(tab);
+	projectNote->setObjectName(QStringLiteral("aboutProjectNote"));
+	projectNote->setProperty("aboutInformation", true);
+	auto* projectNoteLayout = new QHBoxLayout(projectNote);
+	projectNoteLayout->setContentsMargins(14, 10, 14, 10);
+	auto* projectIcon = new QLabel(projectNote);
+	projectIcon->setPixmap(IconManager::instance().loadPixmap("pref-document-info", QSize(28, 28)));
+	projectNoteLayout->addWidget(projectIcon, 0, Qt::AlignTop);
+	auto* projectText = new QLabel(tr(
+		"<b>Open-source desktop publishing.</b><br>"
+		"Scribus is developed by its worldwide contributor community and distributed under the GNU GPL."), projectNote);
+	projectText->setWordWrap(true);
+	projectText->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	projectNoteLayout->addWidget(projectText, 1);
+	tabLayout1->addWidget(projectNote);
+
+	auto* aboutActions = new QHBoxLayout();
+	aboutActions->setSpacing(8);
+	auto* websiteButton = new QPushButton(tr("Website"), tab);
+	auto* acknowledgementsButton = new QPushButton(tr("Acknowledgements"), tab);
+	auto* licenseButton = new QPushButton(tr("License"), tab);
+	for (QPushButton* button : { websiteButton, acknowledgementsButton, licenseButton })
+		button->setProperty("aboutAction", true);
+	aboutActions->addWidget(websiteButton);
+	aboutActions->addWidget(acknowledgementsButton);
+	aboutActions->addWidget(licenseButton);
+	tabLayout1->addLayout(aboutActions);
+
+	auto* secondaryActions = new QHBoxLayout();
+	secondaryActions->setSpacing(8);
+	auto* copySystemInfoButton = new QPushButton(tr("Copy System Information"), tab);
+	copySystemInfoButton->setProperty("aboutAction", true);
+	copySystemInfoButton->setIcon(IconManager::instance().loadIcon("edit-copy"));
+	secondaryActions->addWidget(copySystemInfoButton);
+	auto* moreButton = new QToolButton(tab);
+	moreButton->setText(tr("More\u2026"));
+	moreButton->setPopupMode(QToolButton::InstantPopup);
+	moreButton->setProperty("aboutAction", true);
+	secondaryActions->addWidget(moreButton);
+	tabLayout1->addLayout(secondaryActions);
+
+	auto* aboutFooter = new QLabel(tr("GNU GPL v2 or later  \u2022  \u00a9 %1 Scribus contributors")
+		.arg(QDate::currentDate().year()), tab);
+	aboutFooter->setObjectName(QStringLiteral("aboutFooter"));
+	aboutFooter->setAlignment(Qt::AlignCenter);
+	tabLayout1->addWidget(aboutFooter);
 	tabWidget2->addTab( tab, tr("&About") );
 
 	/*! AUTHORS tab */
@@ -223,12 +278,29 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 	textViewBuild = new QTextBrowser( tab_build);
 	buildLayout->addWidget( textViewBuild );
 	textViewBuild->setText(generateBuildInfo());
+
+	auto* moreMenu = new QMenu(moreButton);
+	moreMenu->addAction(tr("Translations"), this, [this]() { tabWidget2->setCurrentIndex(2); });
+	moreMenu->addAction(tr("Check for Updates"), this, [this]() { tabWidget2->setCurrentIndex(4); });
+	moreMenu->addAction(tr("Build Information"), this, [this]() { tabWidget2->setCurrentIndex(6); });
+	moreButton->setMenu(moreMenu);
+	connect(websiteButton, &QPushButton::clicked, this, [this]() { tabWidget2->setCurrentIndex(3); });
+	connect(acknowledgementsButton, &QPushButton::clicked, this, [this]() { tabWidget2->setCurrentIndex(1); });
+	connect(licenseButton, &QPushButton::clicked, this, [this]() { tabWidget2->setCurrentIndex(5); });
+	connect(copySystemInfoButton, &QPushButton::clicked, this, [this]() {
+		QApplication::clipboard()->setText(generateBuildInfo());
+	});
+	tabWidget2->tabBar()->hide();
 	//Add tab widget to about window
 	aboutLayout->addWidget( tabWidget2 );
 
 	layout2 = new QHBoxLayout;
 	layout2->setSpacing(6);
 	layout2->setContentsMargins(0, 0, 0, 0);
+	auto* backButton = new QPushButton(tr("Back to About"), this);
+	backButton->setProperty("secondaryAction", true);
+	backButton->setVisible(false);
+	layout2->addWidget(backButton);
 	QSpacerItem* spacer = new QSpacerItem( 20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum );
 	layout2->addItem( spacer );
 	okButton = new QPushButton( tr("&Close"), this );
@@ -244,6 +316,8 @@ About::About( QWidget* parent, AboutMode diaMode ) : QDialog( parent )
 	// signals and slots connections
 	connect( okButton, SIGNAL( clicked() ), this, SLOT( accept() ) );
 	connect( checkForUpdateButton, SIGNAL( clicked() ), this, SLOT( runUpdateCheck() ) );
+	connect(backButton, &QPushButton::clicked, this, [this]() { tabWidget2->setCurrentIndex(0); });
+	connect(tabWidget2, &QTabWidget::currentChanged, this, [backButton](int index) { backButton->setVisible(index != 0); });
 	resize(680, 600);
 }
 

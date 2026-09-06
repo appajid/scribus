@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+  <defs>
+    <clipPath id="rounded"><rect width="720" height="360" rx="18"/></clipPath>
+  </defs>
+  <g clip-path="url(#rounded)">
+    <rect width="720" height="360" fill="#26292e"/>
+    <rect x="360" width="360" height="360" fill="#202329"/>
+    <g fill="none" stroke="#49627e" stroke-width="1" opacity=".34">
+      <path d="M382 0v360M412 0v360M442 0v360M472 0v360M502 0v360M532 0v360M562 0v360M592 0v360M622 0v360M652 0v360M682 0v360"/>
+      <path d="M360 24h360M360 54h360M360 84h360M360 114h360M360 144h360M360 174h360M360 204h360M360 234h360M360 264h360M360 294h360M360 324h360"/>
+    </g>
+    <g fill="none" stroke="#5e7fa5" stroke-width="1.3" opacity=".46">
+      <rect x="438" y="42" width="218" height="278" fill="#171a1f"/>
+      <rect x="466" y="70" width="162" height="104" fill="#111419"/>
+      <path d="m466 70 162 104m0-104-162 104M466 200h162M466 216h134M466 232h154M466 248h142M466 264h156M466 280h126"/>
+    </g>
+    <path d="M360 0v360" stroke="#3b3f46"/>
+  </g>
+</svg>

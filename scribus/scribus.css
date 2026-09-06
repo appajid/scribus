@@ -945,6 +945,32 @@ QLabel#aboutSummary {
    padding: 4px 12px 12px 12px;
 }
 
+QDialog#aboutDialog QFrame[aboutInformation="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+}
+
+QDialog#aboutDialog QPushButton[aboutAction="true"],
+QDialog#aboutDialog QToolButton[aboutAction="true"] {
+   min-height: 30px;
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 7px;
+   padding: 3px 10px;
+}
+
+QDialog#aboutDialog QPushButton[aboutAction="true"]:hover,
+QDialog#aboutDialog QToolButton[aboutAction="true"]:hover {
+   background: palette(midlight);
+   border-color: palette(highlight);
+}
+
+QDialog#aboutDialog QLabel#aboutFooter {
+   color: palette(mid);
+   padding-top: 5px;
+}
+
 QDialog#aboutDialog QTextBrowser {
    background: palette(base);
    border: 1px solid palette(mid);
