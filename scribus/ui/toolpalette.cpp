@@ -348,8 +348,23 @@ void ToolPalette::refreshToolIcon(QToolButton* button)
 	QPixmap selected = normal;
 	QPainter painter(&selected);
 	painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-	painter.fillRect(selected.rect(), QApplication::palette().color(QPalette::HighlightedText));
+	painter.fillRect(selected.rect(), QApplication::palette().color(QPalette::Highlight));
 	painter.end();
+
+	const QPalette applicationPalette = QApplication::palette();
+	const QColor base = applicationPalette.color(QPalette::Base);
+	const QColor accent = applicationPalette.color(QPalette::Highlight);
+	const qreal accentWeight = base.lightness() < 128 ? 0.30 : 0.13;
+	auto blend = [accentWeight](int baseChannel, int accentChannel) {
+		return qRound(baseChannel * (1.0 - accentWeight) + accentChannel * accentWeight);
+	};
+	QColor selectedBackground(
+		blend(base.red(), accent.red()),
+		blend(base.green(), accent.green()),
+		blend(base.blue(), accent.blue()));
+	QPalette buttonPalette = button->palette();
+	buttonPalette.setColor(QPalette::Button, selectedBackground);
+	button->setPalette(buttonPalette);
 
 	QIcon icon;
 	icon.addPixmap(normal, QIcon::Normal, QIcon::Off);

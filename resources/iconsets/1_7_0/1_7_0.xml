@@ -41,6 +41,8 @@ On Dark:  #e580ff; rgb(229, 128, 255); hsl(288, 100, 75)
     		
 		<!-- Action -->	
 		<icon id="add" file="16/action-add.svg" />
+		<icon id="appearance-dark" file="16/appearance-dark.svg" />
+		<icon id="appearance-light" file="16/appearance-light.svg" />
 		<icon id="chain-closed" file="16/action-link.svg" />
 		<icon id="chain-open" file="16/action-unlink.svg" />
 		<icon id="clear-right" file="16/action-backspace-reverse.svg" />

@@ -24,17 +24,28 @@ for which a new license (GPL+exception) is in place.
 #include "edittoolbar.h"
 
 #include <QEvent>
+#include <QDebug>
 #include <QFont>
+#include <QGuiApplication>
 #include <QLabel>
+#include <QMainWindow>
+#include <QPainter>
+#include <QStyleHints>
+#include <QTimer>
 #include <QToolButton>
+#include <QWidget>
 
 #include <utility>
 
+#include "iconmanager.h"
 #include "pageitem.h"
+#include "prefsmanager.h"
 #include "scraction.h"
 #include "scribus.h"
+#include "scribusapp.h"
 #include "scribusdoc.h"
 #include "selection.h"
+#include "ui/factories/scribusproxystyle.h"
 
 
 EditToolBar::EditToolBar(ScribusMainWindow* parent) : ScToolBar(tr("Context"), "Context", parent),
@@ -42,6 +53,7 @@ EditToolBar::EditToolBar(ScribusMainWindow* parent) : ScToolBar(tr("Context"), "
 {
 	setProperty("contextToolbar", true);
 	setMinimumHeight(44);
+	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 	setAllowedAreas(Qt::TopToolBarArea);
 	setFloatable(false);
 	setMovable(false);
@@ -76,7 +88,122 @@ EditToolBar::EditToolBar(ScribusMainWindow* parent) : ScToolBar(tr("Context"), "
 	addContextAction("toolsAlignDistribute", MultipleSelection);
 	addContextAction("itemGroup", MultipleSelection);
 
+	// The approved workspace keeps file and contextual controls in a single
+	// compact row. Remove the legacy toolbar break after QMainWindow has added us.
+	QTimer::singleShot(0, this, [this]() {
+		if (auto* mainWindow = qobject_cast<QMainWindow*>(parentWidget()))
+			mainWindow->removeToolBarBreak(this);
+	});
+
+	auto* appearanceSpacer = new QWidget(this);
+	appearanceSpacer->setObjectName(QStringLiteral("contextToolbarSpacer"));
+	appearanceSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+	addWidget(appearanceSpacer);
+
+	m_lightAppearanceButton = new QToolButton(this);
+	m_lightAppearanceButton->setObjectName(QStringLiteral("appearanceButton"));
+	m_lightAppearanceButton->setCheckable(true);
+	m_lightAppearanceButton->setAutoExclusive(true);
+	m_lightAppearanceButton->setFixedSize(34, 32);
+	m_lightAppearanceButton->setIconSize(QSize(20, 20));
+	m_lightAppearanceButton->setToolTip(tr("Use Light Appearance"));
+	m_lightAppearanceButton->setAccessibleName(tr("Light Appearance"));
+	addWidget(m_lightAppearanceButton);
+
+	m_darkAppearanceButton = new QToolButton(this);
+	m_darkAppearanceButton->setObjectName(QStringLiteral("appearanceButton"));
+	m_darkAppearanceButton->setCheckable(true);
+	m_darkAppearanceButton->setAutoExclusive(true);
+	m_darkAppearanceButton->setFixedSize(34, 32);
+	m_darkAppearanceButton->setIconSize(QSize(20, 20));
+	m_darkAppearanceButton->setToolTip(tr("Use Dark Appearance"));
+	m_darkAppearanceButton->setAccessibleName(tr("Dark Appearance"));
+	addWidget(m_darkAppearanceButton);
+
+	connect(m_lightAppearanceButton, &QToolButton::clicked, this, &EditToolBar::setLightAppearance);
+	connect(m_darkAppearanceButton, &QToolButton::clicked, this, &EditToolBar::setDarkAppearance);
+	connect(ScQApp, &ScribusQApp::iconSetChanged, this, &EditToolBar::updateAppearanceButtons);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+	connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, &EditToolBar::updateAppearanceButtons);
+#endif
+	updateAppearanceButtons();
+
+	if (qEnvironmentVariableIsSet("SCRIBUS_APPEARANCE_SELFTEST"))
+	{
+		QTimer::singleShot(150, this, [this]() {
+			const QString originalAppearance = PrefsManager::instance().appPrefs.uiPrefs.stylePalette;
+			if (auto* mainWindow = qobject_cast<QMainWindow*>(parentWidget()))
+				qInfo().noquote() << "[workspace-test] contextual-toolbar"
+					<< "| singleRow=" << !mainWindow->toolBarBreak(this)
+					<< "| appearanceControls=" << (m_lightAppearanceButton && m_darkAppearanceButton);
+			m_lightAppearanceButton->click();
+			qInfo().noquote() << "[appearance-test] light"
+				<< "| preference=" << PrefsManager::instance().appPrefs.uiPrefs.stylePalette
+				<< "| checked=" << m_lightAppearanceButton->isChecked();
+			m_darkAppearanceButton->click();
+			qInfo().noquote() << "[appearance-test] dark"
+				<< "| preference=" << PrefsManager::instance().appPrefs.uiPrefs.stylePalette
+				<< "| checked=" << m_darkAppearanceButton->isChecked();
+			setAppearance(originalAppearance);
+			qInfo().noquote() << "[appearance-test] restored"
+				<< "| preference=" << PrefsManager::instance().appPrefs.uiPrefs.stylePalette;
+		});
+	}
+
 	updateForSelection();
+}
+
+void EditToolBar::setLightAppearance()
+{
+	setAppearance(QStringLiteral("light"));
+}
+
+void EditToolBar::setDarkAppearance()
+{
+	setAppearance(QStringLiteral("dark"));
+}
+
+void EditToolBar::setAppearance(const QString& appearance)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+	PrefsManager::instance().appPrefs.uiPrefs.stylePalette = appearance;
+	ScribusProxyStyle::ApplicationTheme theme = ScribusProxyStyle::ApplicationTheme::System;
+	if (appearance == QStringLiteral("dark"))
+		theme = ScribusProxyStyle::ApplicationTheme::Dark;
+	else if (appearance == QStringLiteral("light"))
+		theme = ScribusProxyStyle::ApplicationTheme::Light;
+	ScribusProxyStyle::instance()->setApplicationTheme(theme);
+	updateAppearanceButtons();
+#else
+	Q_UNUSED(appearance);
+#endif
+}
+
+void EditToolBar::updateAppearanceButtons()
+{
+	if (!m_lightAppearanceButton || !m_darkAppearanceButton)
+		return;
+
+	auto statefulIcon = [](const QString& iconName) {
+		const QSize iconSize(20, 20);
+		QPixmap normal = IconManager::instance().loadPixmap(iconName, iconSize.width());
+		QPixmap selected = normal;
+		QPainter painter(&selected);
+		painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+		painter.fillRect(selected.rect(), QApplication::palette().color(QPalette::Highlight));
+		painter.end();
+		QIcon icon;
+		icon.addPixmap(normal, QIcon::Normal, QIcon::Off);
+		icon.addPixmap(selected, QIcon::Normal, QIcon::On);
+		icon.addPixmap(selected, QIcon::Active, QIcon::On);
+		return icon;
+	};
+
+	m_lightAppearanceButton->setIcon(statefulIcon(QStringLiteral("appearance-light")));
+	m_darkAppearanceButton->setIcon(statefulIcon(QStringLiteral("appearance-dark")));
+	const QString appearance = PrefsManager::instance().appPrefs.uiPrefs.stylePalette;
+	m_lightAppearanceButton->setChecked(appearance == QStringLiteral("light"));
+	m_darkAppearanceButton->setChecked(appearance == QStringLiteral("dark"));
 }
 
 void EditToolBar::addContextAction(const QString& actionName, int contexts)
@@ -117,11 +244,9 @@ void EditToolBar::updateForSelection()
 	if (!m_doc)
 	{
 		setContext(NoSelection, tr("No document"));
-		setEnabled(false);
 		return;
 	}
 
-	setEnabled(true);
 	const int selectionCount = m_doc->m_Selection->count();
 	if (selectionCount == 0)
 	{
@@ -153,6 +278,12 @@ void EditToolBar::setContext(int context, const QString& labelText)
 void EditToolBar::changeEvent(QEvent* event)
 {
 	if (event->type() == QEvent::LanguageChange)
+	{
+		m_lightAppearanceButton->setToolTip(tr("Use Light Appearance"));
+		m_lightAppearanceButton->setAccessibleName(tr("Light Appearance"));
+		m_darkAppearanceButton->setToolTip(tr("Use Dark Appearance"));
+		m_darkAppearanceButton->setAccessibleName(tr("Dark Appearance"));
 		updateForSelection();
+	}
 	ScToolBar::changeEvent(event);
 }

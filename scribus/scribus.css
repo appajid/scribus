@@ -342,12 +342,12 @@ QToolButton#toolButton:hover {
 
 QToolButton#toolButton:checked {
    border: 1px solid palette(highlight);
-   background: palette(highlight);
+   background: palette(button);
 }
 
 QToolButton#toolButton:checked:hover {
    border: 1px solid palette(highlight);
-   background: palette(highlight);
+   background: palette(button);
 }
 
 QToolButton#toolButton:focus {
@@ -413,6 +413,27 @@ QLabel#contextToolbarTitle {
    color: palette(text);
    font-weight: 600;
    padding: 0px 6px;
+}
+
+QToolButton#appearanceButton {
+   background: transparent;
+   border: 1px solid transparent;
+   border-radius: 6px;
+   padding: 5px;
+}
+
+QToolButton#appearanceButton:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QToolButton#appearanceButton:checked {
+   background: palette(base);
+   border: 2px solid palette(highlight);
+}
+
+QToolButton#appearanceButton:focus {
+   border: 2px solid palette(highlight);
 }
 
 ads--CDockAreaTitleBar,
