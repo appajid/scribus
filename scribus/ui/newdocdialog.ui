@@ -41,7 +41,7 @@
       <attribute name="title">
        <string>New Document</string>
       </attribute>
-      <layout class="QHBoxLayout" name="horizontalLayout_7">
+      <layout class="QVBoxLayout" name="horizontalLayout_7">
        <property name="spacing">
         <number>4</number>
        </property>

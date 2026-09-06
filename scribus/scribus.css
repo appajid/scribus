@@ -522,6 +522,73 @@ QDialog[modernDialog="true"] {
    background: palette(window);
 }
 
+QDialog[modernDialog="true"] QWidget[welcomeSurface="true"] {
+   background: palette(window);
+}
+
+QDialog[modernDialog="true"] QLabel#welcomeAppName {
+   color: palette(text);
+   font-weight: 600;
+}
+
+QDialog[modernDialog="true"] QLabel#welcomeTitle {
+   color: palette(text);
+   font-size: 20px;
+   font-weight: 600;
+}
+
+QDialog[modernDialog="true"] QLabel#welcomeSectionTitle {
+   color: palette(text);
+   font-weight: 600;
+}
+
+QDialog[modernDialog="true"] QFrame#welcomeHeaderDivider,
+QDialog[modernDialog="true"] QFrame#welcomeContentDivider {
+   color: palette(mid);
+}
+
+QDialog[modernDialog="true"] QPushButton[welcomeAction="true"] {
+   min-height: 50px;
+   border: 1px solid transparent;
+   border-radius: 8px;
+   background: palette(window);
+   padding: 4px 10px;
+   text-align: left;
+}
+
+QDialog[modernDialog="true"] QPushButton[welcomeAction="true"]:hover,
+QDialog[modernDialog="true"] QPushButton[welcomeAction="true"]:focus {
+   background: palette(midlight);
+   border-color: palette(highlight);
+}
+
+QDialog[modernDialog="true"] QPushButton[linkAction="true"] {
+   color: palette(highlight);
+   background: transparent;
+   border: none;
+   padding: 0px 4px;
+}
+
+QDialog[modernDialog="true"] QListWidget[welcomeRecents="true"] {
+   background: palette(window);
+   border: none;
+   padding: 0px;
+}
+
+QDialog[modernDialog="true"] QListWidget[welcomeRecents="true"]::item {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   padding: 6px 9px;
+}
+
+QDialog[modernDialog="true"] QListWidget[welcomeRecents="true"]::item:hover,
+QDialog[modernDialog="true"] QListWidget[welcomeRecents="true"]::item:selected {
+   color: palette(text);
+   background: palette(midlight);
+   border-color: palette(highlight);
+}
+
 QDialog[modernDialog="true"] QTabWidget::pane {
    border: none;
    background: palette(window);

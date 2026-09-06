@@ -28,6 +28,7 @@ class QLabel;
 class QListWidgetItem;
 class QPushButton;
 class QSpinBox;
+class QWidget;
 
 #include "scdialog.h"
 #include "scribusapi.h"
@@ -108,6 +109,7 @@ public slots:
 	void gotoDesktopDirectory();
 	void gotoHomeDirectory();
 	void openFileDialogFileClicked(const QString &path);
+	void showWelcomePage();
 
 private slots:
 	void changeMargin(MarginStruct margin);
@@ -142,8 +144,13 @@ protected:
 	double m_bleedLeft { 0.0 };
 	double m_bleedRight { 0.0 };
 	bool m_labelVisibity {true};
+	QWidget* m_welcomePage { nullptr };
+	QListWidget* m_welcomeRecentList { nullptr };
+	QPushButton* m_backButton { nullptr };
 
 	bool eventFilter(QObject *object, QEvent *event);
+	void createWelcomePage();
+	int logicalTabIndex(int widgetTabIndex) const;
 	void updateCategory(const QString& category, bool forceUpdate = false);
 };
 
