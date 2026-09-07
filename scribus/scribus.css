@@ -1358,3 +1358,40 @@ QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item:s
 QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item:disabled {
    color: palette(mid);
 }
+
+/* Find & Replace */
+QDialog[modernDialogRole="findReplace"] QLabel#searchTextLabel,
+QDialog[modernDialogRole="findReplace"] QLabel#replaceTextLabel {
+   color: palette(text);
+   font-weight: 600;
+}
+
+QDialog[modernDialogRole="findReplace"] QLineEdit#searchTextValue,
+QDialog[modernDialogRole="findReplace"] QLineEdit#replaceTextValue {
+   min-height: 30px;
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   padding: 2px 9px;
+}
+
+QDialog[modernDialogRole="findReplace"] QLineEdit#searchTextValue:focus,
+QDialog[modernDialogRole="findReplace"] QLineEdit#replaceTextValue:focus {
+   border-color: palette(highlight);
+}
+
+QDialog[modernDialogRole="findReplace"] QLabel[statusMessage="true"] {
+   min-height: 24px;
+   background: palette(midlight);
+   border-radius: 6px;
+   color: palette(text);
+   padding: 2px 8px;
+}
+
+QDialog[modernDialogRole="findReplace"] QGroupBox[modernSection="true"] {
+   min-width: 250px;
+}
+
+QDialog[modernDialogRole="findReplace"] QPushButton#collapseButton {
+   min-width: 118px;
+}

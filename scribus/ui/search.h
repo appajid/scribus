@@ -65,7 +65,7 @@ public:
 	SearchReplace( QWidget* parent, ScribusDoc *doc);
 	~SearchReplace() {};
 
-	void setStoryEditorMode(bool mode = true) {m_storyEditorMode = true;}
+	void setStoryEditorMode(bool mode = true) { m_storyEditorMode = mode; }
 	QPair<int, int> cursorPosition();
 	//! \brief fill the text field with the current selection, if the selection does not contain a newline.
 	void processCurrentSelection(QString selection);

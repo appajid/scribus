@@ -22,6 +22,7 @@ for which a new license (GPL+exception) is in place.
 #include "commonstrings.h"
 #include "fontcombo.h"
 #include "iconmanager.h"
+#include "modernui.h"
 #include "prefscontext.h"
 #include "prefsfile.h"
 #include "prefsmanager.h"
@@ -46,6 +47,13 @@ SearchReplace::SearchReplace(QWidget* parent, ScribusDoc *doc)
 	m_doc = doc;
 
 	setupUi(this);
+	ModernUI::applySurfaceStyle(this, "findReplace");
+	ModernUI::markSections(this);
+	ModernUI::setPrimaryAction(searchButton);
+	searchTextValue->setAccessibleName(tr("Find text"));
+	searchTextValue->setAccessibleDescription(tr("Text to find in the current story or selected text frames"));
+	replaceTextValue->setAccessibleName(tr("Replacement text"));
+	messageLabel->setAccessibleName(tr("Find and replace status"));
 
 	QSizePolicy sp = messageLabel->sizePolicy();
 	sp.setRetainSizeWhenHidden(true);
@@ -118,7 +126,7 @@ SearchReplace::SearchReplace(QWidget* parent, ScribusDoc *doc)
 	connect(replaceStyleCheckBox, &QCheckBox::clicked, this, &SearchReplace::enableStyleReplace);
 	connect(replaceTextValue, &QLineEdit::textChanged, this, &SearchReplace::updateButtonState);
 
-	collapseButton->setToolTip( tr( "Collapse or expand the formatting options" ) );
+	collapseButton->setToolTip( tr( "Show or hide the formatting options" ) );
 	searchButton->setToolTip( tr( "Search for text or formatting in the current text" ) );
 	replaceButton->setToolTip( tr( "Replace the searched for formatting with the replacement values" ) );
 	replaceAllButton->setToolTip( tr( "Replace all found instances" ) );
@@ -1055,7 +1063,8 @@ void SearchReplace::collapseFormat()
 	searchGroupBox->setVisible(!m_stateCollapsed);
 	replaceGroupBox->setVisible(!m_stateCollapsed);
 	// move the following line to setCollapseLabel() if we have to catch languageChange()
-	collapseButton->setText(m_stateCollapsed ? tr("More...") : tr("Less..."));
+	collapseButton->setText(m_stateCollapsed ? tr("Show Formatting") : tr("Hide Formatting"));
+	collapseButton->setAccessibleName(collapseButton->text());
 	// It's important to call QApplication::processEvents() before calling adjustSize()
 	// https://stackoverflow.com/questions/1675499/how-do-i-auto-adjust-the-size-of-a-qdialog-depending-on-the-text-length-of-one-o#comment82074153_1679399
 	QTimer::singleShot(0, [this](){adjustSize();});
@@ -1495,12 +1504,12 @@ void SearchReplace::writePrefs()
 	m_prefs->set("replaceStrokeColor", replaceStrokeColorCheckBox->isChecked());
 	m_prefs->set("replaceStrokeColorValue", replaceStrokeColorComboBox->currentText());
 	m_prefs->set("replaceStrokeColorShade", replaceStrokeShadeCheckBox->isChecked());
-	m_prefs->set("replaceStyleValue", replaceStyleComboBox->currentText());
+	m_prefs->set("replaceStyleValue", replaceStyleComboBox->currentIndex());
 	m_prefs->set("replaceTextValue", replaceTextValue->text());
 	m_prefs->set("searchAlignment", searchAlignmentCheckBox->isChecked());
 	m_prefs->set("searchAlignmentValue", searchAlignmentComboBox->currentIndex());
 	m_prefs->set("searchFillColor", searchFillColorCheckBox->isChecked());
-	m_prefs->set("searchFillColorShade", replaceFillShadeCheckBox->isChecked());
+	m_prefs->set("searchFillColorShade", searchFillShadeCheckBox->isChecked());
 	m_prefs->set("searchFillColorValue", searchFillColorComboBox->currentText());
 	m_prefs->set("searchFont", searchFontCheckBox->isChecked());
 	m_prefs->set("searchFontEffects", searchFontEffectsCheckBox->isChecked());
@@ -1511,7 +1520,7 @@ void SearchReplace::writePrefs()
 	m_prefs->set("searchParagraphStyleValue", searchStyleComboBox->currentIndex());
 	m_prefs->set("searchStrokeColor", searchStrokeColorCheckBox->isChecked());
 	m_prefs->set("searchStrokeColorValue", searchStrokeColorComboBox->currentText());
-	m_prefs->set("searchStrokeShade", searchStrokeShadeCheckBox->isChecked());
+	m_prefs->set("searchStrokeColorShade", searchStrokeShadeCheckBox->isChecked());
 	m_prefs->set("searchTextValue", searchTextValue->text());
 	m_prefs->set("ignoreCase", ignoreCaseCheckBox->isChecked());
 	m_prefs->set("wholeword", wholeWordsCheckBox->isChecked());
