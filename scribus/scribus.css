@@ -987,3 +987,98 @@ QDialog#aboutDialog QTextBrowser {
    selection-background-color: palette(highlight);
    selection-color: palette(highlighted-text);
 }
+
+/* Story Editor specialist workspace */
+QMainWindow[modernStoryEditor="true"] {
+   background: palette(window);
+}
+
+QMainWindow[modernStoryEditor="true"] QMenuBar {
+   background: palette(window);
+   border-bottom: 1px solid palette(mid);
+   padding: 2px 6px;
+}
+
+QMainWindow[modernStoryEditor="true"] QToolBar[storyPrimaryToolbar="true"],
+QMainWindow[modernStoryEditor="true"] QToolBar[storyContextToolbar="true"] {
+   background: palette(window);
+   border: none;
+   border-bottom: 1px solid palette(mid);
+   spacing: 5px;
+   padding: 5px 7px;
+}
+
+QMainWindow[modernStoryEditor="true"] QToolBar[storyPrimaryToolbar="true"] QToolButton,
+QMainWindow[modernStoryEditor="true"] QToolBar[storyContextToolbar="true"] QToolButton {
+   min-width: 28px;
+   min-height: 28px;
+   border: 1px solid transparent;
+   border-radius: 5px;
+   padding: 2px;
+}
+
+QMainWindow[modernStoryEditor="true"] QToolBar[storyPrimaryToolbar="true"] QToolButton:hover,
+QMainWindow[modernStoryEditor="true"] QToolBar[storyContextToolbar="true"] QToolButton:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QMainWindow[modernStoryEditor="true"] QToolBar[storyPrimaryToolbar="true"] QToolButton:focus,
+QMainWindow[modernStoryEditor="true"] QToolBar[storyContextToolbar="true"] QToolButton:focus,
+QMainWindow[modernStoryEditor="true"] QComboBox:focus,
+QMainWindow[modernStoryEditor="true"] QSpinBox:focus,
+QMainWindow[modernStoryEditor="true"] QDoubleSpinBox:focus,
+QMainWindow[modernStoryEditor="true"] QTextEdit:focus {
+   border: 1px solid palette(highlight);
+}
+
+QSplitter#storyWorkspace {
+   background: palette(window);
+}
+
+QSplitter#storyWorkspace::handle {
+   background: palette(mid);
+   width: 1px;
+}
+
+QTextEdit#storyTextEditor {
+   background: palette(base);
+   color: palette(text);
+   border: none;
+   padding: 24px 28px;
+   selection-background-color: palette(highlight);
+   selection-color: palette(highlighted-text);
+}
+
+QFrame#storyInspectorPanel {
+   background: palette(window);
+   border: none;
+   border-left: 1px solid palette(mid);
+}
+
+QLabel#storyInspectorTitle {
+   background: palette(window);
+   color: palette(text);
+   border: none;
+   border-bottom: 1px solid palette(mid);
+   font-weight: 600;
+   padding: 12px 14px;
+}
+
+QLabel#storyParagraphStyles {
+   background: palette(base);
+   color: palette(text);
+   border: none;
+   padding: 4px 8px;
+}
+
+QMainWindow[modernStoryEditor="true"] QStatusBar {
+   background: palette(window);
+   color: palette(text);
+   border-top: 1px solid palette(mid);
+}
+
+QMainWindow[modernStoryEditor="true"] QStatusBar QLabel {
+   color: palette(text);
+   padding: 1px 3px;
+}

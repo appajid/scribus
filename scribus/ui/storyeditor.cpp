@@ -83,6 +83,7 @@ for which a new license (GPL+exception) is in place.
 #include "styleselect.h"
 #include "ui/charselect.h"
 #include "ui/customfdialog.h"
+#include "ui/modernui.h"
 #include "ui/scmessagebox.h"
 #include "ui/stylecombos.h"
 #include "units.h"
@@ -1602,8 +1603,11 @@ void StoryEditor::savePrefs()
 	prefs->set("width", width());
 	prefs->set("height", height());
 	QList<int> splitted = EdSplit->sizes();
-	prefs->set("side", splitted[0]);
-	prefs->set("main", splitted[1]);
+	if (splitted.count() >= 2)
+	{
+		prefs->set("main", splitted[0]);
+		prefs->set("side", splitted[1]);
+	}
 	prefs->set("winstate", QString(saveState().toBase64()));
 }
 
@@ -1637,8 +1641,8 @@ void StoryEditor::loadPrefs()
 	if ((side != -1) && (txtarea != -1))
 	{
 		QList<int> splitted;
-		splitted.append(side);
 		splitted.append(txtarea);
+		splitted.append(side);
 		EdSplit->setSizes(splitted);
 	}
 	setupEditorGUI();
@@ -1833,6 +1837,9 @@ void StoryEditor::buildGUI()
 	seActions["unicodeSoftHyphen"]->setEnabled(false);//CB TODO doesn't work in SE yet.
 	buildMenus();
 
+	setProperty("modernStoryEditor", true);
+	setAttribute(Qt::WA_StyledBackground, true);
+	ModernUI::applySurfaceStyle(this, "storyEditor", false);
 	setWindowIcon(IconManager::instance().loadPixmap("app-icon"));
 	StoryEd2Layout = new QHBoxLayout;
 	StoryEd2Layout->setSpacing(6);
@@ -1840,6 +1847,8 @@ void StoryEditor::buildGUI()
 
 /* Setting up Toolbars */
 	FileTools = new QToolBar(this);
+	FileTools->setProperty("storyPrimaryToolbar", true);
+	FileTools->setAccessibleName(tr("Story commands"));
 	FileTools->setIconSize(QSize(16,16));
 	FileTools->setObjectName("File");
 	FileTools->addAction(seActions["fileNew"]);
@@ -1856,6 +1865,8 @@ void StoryEditor::buildGUI()
 	FileTools->setAllowedAreas(Qt::BottomToolBarArea);
 	FileTools->setAllowedAreas(Qt::TopToolBarArea);
 	FontTools = new SToolBFont(this);
+	FontTools->setProperty("storyContextToolbar", true);
+	FontTools->setAccessibleName(tr("Typeface controls"));
 	FontTools->setIconSize(QSize(16,16));
 	FontTools->setObjectName("Font");
 	FontTools->setAllowedAreas(Qt::LeftToolBarArea);
@@ -1863,6 +1874,8 @@ void StoryEditor::buildGUI()
 	FontTools->setAllowedAreas(Qt::BottomToolBarArea);
 	FontTools->setAllowedAreas(Qt::TopToolBarArea);
 	AlignTools = new SToolBAlign(this);
+	AlignTools->setProperty("storyContextToolbar", true);
+	AlignTools->setAccessibleName(tr("Paragraph controls"));
 	AlignTools->setIconSize(QSize(16,16));
 	AlignTools->setObjectName("Align");
 	AlignTools->setAllowedAreas(Qt::LeftToolBarArea);
@@ -1871,6 +1884,8 @@ void StoryEditor::buildGUI()
 	AlignTools->setAllowedAreas(Qt::TopToolBarArea);
 	AlignTools->paraStyleCombo->setDoc(m_doc);
 	StyleTools = new SToolBStyle(this);
+	StyleTools->setProperty("storyContextToolbar", true);
+	StyleTools->setAccessibleName(tr("Character style controls"));
 	StyleTools->setIconSize(QSize(16,16));
 	StyleTools->setObjectName("Style");
 	StyleTools->setAllowedAreas(Qt::LeftToolBarArea);
@@ -1878,6 +1893,8 @@ void StoryEditor::buildGUI()
 	StyleTools->setAllowedAreas(Qt::BottomToolBarArea);
 	StyleTools->setAllowedAreas(Qt::TopToolBarArea);
 	StrokeTools = new SToolBColorS(this, m_doc);
+	StrokeTools->setProperty("storyContextToolbar", true);
+	StrokeTools->setAccessibleName(tr("Text stroke controls"));
 	StrokeTools->setIconSize(QSize(16,16));
 	StrokeTools->setObjectName("Strok");
 	StrokeTools->setAllowedAreas(Qt::LeftToolBarArea);
@@ -1887,6 +1904,8 @@ void StoryEditor::buildGUI()
 	StrokeTools->TxStroke->setEnabled(false);
 	StrokeTools->PM1->setEnabled(false);
 	FillTools = new SToolBColorF(this, m_doc);
+	FillTools->setProperty("storyContextToolbar", true);
+	FillTools->setAccessibleName(tr("Text fill controls"));
 	FillTools->setIconSize(QSize(16,16));
 	FillTools->setObjectName("Fill");
 	FillTools->setAllowedAreas(Qt::LeftToolBarArea);
@@ -1903,13 +1922,35 @@ void StoryEditor::buildGUI()
 	addToolBar(StrokeTools);
 	addToolBar(FillTools);
 
-	EdSplit = new QSplitter(this);
-/* SideBar Widget */
-	EditorBar = new SideBar(this);
-	EdSplit->addWidget(EditorBar);
+	EdSplit = new QSplitter(Qt::Horizontal, this);
+	EdSplit->setObjectName(QStringLiteral("storyWorkspace"));
+	EdSplit->setChildrenCollapsible(false);
 /* Editor Widget, subclass of QTextEdit */
 	Editor = new SEditor(this, m_doc, this);
+	Editor->setObjectName(QStringLiteral("storyTextEditor"));
+	Editor->setAccessibleName(tr("Story text"));
 	EdSplit->addWidget(Editor);
+	EdSplit->setStretchFactor(0, 1);
+
+/* Paragraph styles remain synchronized with the story, now in the inspector rail. */
+	auto* inspectorPanel = new QFrame(EdSplit);
+	inspectorPanel->setObjectName(QStringLiteral("storyInspectorPanel"));
+	inspectorPanel->setAttribute(Qt::WA_StyledBackground, true);
+	inspectorPanel->setMinimumWidth(180);
+	inspectorPanel->setMaximumWidth(300);
+	auto* inspectorLayout = new QVBoxLayout(inspectorPanel);
+	inspectorLayout->setContentsMargins(0, 0, 0, 0);
+	inspectorLayout->setSpacing(0);
+	auto* inspectorTitle = new QLabel(tr("Paragraph Styles"), inspectorPanel);
+	inspectorTitle->setObjectName(QStringLiteral("storyInspectorTitle"));
+	inspectorTitle->setAccessibleName(tr("Paragraph Styles"));
+	inspectorLayout->addWidget(inspectorTitle);
+	EditorBar = new SideBar(inspectorPanel);
+	EditorBar->setObjectName(QStringLiteral("storyParagraphStyles"));
+	EditorBar->setAccessibleName(tr("Paragraph styles used in the story"));
+	inspectorLayout->addWidget(EditorBar, 1);
+	EdSplit->addWidget(inspectorPanel);
+	EdSplit->setStretchFactor(1, 0);
 	StoryEd2Layout->addWidget( EdSplit );
 
 /* Setting up Status Bar */
@@ -1955,7 +1996,7 @@ void StoryEditor::buildGUI()
 	statusBar()->addPermanentWidget(ButtonGroup2, 1);
 	setCentralWidget( EdSplit );
 	//Final setup
-	resize( QSize(660, 500).expandedTo(minimumSizeHint()) );
+	resize( QSize(1040, 680).expandedTo(minimumSizeHint()) );
 
 	EditorBar->setEditor(Editor);
 	Editor->installEventFilter(this);
