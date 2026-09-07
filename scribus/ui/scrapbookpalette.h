@@ -20,6 +20,7 @@ class QEvent;
 #include "ui/docks/dock_panelbase.h"
 
 class QHBoxLayout;
+class QLineEdit;
 class QToolButton;
 class QVBoxLayout;
 class QToolBox;
@@ -118,6 +119,7 @@ private slots:
 	void deleteAllObj();
 	void renameObj();
 	void newLib();
+	void filterAssets(const QString& text);
 	void updateView();
 	void goOneDirUp();
 	void closeLib();
@@ -137,6 +139,7 @@ protected:
 	QVBoxLayout* BiblioLayout { nullptr };
 	QHBoxLayout* buttonLayout { nullptr };
 	QWidget* containerWidget { nullptr };
+	QLineEdit* searchEdit { nullptr };
 	QToolButton* newButton { nullptr };
 	QToolButton* upButton { nullptr };
 	QToolButton* importButton { nullptr };

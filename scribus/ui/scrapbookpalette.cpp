@@ -21,6 +21,7 @@ for which a new license (GPL+exception) is in place.
 #include <QFileInfo>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
@@ -63,6 +64,9 @@ for which a new license (GPL+exception) is in place.
  * inherited from QListWidget */
 BibView::BibView(QWidget* parent) : QListWidget(parent)
 {
+	setObjectName(QStringLiteral("assetGrid"));
+	setProperty("assetGrid", true);
+	setAccessibleName(tr("Assets"));
 	setDragEnabled(true);
 	setViewMode(QListView::IconMode);
 	setFlow(QListView::LeftToRight);
@@ -746,9 +750,12 @@ Biblio::Biblio(QWidget* parent) : DockPanelBase("Sclib", "panel-scrapbook", pare
 	setMinimumSize( QSize(220, 240) );
 	setSizePolicy( QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
 	containerWidget = new QWidget(this);
+	containerWidget->setObjectName(QStringLiteral("assetManager"));
+	containerWidget->setProperty("modernAssetManager", true);
+	containerWidget->setAttribute(Qt::WA_StyledBackground, true);
 	BiblioLayout = new QVBoxLayout( containerWidget );
-	BiblioLayout->setSpacing(3);
-	BiblioLayout->setContentsMargins(3, 3, 3, 3);
+	BiblioLayout->setSpacing(8);
+	BiblioLayout->setContentsMargins(8, 8, 8, 8);
 
 	buttonLayout = new QHBoxLayout;
 	buttonLayout->setSpacing(3);
@@ -773,6 +780,15 @@ Biblio::Biblio(QWidget* parent) : DockPanelBase("Sclib", "panel-scrapbook", pare
 	configButton->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
 	configButton->setIcon(IconManager::instance().loadPixmap("configure"));
 	configButton->setIconSize(QSize(16, 16));
+
+	const QList<QToolButton*> assetButtons { newButton, upButton, importButton, closeButton, configButton };
+	for (QToolButton* button : assetButtons)
+	{
+		button->setProperty("assetAction", true);
+		button->setAutoRaise(true);
+		button->setFixedSize(32, 32);
+		button->setIconSize(QSize(18, 18));
+	}
 
 	configMenue = new QMenu();
 	conf_HideDirs = configMenue->addAction( tr("Hide Directories"));
@@ -799,7 +815,13 @@ Biblio::Biblio(QWidget* parent) : DockPanelBase("Sclib", "panel-scrapbook", pare
 	buttonLayout->addWidget( configButton );
 	BiblioLayout->addLayout( buttonLayout );
 
+	searchEdit = new QLineEdit(containerWidget);
+	searchEdit->setObjectName(QStringLiteral("assetSearch"));
+	searchEdit->setClearButtonEnabled(true);
+	BiblioLayout->addWidget(searchEdit);
+
 	Frame3 = new QToolBox( this );
+	Frame3->setObjectName(QStringLiteral("assetLibraries"));
 	activeBView = new BibView(this);
 	Frame3->addItem(activeBView, tr("Main"));
 	activeBView->visibleName = tr("Main");
@@ -825,6 +847,7 @@ Biblio::Biblio(QWidget* parent) : DockPanelBase("Sclib", "panel-scrapbook", pare
 	connect(closeButton, SIGNAL(clicked()), this, SLOT(closeLib()));
 	connect(Frame3, SIGNAL(currentChanged(int)), this, SLOT(libChanged(int)));
 	connect(configMenue, SIGNAL(triggered(QAction*)), this, SLOT(updateView()));
+	connect(searchEdit, &QLineEdit::textChanged, this, &Biblio::filterAssets);
 }
 
 void Biblio::setOpenScrapbooks(const QStringList &fileNames)
@@ -937,23 +960,34 @@ void Biblio::installEventFilter(QObject *filterObj)
 
 void Biblio::updateView()
 {
+	filterAssets(searchEdit->text());
+	m_prefs->set("hideDirs", conf_HideDirs->isChecked());
+	m_prefs->set("hideImages", conf_HideImages->isChecked());
+	m_prefs->set("hideVectors", conf_HideVectors->isChecked());
+	m_prefs->set("openMode", conf_OpenMode->isChecked());
+}
+
+void Biblio::filterAssets(const QString& text)
+{
+	const QString searchText = text.trimmed();
 	for (int i = 0; i < Frame3->count(); i++)
 	{
 		BibView* bv = (BibView*) Frame3->widget(i);
 		for (auto itf = bv->objectMap.begin(); itf != bv->objectMap.end(); ++itf)
 		{
-			if (itf.value().isDir)
-				itf.value().widgetItem->setHidden(conf_HideDirs->isChecked());
-			if (itf.value().isRaster)
-				itf.value().widgetItem->setHidden(conf_HideImages->isChecked());
-			if (itf.value().isVector)
-				itf.value().widgetItem->setHidden(conf_HideVectors->isChecked());
+			const auto& asset = itf.value();
+			if (!asset.widgetItem)
+				continue;
+
+			const bool hiddenByType =
+				(asset.isDir && conf_HideDirs->isChecked())
+				|| (asset.isRaster && conf_HideImages->isChecked())
+				|| (asset.isVector && conf_HideVectors->isChecked());
+			const bool hiddenBySearch = !searchText.isEmpty()
+				&& !itf.key().contains(searchText, Qt::CaseInsensitive);
+			asset.widgetItem->setHidden(hiddenByType || hiddenBySearch);
 		}
 	}
-	m_prefs->set("hideDirs", conf_HideDirs->isChecked());
-	m_prefs->set("hideImages", conf_HideImages->isChecked());
-	m_prefs->set("hideVectors", conf_HideVectors->isChecked());
-	m_prefs->set("openMode", conf_OpenMode->isChecked());
 }
 
 void Biblio::newLib()
@@ -2101,12 +2135,19 @@ void Biblio::iconSetChange()
 
 void Biblio::languageChange()
 {
-	setWindowTitle( tr( "Scrapbook" ) );
- 	newButton->setToolTip( tr( "Create a new scrapbook page" ) );
- 	upButton->setToolTip( tr( "Go up one Directory" ) );
- 	importButton->setToolTip( tr( "Import a scrapbook file from Scribus <=1.3.2" ) );
- 	closeButton->setToolTip( tr( "Close the selected scrapbook" ) );
- 	configButton->setToolTip( tr( "Configure the scrapbook" ) );
+	setWindowTitle( tr( "Asset Manager" ) );
+	searchEdit->setPlaceholderText(tr("Search Assets"));
+	searchEdit->setAccessibleName(tr("Search assets"));
+	newButton->setToolTip( tr( "Create a new asset library" ) );
+	upButton->setToolTip( tr( "Go up one Directory" ) );
+	importButton->setToolTip( tr( "Import a legacy scrapbook file" ) );
+	closeButton->setToolTip( tr( "Close the selected asset library" ) );
+	configButton->setToolTip( tr( "Configure asset visibility" ) );
+	newButton->setAccessibleName(tr("New asset library"));
+	upButton->setAccessibleName(tr("Parent directory"));
+	importButton->setAccessibleName(tr("Import asset library"));
+	closeButton->setAccessibleName(tr("Close asset library"));
+	configButton->setAccessibleName(tr("Asset visibility options"));
 	conf_HideDirs->setText( tr("Hide Directories"));
 	conf_HideImages->setText( tr("Hide Images"));
 	conf_HideVectors->setText( tr("Hide Vector files"));

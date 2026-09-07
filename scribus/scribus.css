@@ -1226,3 +1226,77 @@ QDialog[modernDialogRole="imageEffects"] QPushButton[compactAction="true"] {
    max-width: 32px;
    padding: 3px;
 }
+
+/* Asset Manager: modern surface over the compatible Scrapbook engine */
+QWidget[modernAssetManager="true"] {
+   background: palette(window);
+   color: palette(text);
+}
+
+QWidget[modernAssetManager="true"] QToolButton[assetAction="true"] {
+   background: transparent;
+   border: 1px solid transparent;
+   border-radius: 7px;
+   padding: 5px;
+}
+
+QWidget[modernAssetManager="true"] QToolButton[assetAction="true"]:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QWidget[modernAssetManager="true"] QToolButton[assetAction="true"]:pressed,
+QWidget[modernAssetManager="true"] QToolButton[assetAction="true"]:checked {
+   background: palette(highlight);
+   color: palette(highlighted-text);
+}
+
+QWidget[modernAssetManager="true"] QLineEdit#assetSearch {
+   min-height: 28px;
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   padding: 2px 9px;
+}
+
+QWidget[modernAssetManager="true"] QLineEdit#assetSearch:focus {
+   border-color: palette(highlight);
+}
+
+QWidget[modernAssetManager="true"] QToolBox#assetLibraries::tab {
+   min-height: 28px;
+   background: palette(button);
+   border: 0;
+   border-radius: 6px;
+   color: palette(button-text);
+   font-weight: 600;
+   padding: 3px 8px;
+}
+
+QWidget[modernAssetManager="true"] QToolBox#assetLibraries::tab:selected {
+   background: palette(midlight);
+}
+
+QWidget[modernAssetManager="true"] QListWidget[assetGrid="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   padding: 5px;
+}
+
+QWidget[modernAssetManager="true"] QListWidget[assetGrid="true"]::item {
+   border: 1px solid transparent;
+   border-radius: 7px;
+   padding: 3px;
+}
+
+QWidget[modernAssetManager="true"] QListWidget[assetGrid="true"]::item:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QWidget[modernAssetManager="true"] QListWidget[assetGrid="true"]::item:selected {
+   background: palette(highlight);
+   color: palette(highlighted-text);
+}
