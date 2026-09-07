@@ -11,6 +11,7 @@ for which a new license (GPL+exception) is in place.
 #include <QByteArray>
 #include <QDialogButtonBox>
 #include <QGroupBox>
+#include <QPushButton>
 #include <QStyle>
 #include <QWidget>
 

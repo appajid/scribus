@@ -1300,3 +1300,61 @@ QWidget[modernAssetManager="true"] QListWidget[assetGrid="true"]::item:selected 
    background: palette(highlight);
    color: palette(highlighted-text);
 }
+
+/* Command Palette */
+QDialog[modernDialogRole="commandPalette"] QLabel[commandPaletteTitle="true"] {
+   color: palette(text);
+   font-size: 18px;
+   font-weight: 600;
+}
+
+QDialog[modernDialogRole="commandPalette"] QLabel[commandPaletteSection="true"] {
+   color: palette(text);
+   font-weight: 600;
+}
+
+QDialog[modernDialogRole="commandPalette"] QLabel#descriptionLabel,
+QDialog[modernDialogRole="commandPalette"] QLabel#resultCountLabel,
+QDialog[modernDialogRole="commandPalette"] QLabel[commandPaletteHint="true"] {
+   color: palette(mid);
+}
+
+QDialog[modernDialogRole="commandPalette"] QLineEdit#filterLineEdit {
+   min-height: 34px;
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 9px;
+   font-size: 14px;
+   padding: 3px 10px;
+}
+
+QDialog[modernDialogRole="commandPalette"] QLineEdit#filterLineEdit:focus {
+   border-color: palette(highlight);
+}
+
+QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 9px;
+   outline: 0;
+   padding: 5px;
+}
+
+QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item {
+   min-height: 32px;
+   border-radius: 6px;
+   padding: 3px 8px;
+}
+
+QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item:hover {
+   background: palette(midlight);
+}
+
+QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item:selected {
+   background: palette(highlight);
+   color: palette(highlighted-text);
+}
+
+QDialog[modernDialogRole="commandPalette"] QListWidget#actionsListWidget::item:disabled {
+   color: palette(mid);
+}

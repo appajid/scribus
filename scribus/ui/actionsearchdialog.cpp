@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "actionsearchdialog.h"
+#include "modernui.h"
 #include "ui_actionsearchdialog.h"
 
 ActionSearchDialog::ActionSearchDialog(QMainWindow *parent, const QList<ActionSearch::ActionInfo>& actions) :
@@ -26,6 +27,11 @@ ActionSearchDialog::ActionSearchDialog(QMainWindow *parent, const QList<ActionSe
 	m_actions{actions}
 {
 	ui->setupUi(this);
+	ModernUI::applySurfaceStyle(this, "commandPalette");
+	ui->filterLineEdit->setAccessibleName(tr("Search commands"));
+	ui->filterLineEdit->setAccessibleDescription(tr("Search by command name, menu, or keyboard shortcut"));
+	ui->actionsListWidget->setAccessibleName(tr("Matching commands"));
+	ui->actionsListWidget->setIconSize(QSize(20, 20));
 
 	ui->filterLineEdit->installEventFilter(this);
 	installEventFilter(this);
@@ -111,9 +117,7 @@ void ActionSearchDialog::selectNextEnabled(int step)
 		row = (step > 0) ? -1 : count;
 	for (int attempts = 0; attempts < count; ++attempts)
 	{
-		row += step;
-		if (row < 0 || row >= count)
-			return;
+		row = (row + step + count) % count;
 		QListWidgetItem* item = ui->actionsListWidget->item(row);
 		if (item->data(Qt::UserRole + 1).toBool())
 		{
@@ -133,7 +137,9 @@ void ActionSearchDialog::updateList()
 {
 	ui->actionsListWidget->clear();
 
-	const QString filter = ui->filterLineEdit->text().trimmed();
+	QString filter = ui->filterLineEdit->text().trimmed();
+	if (filter.startsWith(QLatin1Char('?')))
+		filter = filter.sliced(1).trimmed();
 	const QStringList words = filter.split(QLatin1Char(' '), Qt::SkipEmptyParts);
 	QList<ActionSearch::ActionInfo> matches;
 	for (const ActionSearch::ActionInfo& action : std::as_const(m_actions))
@@ -178,6 +184,16 @@ void ActionSearchDialog::updateList()
 		item->setToolTip(toolTip);
 		if (!action.enabled)
 			item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+	}
+
+	ui->resultCountLabel->setText(matches.count() == 1
+		? tr("1 command")
+		: tr("%1 commands").arg(matches.count()));
+	if (matches.isEmpty())
+	{
+		auto* item = new QListWidgetItem(tr("No matching commands"), ui->actionsListWidget);
+		item->setData(Qt::UserRole + 1, false);
+		item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 	}
 
 	selectNextEnabled(1);
