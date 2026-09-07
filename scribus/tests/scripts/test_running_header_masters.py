@@ -63,7 +63,6 @@ def create_heading(page, name, value, y=180):
 def populate_master(name, label, variable_id):
     scribus.editMasterPage(name)
     frame = scribus.createText(50, 35, 480, 35, name + "Frame")
-    scribus.setFont("Arial Regular", frame)
     scribus.setText(label, frame)
     scribus.insertVariable(variable_id, frame)
     scribus.closeMasterPage()

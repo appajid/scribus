@@ -107,3 +107,4 @@ if cold_seconds > 5.0:
 if warm_seconds > 1.0:
     raise AssertionError("warm running-header resolution exceeded 1 second")
 scribus.closeDoc()
+print("RUNNING_HEADER_SCALE_QA_PASSED", flush=True)

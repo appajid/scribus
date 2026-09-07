@@ -45,3 +45,54 @@ target_link_libraries(actionsearchtests Qt6::Test Qt6::Core Qt6::Gui Qt6::Widget
 target_compile_definitions(actionsearchtests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
 add_test(NAME actionsearchtests COMMAND actionsearchtests)
 set_tests_properties(actionsearchtests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# End-to-end running-header tests use the installed application because the
+# Scripter and file-format plugins are loaded from the installation layout.
+if(APPLEBUNDLE)
+	set(SCRIBUS_SCRIPT_TEST_EXECUTABLE
+		"${APPLE_APP_DIR}/Scribus${VERSION}.app/Contents/MacOS/Scribus")
+elseif(WIN32)
+	set(SCRIBUS_SCRIPT_TEST_EXECUTABLE "${CMAKE_INSTALL_PREFIX}/scribus.exe")
+else()
+	set(SCRIBUS_SCRIPT_TEST_EXECUTABLE
+		"${CMAKE_INSTALL_PREFIX}/bin/scribus${TAG_VERSION}")
+endif()
+
+add_test(NAME runningheader_test_install
+	COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config $<CONFIG>)
+set_tests_properties(runningheader_test_install PROPERTIES
+	FIXTURES_SETUP runningheader_test_app
+	LABELS "integration;running-headers"
+	TIMEOUT 180)
+
+function(add_running_header_test test_name script_name pass_marker timeout_seconds)
+	set(test_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-${test_name}")
+	file(MAKE_DIRECTORY "${test_prefs_dir}")
+	add_test(NAME ${test_name}
+		COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+			--no-splash
+			--prefs "${test_prefs_dir}"
+			--no-gui
+			--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/${script_name}")
+	set_tests_properties(${test_name} PROPERTIES
+		ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+		FIXTURES_REQUIRED runningheader_test_app
+		LABELS "integration;running-headers"
+		PASS_REGULAR_EXPRESSION "${pass_marker}"
+		RUN_SERIAL TRUE
+		TIMEOUT ${timeout_seconds})
+endfunction()
+
+add_running_header_test(runningheader_masters test_running_header_masters.py
+	"RUNNING_HEADER_MASTERS_QA_PASSED" 180)
+add_running_header_test(runningheader_spreads test_running_header_spreads.py
+	"RUNNING_HEADER_SPREADS_QA_PASSED" 120)
+add_running_header_test(runningheader_sections test_running_header_sections.py
+	"RUNNING_HEADER_SECTIONS_QA_PASSED" 120)
+add_running_header_test(runningheader_scale test_running_header_scale.py
+	"RUNNING_HEADER_SCALE_QA_PASSED" 180)
+
+find_program(PDFTOTEXT_EXECUTABLE pdftotext)
+if(NOT PDFTOTEXT_EXECUTABLE)
+	set_tests_properties(runningheader_masters PROPERTIES DISABLED TRUE)
+endif()

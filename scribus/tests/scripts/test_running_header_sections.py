@@ -106,6 +106,12 @@ expect_error(
     ),
     "most-recent accepted an inapplicable fallback",
 )
+expect_error(
+    lambda: scribus.createRunningHeaderVariable(
+        "Missing Style", "Style That Does Not Exist", "most-recent"
+    ),
+    "a running header accepted a missing paragraph style",
+)
 
 step("saving and defining two document sections in the SLA fixture")
 scribus.saveDocAs(output_path)
@@ -136,6 +142,9 @@ legacy_definition = (
     b'<Variable id="unsupported-fallback" type="running-header" name="Unsupported Fallback" value="" '
     b'paragraphStyle="SectionHeading" mode="first-on-page" textCase="as-entered" '
     b'removeTrailingPunctuation="0" fallback="future"/>'
+    b'<Variable id="missing-style" type="running-header" name="Missing Style Fixture" value="" '
+    b'paragraphStyle="Style That Does Not Exist" mode="most-recent" textCase="as-entered" '
+    b'removeTrailingPunctuation="0" fallback="none"/>'
 )
 saved_data = saved_data.replace(b"</DynamicVariables>", legacy_definition + b"</DynamicVariables>", 1)
 with open(output_path, "wb") as target_file:
@@ -183,6 +192,10 @@ check(
 check(
     scribus.getVariable("unsupported-fallback", "NewSectionContext") == "",
     "an unsupported fallback resolved content",
+)
+check(
+    scribus.getVariable("missing-style", "NewSectionContext") == "",
+    "a running header with a missing style resolved content",
 )
 
 step("checking API updates preserve or explicitly change fallback")
@@ -239,6 +252,10 @@ check(
 check(
     scribus.getVariable("unsupported-fallback", "NewSectionContext") == "",
     "an unsupported fallback became active after round trip",
+)
+check(
+    scribus.getVariable("missing-style", "NewSectionContext") == "",
+    "a missing-style running header became active after round trip",
 )
 scribus.closeDoc()
 
