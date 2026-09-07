@@ -29,7 +29,7 @@
    <item>
     <widget class="SectionContainer" name="scTableStyles">
      <property name="title" stdset="0">
-      <string>Styles</string>
+      <string>Table &amp; Cell Styles</string>
      </property>
      <widget class="QWidget" name="page">
       <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -187,7 +187,7 @@
    <item>
     <widget class="SectionContainer" name="scTableFills">
      <property name="title" stdset="0">
-      <string>Fill</string>
+      <string>Table &amp; Cell Fill</string>
      </property>
      <widget class="QWidget" name="page_2">
       <layout class="QVBoxLayout" name="verticalLayout_5">

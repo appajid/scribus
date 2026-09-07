@@ -1155,3 +1155,29 @@ QWidget[modernNodeEditor="true"] QPushButton[primaryAction="true"] {
    border-color: palette(highlight);
    font-weight: 600;
 }
+
+/* Table Editor selection inspector */
+QWidget[specialistTableEditor="true"] {
+   background: palette(window);
+   color: palette(text);
+}
+
+QWidget[specialistTableEditor="true"] QToolButton[tableInspectorAction="true"] {
+   background: palette(base);
+   border: 1px solid transparent;
+   border-radius: 6px;
+   padding: 4px;
+}
+
+QWidget[specialistTableEditor="true"] QToolButton[tableInspectorAction="true"]:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QWidget[specialistTableEditor="true"] QToolButton[tableInspectorAction="true"]:focus,
+QWidget[specialistTableEditor="true"] QComboBox:focus,
+QWidget[specialistTableEditor="true"] QSpinBox:focus,
+QWidget[specialistTableEditor="true"] QDoubleSpinBox:focus,
+QWidget[specialistTableEditor="true"] QListWidget:focus {
+   border: 1px solid palette(highlight);
+}

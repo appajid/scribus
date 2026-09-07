@@ -11,6 +11,7 @@ for which a new license (GPL+exception) is in place.
 #include <QListWidgetItem>
 #include <QScopedValueRollback>
 #include <QSignalBlocker>
+#include <QToolButton>
 #include <QWidget>
 
 #include "appmodehelper.h"
@@ -37,7 +38,26 @@ for which a new license (GPL+exception) is in place.
 PropertiesPalette_Table::PropertiesPalette_Table(QWidget* parent) : QWidget(parent)
 {
 	setupUi(this);
-	setSizePolicy( QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum));
+	setProperty("specialistTableEditor", true);
+	setAttribute(Qt::WA_StyledBackground, true);
+	setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred));
+
+	for (QToolButton* button : findChildren<QToolButton*>())
+	{
+		button->setProperty("tableInspectorAction", true);
+		button->setFixedSize(32, 32);
+		button->setIconSize(QSize(20, 20));
+	}
+	tableStyleCombo->setAccessibleName(tr("Table style"));
+	cellStyleCombo->setAccessibleName(tr("Cell style"));
+	buttonClearTableStyle->setAccessibleName(tr("Remove direct table formatting"));
+	buttonClearCellStyle->setAccessibleName(tr("Remove direct cell formatting"));
+	addBorderLineButton->setAccessibleName(tr("Add border line"));
+	removeBorderLineButton->setAccessibleName(tr("Remove border line"));
+	borderLineList->setAccessibleName(tr("Table border lines"));
+	sideSelector->setAccessibleName(tr("Table and cell border sides"));
+	fillColor->setAccessibleName(tr("Table or cell fill colour"));
+	tableDirectionComboBox->setAccessibleName(tr("Table direction"));
 
 	iconSetChange();
 
