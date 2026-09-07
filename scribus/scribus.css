@@ -1181,3 +1181,48 @@ QWidget[specialistTableEditor="true"] QDoubleSpinBox:focus,
 QWidget[specialistTableEditor="true"] QListWidget:focus {
    border: 1px solid palette(highlight);
 }
+
+/* Image Effects specialist workspace */
+QDialog[modernDialogRole="imageEffects"] QLabel[effectsColumnHeader="true"] {
+   color: palette(text);
+   font-weight: 600;
+   padding: 2px 4px 5px 4px;
+}
+
+QDialog[modernDialogRole="imageEffects"] QLabel#effectsPreview {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+}
+
+QDialog[modernDialogRole="imageEffects"] QListWidget#effectsAvailableList,
+QDialog[modernDialogRole="imageEffects"] QListWidget#effectsAppliedList {
+   min-width: 190px;
+   background: palette(base);
+   alternate-background-color: palette(window);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   outline: 0;
+   padding: 4px;
+}
+
+QDialog[modernDialogRole="imageEffects"] QListWidget::item {
+   min-height: 26px;
+   border-radius: 5px;
+   padding: 2px 7px;
+}
+
+QDialog[modernDialogRole="imageEffects"] QListWidget::item:hover {
+   background: palette(midlight);
+}
+
+QDialog[modernDialogRole="imageEffects"] QListWidget::item:selected {
+   background: palette(highlight);
+   color: palette(highlighted-text);
+}
+
+QDialog[modernDialogRole="imageEffects"] QPushButton[compactAction="true"] {
+   min-width: 32px;
+   max-width: 32px;
+   padding: 3px;
+}

@@ -38,6 +38,7 @@ for which a new license (GPL+exception) is in place.
 #include "scrspinbox.h"
 #include "sctextstream.h"
 #include "shadebutton.h"
+#include "ui/modernui.h"
 #include "util.h"
 #include "util_color.h"
 
@@ -48,6 +49,7 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	  m_doc(docc),
 	  m_item(item)
 {
+	ModernUI::applySurfaceStyle(this, "imageEffects");
 	setModal(true);
 	setWindowTitle( tr( "Image Effects" ) );
 	setWindowIcon(IconManager::instance().loadIcon("app-icon"));
@@ -81,8 +83,11 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	layoutGrid->setSpacing(6);
 
 	textLabel5 = new QLabel( this );
+	textLabel5->setProperty("effectsColumnHeader", true);
 	textLabel5->setText( tr( "Preview" ) );
 	pixmapLabel1 = new QLabel( this );
+	pixmapLabel1->setObjectName(QStringLiteral("effectsPreview"));
+	pixmapLabel1->setAccessibleName(tr("Image effects preview"));
 	pixmapLabel1->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	pixmapLabel1->setMinimumSize( QSize( 220, 220 ) );
 	pixmapLabel1->setMaximumSize( QSize( 220, 220 ) );
@@ -462,8 +467,12 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	optionStack->addWidget( WStackPage_11 );
 
 	textLabel1 = new QLabel( this );
+	textLabel1->setProperty("effectsColumnHeader", true);
 	textLabel1->setText( tr( "Available Effects" ) );
 	availableEffects = new QListWidget( this );
+	availableEffects->setObjectName(QStringLiteral("effectsAvailableList"));
+	availableEffects->setAccessibleName(tr("Available image effects"));
+	availableEffects->setAlternatingRowColors(true);
 	availableEffects->clear();
 	availableEffects->addItem( tr("Blur"));
 	availableEffects->addItem( tr("Brightness"));
@@ -484,11 +493,16 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	availableEffects->setMinimumSize(availableEffectsAdvance + 40, 180);
 	toEffects = new QPushButton( this );
 	toEffects->setText( tr( "Add" ) );
+	toEffects->setAccessibleName(tr("Add selected image effect"));
 	toEffects->setEnabled(false);
 
 	textLabel2 = new QLabel( this );
+	textLabel2->setProperty("effectsColumnHeader", true);
 	textLabel2->setText( tr( "Applied Effects" ) );
 	usedEffects = new QListWidget( this );
+	usedEffects->setObjectName(QStringLiteral("effectsAppliedList"));
+	usedEffects->setAccessibleName(tr("Applied image effects"));
+	usedEffects->setAlternatingRowColors(true);
 	usedEffects->setMinimumSize(availableEffectsAdvance + 40, 180);
 	usedEffects->clear();
 	m_effectValMap.clear();
@@ -581,21 +595,28 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	layout7->setSpacing(6);
 	fromEffects = new QPushButton( this );
 	fromEffects->setText( tr( "Remove" ) );
+	fromEffects->setAccessibleName(tr("Remove selected image effect"));
 	fromEffects->setEnabled(false);
 	layout7->addWidget( fromEffects );
 	effectUp = new QPushButton( this );
 	effectUp->setText( "" );
 	effectUp->setIcon(IconManager::instance().loadIcon("go-up"));
+	effectUp->setProperty("compactAction", true);
+	effectUp->setAccessibleName(tr("Move selected effect up"));
+	effectUp->setFixedSize(32, 32);
 	effectUp->setEnabled(false);
 	layout7->addWidget( effectUp );
 	effectDown = new QPushButton( this );
 	effectDown->setText( "" );
 	effectDown->setIcon(IconManager::instance().loadIcon("go-down"));
+	effectDown->setProperty("compactAction", true);
+	effectDown->setAccessibleName(tr("Move selected effect down"));
+	effectDown->setFixedSize(32, 32);
 	effectDown->setEnabled(false);
 	layout7->addWidget( effectDown );
 
 	groupBox = new QGroupBox( this );
-	groupBox->setTitle( tr( "Options:" ) );
+	groupBox->setTitle( tr( "Effect Options" ) );
 	layout8 = new QVBoxLayout( groupBox );
 	layout8->addWidget( optionStack );
 	layout8->setAlignment( Qt::AlignTop );
@@ -620,17 +641,21 @@ EffectsDialog::EffectsDialog( QWidget* parent, PageItem* item, ScribusDoc* docc 
 	layoutDialogButtonBox->addItem( spacer3 );
 	okButton = new QPushButton( this );
 	okButton->setText( tr( "OK" ) );
-	layoutDialogButtonBox->addWidget( okButton );
 	cancelButton = new QPushButton( this );
 	cancelButton->setText( tr( "Cancel" ) );
 	layoutDialogButtonBox->addWidget( cancelButton );
+	layoutDialogButtonBox->addWidget( okButton );
 	EffectsDialogLayout->addLayout( layoutDialogButtonBox );
+	ModernUI::markSections(this);
+	ModernUI::setPrimaryAction(okButton);
+	cancelButton->setProperty("secondaryAction", true);
 
 
 	optionStack->setCurrentIndex(0);
 	usedEffects->clearSelection();
 	availableEffects->clearSelection();
-	resize( minimumSizeHint() );
+	setMinimumSize(820, 560);
+	resize(QSize(900, 620).expandedTo(minimumSizeHint()));
 	ScImage im(m_image);
 	saveValues(false);
 	im.applyEffect(effectsList, m_doc->PageColors, false);
