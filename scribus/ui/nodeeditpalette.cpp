@@ -19,10 +19,25 @@ for which a new license (GPL+exception) is in place.
 #include "undostate.h"
 #include "units.h"
 #include "iconmanager.h"
+#include "ui/modernui.h"
 
 NodePalette::NodePalette( QWidget* parent) : ScrPaletteBase(parent, "nodePalette", false, Qt::WindowFlags())
 {
 	setupUi(this);
+	setProperty("modernNodeEditor", true);
+	setAttribute(Qt::WA_StyledBackground, true);
+	ModernUI::applySurfaceStyle(this, "nodeEditor", false);
+	ModernUI::markSections(this);
+
+	const auto toolButtons = findChildren<QToolButton*>();
+	for (QToolButton* button : toolButtons)
+	{
+		button->setProperty("nodeEditorTool", true);
+		button->setFixedSize(32, 32);
+		button->setIconSize(QSize(20, 20));
+	}
+	ModernUI::setPrimaryAction(editEditButton);
+	cancelEditButton->setProperty("secondaryAction", true);
 
 	MoveNode->setCheckable(true);
 	MoveNode->setChecked(true);
@@ -118,8 +133,9 @@ NodePalette::NodePalette( QWidget* parent) : ScrPaletteBase(parent, "nodePalette
 	btngpTools->addButton(BezierClose);
 	btngpTools->addButton(EditControl);
 
-	resize(QSize(170, 380).expandedTo(minimumSizeHint()));
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
+	setMinimumWidth(290);
+	resize(QSize(310, 560).expandedTo(minimumSizeHint()));
+	layout()->setSizeConstraint(QLayout::SetMinimumSize);
 	iconSetChange();
 	languageChange();
 
@@ -922,7 +938,7 @@ void NodePalette::languageChange()
 	MoveNode->setToolTip( tr("Move Nodes"));
 	AddNode->setToolTip( tr("Add Nodes"));
 	DeleteNode->setToolTip( tr("Delete Nodes"));
-	AsymMove->setToolTip( tr("Move Control Points Asymetrical"));
+	AsymMove->setToolTip( tr("Move Control Points Asymmetrically"));
 	SymMove->setToolTip( tr("Move Control Points Symmetrical"));
 	IndependentMove->setToolTip( tr("Move Control Points Independently"));
 	EditControl->setToolTip( tr("Edit Control Points"));
@@ -949,6 +965,13 @@ void NodePalette::languageChange()
 	ResetContClip->setToolTip( tr("Reset the Contour Line to the Clipping Path of the Image"));
 	ResetShape2Clip->setToolTip( tr("Set the Shape to the Clipping Path of the Image"));
 	PosOriginButton->setToolTip(  "<qt>" + tr("Use coordinates relative to the canvas, page, or to the Object") + "</qt>");
+
+	const auto toolButtons = findChildren<QToolButton*>();
+	for (QToolButton* button : toolButtons)
+		button->setAccessibleName(button->toolTip());
+	PosOriginButton->setAccessibleName(tr("Coordinate origin"));
+	editEditButton->setAccessibleName(tr("Apply path edits"));
+	cancelEditButton->setAccessibleName(tr("Cancel path edits"));
 }
 
 void NodePalette::unitChange()

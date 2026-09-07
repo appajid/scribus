@@ -30,7 +30,11 @@
     <number>8</number>
    </property>
    <item>
-    <layout class="QGridLayout" name="gridLayout">
+    <widget class="QGroupBox" name="nodeToolsSection">
+     <property name="title">
+      <string>Node Tools</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
      <property name="spacing">
       <number>4</number>
      </property>
@@ -152,10 +156,15 @@
        </property>
       </widget>
      </item>
-    </layout>
+     </layout>
+    </widget>
    </item>
    <item>
-    <layout class="QGridLayout" name="gridLayout_2">
+    <widget class="QGroupBox" name="transformSection">
+     <property name="title">
+      <string>Transform</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
      <property name="spacing">
       <number>4</number>
      </property>
@@ -223,10 +232,15 @@
        </property>
       </spacer>
      </item>
-    </layout>
+     </layout>
+    </widget>
    </item>
    <item>
-    <layout class="QGridLayout" name="gridLayout_3">
+    <widget class="QGroupBox" name="positionSection">
+     <property name="title">
+      <string>Position</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3">
      <property name="spacing">
       <number>4</number>
      </property>
@@ -294,10 +308,15 @@
        </item>
       </layout>
      </item>
-    </layout>
+     </layout>
+    </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <widget class="QGroupBox" name="pathOptionsSection">
+     <property name="title">
+      <string>Path Options</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <property name="spacing">
       <number>4</number>
      </property>
@@ -394,7 +413,8 @@
        </property>
       </spacer>
      </item>
-    </layout>
+     </layout>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">

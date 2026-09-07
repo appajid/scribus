@@ -1082,3 +1082,76 @@ QMainWindow[modernStoryEditor="true"] QStatusBar QLabel {
    color: palette(text);
    padding: 1px 3px;
 }
+
+/* Path and Node Editor specialist workspace */
+QWidget[modernNodeEditor="true"] {
+   background: palette(window);
+   color: palette(text);
+}
+
+QWidget[modernNodeEditor="true"] QGroupBox[modernSection="true"] {
+   background: palette(base);
+   border: 1px solid palette(mid);
+   border-radius: 8px;
+   margin-top: 12px;
+   padding: 12px 8px 8px 8px;
+}
+
+QWidget[modernNodeEditor="true"] QGroupBox[modernSection="true"]::title {
+   subcontrol-origin: margin;
+   subcontrol-position: top left;
+   left: 10px;
+   padding: 0 5px;
+   color: palette(text);
+   font-weight: 600;
+}
+
+QWidget[modernNodeEditor="true"] QToolButton[nodeEditorTool="true"] {
+   background: palette(base);
+   border: 1px solid transparent;
+   border-radius: 6px;
+   padding: 4px;
+}
+
+QWidget[modernNodeEditor="true"] QToolButton[nodeEditorTool="true"]:hover {
+   background: palette(midlight);
+   border-color: palette(mid);
+}
+
+QWidget[modernNodeEditor="true"] QToolButton[nodeEditorTool="true"]:checked {
+   background: palette(highlight);
+   border-color: palette(highlight);
+}
+
+QWidget[modernNodeEditor="true"] QToolButton[nodeEditorTool="true"]:focus,
+QWidget[modernNodeEditor="true"] QSpinBox:focus,
+QWidget[modernNodeEditor="true"] QDoubleSpinBox:focus,
+QWidget[modernNodeEditor="true"] QPushButton:focus {
+   border: 1px solid palette(highlight);
+}
+
+QWidget[modernNodeEditor="true"] QSpinBox,
+QWidget[modernNodeEditor="true"] QDoubleSpinBox {
+   min-height: 28px;
+   background: palette(base);
+   color: palette(text);
+   border: 1px solid palette(mid);
+   border-radius: 6px;
+   padding: 1px 7px;
+}
+
+QWidget[modernNodeEditor="true"] QPushButton {
+   min-height: 30px;
+   background: palette(base);
+   color: palette(text);
+   border: 1px solid palette(mid);
+   border-radius: 7px;
+   padding: 3px 12px;
+}
+
+QWidget[modernNodeEditor="true"] QPushButton[primaryAction="true"] {
+   background: palette(highlight);
+   color: palette(highlighted-text);
+   border-color: palette(highlight);
+   font-weight: 600;
+}
