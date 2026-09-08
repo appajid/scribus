@@ -2239,7 +2239,11 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 		{
 			Q_ASSERT(mrk != nullptr);
 			if (is->contains("labelOLD"))
-				mrk->label = is->get("labelOLD");
+			{
+				const QString oldLabel = is->get("labelOLD");
+				retargetMarkReferences(mrk->getType(), mrk->label, oldLabel);
+				mrk->label = oldLabel;
+			}
 			if (is->contains("strtxtOLD"))
 			{
 				mrk->setString(is->get("strtxtOLD"));
@@ -2370,7 +2374,11 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 		else if (markAction == "edit")
 		{
 			if (is->contains("labelNEW"))
-				mrk->label = is->get("labelNEW");
+			{
+				const QString newLabel = is->get("labelNEW");
+				retargetMarkReferences(mrk->getType(), mrk->label, newLabel);
+				mrk->label = newLabel;
+			}
 			if (is->contains("strtxtNEW"))
 			{
 				mrk->setString(is->get("strtxtNEW"));
@@ -18650,6 +18658,59 @@ Mark* ScribusDoc::insertCrossReferencePageNumber(const QString& targetName, Page
 	}
 	changed();
 	return mark;
+}
+
+void ScribusDoc::retargetMarkReferences(MarkType targetType, const QString& oldLabel, const QString& newLabel)
+{
+	if (oldLabel == newLabel)
+		return;
+	for (Mark* reference : std::as_const(m_docMarksList))
+	{
+		if (!reference || !reference->isType(MARK2MarkType)
+			|| reference->getDestMarkType() != targetType
+			|| reference->getDestMarkName() != oldLabel)
+			continue;
+		reference->setDestMark(newLabel, targetType);
+		PageItem* lastItem = nullptr;
+		for (PageItem* item = findMarkItem(reference, lastItem); item; item = findMarkItem(reference, lastItem))
+			item->invalidateLayout();
+	}
+}
+
+bool ScribusDoc::renameCrossReferenceTarget(const QString& oldName, const QString& newName)
+{
+	Mark* target = crossReferenceTarget(oldName.trimmed());
+	const QString targetName = newName.trimmed();
+	if (!target || targetName.isEmpty())
+		return false;
+	if (target->label == targetName)
+		return true;
+	if (crossReferenceTarget(targetName))
+		return false;
+
+	const QString previousName = target->label;
+	retargetMarkReferences(MARKAnchorType, previousName, targetName);
+	target->label = targetName;
+	flag_updateMarksLabels = true;
+
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new ScItemsState(UndoManager::EditMark);
+		state->set("MARK", QStringLiteral("edit"));
+		state->set("ETEA", targetName);
+		state->set("label", targetName);
+		state->set("labelOLD", previousName);
+		state->set("labelNEW", targetName);
+		state->set("type", static_cast<int>(MARKAnchorType));
+		state->set("strtxt", target->getString());
+		m_undoManager->action(this, state);
+	}
+
+	changed();
+	regionsChanged()->update(QRectF());
+	if (scMW())
+		scMW()->emitUpdateRequest(reqMarksUpdate);
+	return true;
 }
 
 QString ScribusDoc::crossReferencePageNumber(const QString& targetName) const

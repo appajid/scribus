@@ -471,6 +471,10 @@ PyDoc_STRVAR(scribus_listcrossreferencetargets__doc__,
 QT_TR_NOOP("listCrossReferenceTargets() -> list\n\nReturns the names of all cross-reference targets in the document."));
 PyObject *scribus_listcrossreferencetargets(PyObject *self);
 
+PyDoc_STRVAR(scribus_renamecrossreferencetarget__doc__,
+QT_TR_NOOP("renameCrossReferenceTarget(target, newName)\n\nRenames a cross-reference target and safely retargets every page reference that points to it."));
+PyObject *scribus_renamecrossreferencetarget(PyObject *self, PyObject* args);
+
 PyDoc_STRVAR(scribus_createvariable__doc__,
 QT_TR_NOOP("createVariable(name, value) -> str\n\nCreates a user-defined dynamic variable and returns its stable ID."));
 PyObject *scribus_createvariable(PyObject *self, PyObject* args);

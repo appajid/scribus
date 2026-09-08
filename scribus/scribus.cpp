@@ -10136,6 +10136,7 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 			markData.itemName = currItem->itemName();
 		bool newMark = false;
 		bool replaceMark = false;
+		bool undoRecorded = false;
 		switch (mrk->getType())
 		{
 			case MARKAnchorType:
@@ -10146,8 +10147,11 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 				if (mrk->label != label)
 				{
 					getUniqueName(label, doc->marksLabelsList(mrk->getType()), "_"); //FIX ME here user should be warned that inserted mark`s label was changed
-					mrk->label = label;
-					emit UpdateRequest(reqMarksUpdate);
+					if (doc->renameCrossReferenceTarget(mrk->label, label))
+					{
+						docWasChanged = true;
+						undoRecorded = true;
+					}
 				}
 				break;
 			case MARKVariableTextType:
@@ -10218,7 +10222,7 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 						label = tr("Mark to %1 mark").arg(markPtr->label);
 					QString destLabel = markPtr->label;
 					MarkType destType = markPtr->getType();
-					if (markData.destMarkName != destLabel || markData.destMarkType != destType)
+					if (oldData.destMarkName != destLabel || oldData.destMarkType != destType)
 					{
 						mrk->setDestMark(markPtr);
 						mrk->setString(doc->getSectionPageNumberForPageIndex(markPtr->OwnPage));
@@ -10248,7 +10252,7 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 			default:
 				break;
 		}
-		if (UndoManager::undoEnabled())
+		if (UndoManager::undoEnabled() && !undoRecorded)
 		{
 			ScItemsState* is = nullptr;
 			if (newMark || replaceMark)

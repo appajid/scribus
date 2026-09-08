@@ -1900,6 +1900,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		Mark* insertCrossReferenceTarget(const QString& name, PageItem* item, int position = -1);
 		Mark* insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position = -1,
 			const QString& label = QString());
+		bool renameCrossReferenceTarget(const QString& oldName, const QString& newName);
 		QString crossReferencePageNumber(const QString& targetName) const;
 
 		const QMap<QString, DynamicVariable>& dynamicVariables() const { return m_dynamicVariables; }
@@ -2019,6 +2020,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		bool updateEndNotesNums(); //return true if doc needs update
 		void invalidateNoteFrames(const NotesStyle* nStyle);
 		void invalidateMasterFrames(const NotesStyle* nStyle);
+		void retargetMarkReferences(MarkType targetType, const QString& oldLabel, const QString& newLabel);
 
 
 	public slots:

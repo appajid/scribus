@@ -91,6 +91,8 @@ check(
 )
 source_frame = scribus.createText(40, 40, 300, 60, "ReferenceSource")
 scribus.setText("See page ", source_frame)
+second_source_frame = scribus.createText(40, 120, 300, 60, "SecondReferenceSource")
+scribus.setText("Also see page ", second_source_frame)
 scribus.gotoPage(2)
 target_frame = scribus.createText(40, 120, 300, 60, "ReferenceTarget")
 scribus.setText("Chapter Two", target_frame)
@@ -102,6 +104,10 @@ check(scribus.listCrossReferenceTargets() == ["chapter-two"], "target list is in
 check(scribus.getCrossReferencePage(target_name) == "2", "target page did not resolve")
 reference_label = scribus.insertCrossReference(target_name, source_frame, -1, "Chapter Two page")
 check(reference_label == "Chapter Two page", "page-reference insertion returned the wrong label")
+second_reference_label = scribus.insertCrossReference(
+    target_name, second_source_frame, -1, "Second Chapter Two page"
+)
+check(second_reference_label == "Second Chapter Two page", "second page-reference insertion failed")
 rendered_text = rendered_source_text()
 if rendered_text is not None:
     check("See page 2" in rendered_text, "inserted page reference did not render its target page")
@@ -133,6 +139,24 @@ expect_error(
     "a page reference was inserted into a non-text frame",
 )
 
+step("renaming a target without breaking its page references")
+scribus.renameCrossReferenceTarget(target_name, "chapter-renamed")
+target_name = "chapter-renamed"
+check(scribus.listCrossReferenceTargets() == [target_name], "renamed target list is incorrect")
+check(scribus.getCrossReferencePage(target_name) == "2", "renamed target lost its page")
+check("BrokenCrossReference" not in preflight_errors(), "renaming broke an existing page reference")
+rendered_text = rendered_source_text()
+if rendered_text is not None:
+    check("See page 2" in rendered_text, "page reference did not render after target rename")
+expect_error(
+    lambda: scribus.getCrossReferencePage("chapter-two"),
+    "the old target name remained addressable after rename",
+)
+expect_error(
+    lambda: scribus.renameCrossReferenceTarget(target_name, ""),
+    "an empty target name was accepted during rename",
+)
+
 step("checking repagination updates")
 scribus.newPage(2)
 check(scribus.getCrossReferencePage(target_name) == "3", "target did not follow page insertion")
@@ -145,19 +169,23 @@ check(scribus.getCrossReferencePage(target_name) == "2", "target did not follow 
 step("checking SLA persistence and reopen")
 scribus.saveDocAs(output_path)
 saved_data = read_sla(output_path)
-check(b'label="chapter-two" type="0"' in saved_data, "target mark was not serialized")
+check(b'label="chapter-renamed" type="0"' in saved_data, "renamed target was not serialized")
 check(b'label="Chapter Two page" type="2"' in saved_data, "page reference was not serialized")
-check(b'MARKlabel="chapter-two"' in saved_data, "page-reference destination was not serialized")
+check(
+    saved_data.count(b'MARKlabel="chapter-renamed"') == 2,
+    "not every page-reference destination followed the target rename",
+)
+check(b'MARKlabel="chapter-two"' not in saved_data, "a stale destination survived target rename")
 scribus.closeDoc()
 check(scribus.openDoc(output_path), "could not reopen the cross-reference document")
-check(scribus.listCrossReferenceTargets() == ["chapter-two"], "target did not survive reopen")
+check(scribus.listCrossReferenceTargets() == [target_name], "renamed target did not survive reopen")
 check(scribus.getCrossReferencePage(target_name) == "2", "target page did not survive reopen")
 check("BrokenCrossReference" not in preflight_errors(), "valid page reference failed Preflight")
 
 step("preserving and reporting an externally broken reference")
 scribus.closeDoc()
 saved_data = read_sla(output_path)
-saved_data = saved_data.replace(b'MARKlabel="chapter-two"', b'MARKlabel="missing-target"', 1)
+saved_data = saved_data.replace(b'MARKlabel="chapter-renamed"', b'MARKlabel="missing-target"', 1)
 with open(output_path, "wb") as saved_file:
     saved_file.write(saved_data)
 check(scribus.openDoc(output_path), "could not reopen the malformed reference fixture")

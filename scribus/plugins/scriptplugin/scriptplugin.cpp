@@ -526,6 +526,7 @@ PyMethodDef scribus_methods[] = {
 	{ "resizeTableColumn", scribus_resizetablecolumn, METH_VARARGS, tr(scribus_resizetablecolumn__doc__)},
 	{ "resizeTableRow", scribus_resizetablerow, METH_VARARGS, tr(scribus_resizetablerow__doc__)},
 	{ "revertDoc", (PyCFunction) scribus_revertdoc, METH_NOARGS, tr(scribus_revertdoc__doc__)},
+	{ "renameCrossReferenceTarget", scribus_renamecrossreferencetarget, METH_VARARGS, tr(scribus_renamecrossreferencetarget__doc__)},
 	{ "renameVariable", scribus_renamevariable, METH_VARARGS, tr(scribus_renamevariable__doc__)},
 	{ "rotateObject", scribus_rotateobjectrel, METH_VARARGS, tr(scribus_rotateobjectrel__doc__)},
 	{ "rotateObjectAbs", (PyCFunction) scribus_setrotation, METH_VARARGS|METH_KEYWORDS, tr(scribus_setrotation__doc__)}, // Deprecated, alias to setRotation

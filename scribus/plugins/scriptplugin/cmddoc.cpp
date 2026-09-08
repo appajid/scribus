@@ -967,6 +967,36 @@ PyObject *scribus_listcrossreferencetargets(PyObject* /* self */)
 	return list;
 }
 
+PyObject *scribus_renamecrossreferencetarget(PyObject* /* self */, PyObject* args)
+{
+	PyESString oldName;
+	PyESString newName;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", oldName.ptr(), "utf-8", newName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString previousName = QString::fromUtf8(oldName.c_str()).trimmed();
+	const QString targetName = QString::fromUtf8(newName.c_str()).trimmed();
+	if (!currentDoc->crossReferenceTarget(previousName))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(previousName).toUtf8().constData());
+		return nullptr;
+	}
+	if (targetName.isEmpty() || (targetName != previousName && currentDoc->crossReferenceTarget(targetName)))
+	{
+		PyErr_SetString(NameExistsError, QObject::tr("A cross-reference target named '%1' already exists, or the name is empty.", "python error").arg(targetName).toUtf8().constData());
+		return nullptr;
+	}
+	if (!currentDoc->renameCrossReferenceTarget(previousName, targetName))
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The cross-reference target could not be renamed.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	Py_RETURN_NONE;
+}
+
 PyObject *scribus_createvariable(PyObject* /* self */, PyObject* args)
 {
 	PyESString name;
