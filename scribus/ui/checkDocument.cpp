@@ -155,6 +155,7 @@ void CheckDocument::languageChange()
 	warnMap.insert(PV_LAYER_PRINTVIS_MISMATCH,	qMakePair(tr("Print/Visible mismatch"),									tr("This layer uses transparency, only an issue if using older printing profiles. You may safely ignore this when using modern printing methods, or exporting to PDF version greater than 1.4.")));
 	warnMap.insert(PV_IMAGE_HAS_PROGRESSIVE_ENCODING,	qMakePair(tr("Image has progressive encoding"),					tr("The image uses progressive encoding which is useful for websites however does not process well when sending PDFs to professional printers.")));
 	warnMap.insert(PV_MISSING_STYLE,			qMakePair(tr("Style has a missing parent style"),						tr("A paragraph or character style is based on a parent style that no longer exists in the document. Text using this style may not render as intended. Edit the style and choose an existing parent, or recreate the missing style.")));
+	warnMap.insert(PV_BROKEN_CROSS_REFERENCE,	qMakePair(tr("Cross-reference target is missing"),					tr("This page reference points to a target that no longer exists. Choose an existing target or recreate the missing target before publishing.")));
 
 }
 
@@ -406,6 +407,13 @@ void CheckDocument::buildItem(QTreeWidgetItem * item, PreflightError errorType, 
 		case PreflightError::MissingStyle:
 			item->setText(COLUMN_PROBLEM, warnMap[PV_MISSING_STYLE].first);
 			item->setToolTip(COLUMN_PROBLEM, warnMap[PV_MISSING_STYLE].second);
+			item->setIcon(COLUMN_ITEM, graveError);
+			pageGraveError = true;
+			itemError = true;
+			break;
+		case PreflightError::BrokenCrossReference:
+			item->setText(COLUMN_PROBLEM, warnMap[PV_BROKEN_CROSS_REFERENCE].first);
+			item->setToolTip(COLUMN_PROBLEM, warnMap[PV_BROKEN_CROSS_REFERENCE].second);
 			item->setIcon(COLUMN_ITEM, graveError);
 			pageGraveError = true;
 			itemError = true;

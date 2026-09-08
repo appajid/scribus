@@ -434,6 +434,8 @@ The errors are strings, mostly names from the PreflightError enum in scribusstru
 - AppliedMasterDifferentSide\n\
 - EmptyTextFrame\n\
 - ImageHasProgressiveEncoding\n\
+- MissingStyle\n\
+- BrokenCrossReference\n\
 - DocumentModifiedAfterMarksUpdate\n\
 "));
 PyObject* scribus_exportdocumentcheck(PyObject* self, PyObject* args, PyObject* kw);

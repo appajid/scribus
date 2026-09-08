@@ -25,6 +25,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "commonstrings.h"
 #include "documentchecker.h"
+#include "marks.h"
 #include "pageitem.h"
 #include "pdf_analyzer.h"
 #include "sccolor.h"
@@ -71,6 +72,28 @@ bool isPartFilledImageFrame(PageItem * currItem)
 //	qDebug() << "X" << currItem->width() << imageRealWidth;
 //	qDebug() << "Y" << currItem->height() << imageRealHeight;
 	return ((currItem->width() - imageRealWidth) > 0.05 || (currItem->height() - imageRealHeight) > 0.05);
+}
+
+int brokenCrossReferencePosition(ScribusDoc* doc, PageItem* item)
+{
+	if (!doc || !item || (!item->isTextFrame() && !item->isPathText()))
+		return -1;
+	// Linked frames share one StoryText. Associate a broken reference with the
+	// chain head once, where selecting the stored text position still works.
+	if (item->isTextFrame() && item->prevInChain() != nullptr)
+		return -1;
+	for (int position = 0; position < item->itemText.length(); ++position)
+	{
+		if (!item->itemText.hasMark(position))
+			continue;
+		Mark* reference = item->itemText.mark(position);
+		if (!reference || !reference->isType(MARK2MarkType))
+			continue;
+		Mark* target = doc->getMark(reference->getDestMarkName(), reference->getDestMarkType());
+		if (!target || (target->isType(MARKAnchorType) && doc->findFirstMarkItem(target) == nullptr))
+			return position;
+	}
+	return -1;
 }
 
 
@@ -388,6 +411,9 @@ void DocumentChecker::checkItems(ScribusDoc *currDoc, const CheckerPrefs& checke
 			}
 			if ((currItem->isTextFrame()) || (currItem->isPathText()))
 			{
+				const int brokenReferencePosition = brokenCrossReferencePosition(currDoc, currItem);
+				if (brokenReferencePosition >= 0)
+					itemError.insert(PreflightError::BrokenCrossReference, brokenReferencePosition);
 				if ( currItem->frameOverflows() && (checkerSettings.checkOverflow) && (!((currItem->isAnnotation()) && ((currItem->annotation().Type() == Annotation::Combobox) || (currItem->annotation().Type() == Annotation::Listbox)))))
 					itemError.insert(PreflightError::TextOverflow, 0);
 
@@ -666,6 +692,9 @@ void DocumentChecker::checkItems(ScribusDoc *currDoc, const CheckerPrefs& checke
 			}
 			if ((currItem->isTextFrame()) || (currItem->isPathText()))
 			{
+				const int brokenReferencePosition = brokenCrossReferencePosition(currDoc, currItem);
+				if (brokenReferencePosition >= 0)
+					itemError.insert(PreflightError::BrokenCrossReference, brokenReferencePosition);
 				if ( currItem->frameOverflows() && (checkerSettings.checkOverflow) && (!((currItem->isAnnotation()) && ((currItem->annotation().Type() == Annotation::Combobox) || (currItem->annotation().Type() == Annotation::Listbox)))))
 					itemError.insert(PreflightError::TextOverflow, 0);
 

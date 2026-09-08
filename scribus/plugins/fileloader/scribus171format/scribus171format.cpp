@@ -9360,11 +9360,13 @@ void Scribus171Format::updateNames2Ptr() //after document load - items pointers 
 			}
 			else
 			{
-				qWarning() << "Scribus171Format::updateNames2Ptr() : wrong mark [" << mark->label << "] data - pointed mark name [" << label2 << "] not exists - DELETING MARK";
-				QString markLabel(mark->label);
-				if (!m_Doc->eraseMark(mark, true))
-					qWarning() << "Erase mark [" << markLabel << "] failed - was it defined?";
-
+				// Keep unresolved page references so Preflight can report and the
+				// user can repair them. Older loaders deleted these marks, silently
+				// removing content from externally edited or partially damaged files.
+				mark->setDestMark(label2, type2);
+				mark->clearString();
+				qWarning() << "Scribus171Format::updateNames2Ptr() : mark [" << mark->label
+					<< "] points to missing mark [" << label2 << "] - preserving broken reference";
 			}
 		}
 		markeredMarksMap.clear();

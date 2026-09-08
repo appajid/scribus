@@ -684,6 +684,7 @@ PyObject* scribus_exportdocumentcheck(PyObject* /* self */, PyObject* args, PyOb
 		{PreflightError::EmptyTextFrame, "EmptyTextFrame"},
 		{PreflightError::ImageHasProgressiveEncoding, "ImageHasProgressiveEncoding"},
 		{PreflightError::MissingStyle, "MissingStyle"},
+		{PreflightError::BrokenCrossReference, "BrokenCrossReference"},
 	};
 	// Custom Errors
 	// "DocumentModifiedAfterMarksUpdate"

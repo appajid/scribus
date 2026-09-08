@@ -10,6 +10,7 @@ for which a new license (GPL+exception) is in place.
 """
 
 import gzip
+import json
 import os
 import shutil
 import subprocess
@@ -39,6 +40,16 @@ def read_sla(path):
 
 def step(message):
     print("CROSS_REFERENCE_QA: " + message, flush=True)
+
+
+def preflight_errors():
+    report = json.loads(scribus.exportDocumentCheck())
+    errors = []
+    for page_items in report.get("pages", {}).values():
+        errors.extend(item.get("error") for item in page_items)
+    for page_items in report.get("masterPages", {}).values():
+        errors.extend(item.get("error") for item in page_items)
+    return errors
 
 
 output_path = os.path.join(tempfile.gettempdir(), "scribus_cross_reference_test.sla")
@@ -141,5 +152,20 @@ scribus.closeDoc()
 check(scribus.openDoc(output_path), "could not reopen the cross-reference document")
 check(scribus.listCrossReferenceTargets() == ["chapter-two"], "target did not survive reopen")
 check(scribus.getCrossReferencePage(target_name) == "2", "target page did not survive reopen")
+check("BrokenCrossReference" not in preflight_errors(), "valid page reference failed Preflight")
+
+step("preserving and reporting an externally broken reference")
+scribus.closeDoc()
+saved_data = read_sla(output_path)
+saved_data = saved_data.replace(b'MARKlabel="chapter-two"', b'MARKlabel="missing-target"', 1)
+with open(output_path, "wb") as saved_file:
+    saved_file.write(saved_data)
+check(scribus.openDoc(output_path), "could not reopen the malformed reference fixture")
+check("BrokenCrossReference" in preflight_errors(), "broken reference was not reported by Preflight")
+scribus.saveDoc()
+check(
+    b'MARKlabel="missing-target"' in read_sla(output_path),
+    "saving silently deleted or rewrote the broken reference",
+)
 
 print("CROSS_REFERENCE_QA_PASSED", flush=True)
