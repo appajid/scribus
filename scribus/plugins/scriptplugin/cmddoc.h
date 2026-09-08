@@ -459,6 +459,10 @@ PyDoc_STRVAR(scribus_createcrossreferencetarget__doc__,
 QT_TR_NOOP("createCrossReferenceTarget(name, [objectName, position=-1]) -> str\n\nCreates a named cross-reference target in a text frame and returns its name. A position of -1 appends it."));
 PyObject *scribus_createcrossreferencetarget(PyObject *self, PyObject* args);
 
+PyDoc_STRVAR(scribus_deletecrossreferencetarget__doc__,
+QT_TR_NOOP("deleteCrossReferenceTarget(target)\n\nDeletes a named target. Existing page-reference fields are preserved and reported by Preflight until they are repaired or deleted."));
+PyObject *scribus_deletecrossreferencetarget(PyObject *self, PyObject* args);
+
 PyDoc_STRVAR(scribus_insertcrossreference__doc__,
 QT_TR_NOOP("insertCrossReference(target, [objectName, position=-1, label='']) -> str\n\nInserts a dynamic page-number reference to a named target and returns the reference label. A position of -1 appends it."));
 PyObject *scribus_insertcrossreference(PyObject *self, PyObject* args);

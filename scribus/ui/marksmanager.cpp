@@ -8,6 +8,7 @@
 #include "util.h"
 #include "iconmanager.h"
 #include <QHeaderView>
+#include <QMessageBox>
 #include <QStandardItemModel>
 
 MarksManager::MarksManager(QWidget *parent, const char *name)
@@ -233,6 +234,14 @@ Mark* MarksManager::getMarkFromListView()
 	return mrk;
 }
 
+bool MarksManager::isBrokenCrossReference(const Mark* mark) const
+{
+	if (!m_Doc || !mark || !mark->isType(MARK2MarkType))
+		return false;
+	Mark* target = m_Doc->getMark(mark->getDestMarkName(), mark->getDestMarkType());
+	return !target || !m_Doc->findFirstMarkItem(target);
+}
+
 void MarksManager::on_UpdateButton_clicked()
 {
 	m_Doc->flag_updateMarksLabels = true;
@@ -291,11 +300,30 @@ void MarksManager::on_DeleteButton_clicked()
 	if (mrk == nullptr)
 		return;
 
-	if (mrk->isType(MARKNoteMasterType))
+	if (mrk->isType(MARKAnchorType))
+	{
+		QString message = tr("Delete the cross-reference target “%1”?").arg(mrk->label);
+		const int usageCount = m_Doc->crossReferenceTargetUsage(mrk->label);
+		if (usageCount > 0)
+		{
+			message += QStringLiteral("\n\n") + tr("%n page reference(s) use this target. They will remain in the document, display no value, and be flagged by Preflight until repaired or deleted.", nullptr, usageCount);
+		}
+		if (QMessageBox::warning(this, tr("Delete Cross-reference Target"), message,
+			QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes)
+			return;
+		if (!m_Doc->deleteCrossReferenceTarget(mrk->label))
+			return;
+	}
+	else if (mrk->isType(MARKNoteMasterType))
+	{
 		m_Doc->setUndoDelNote(mrk->getNotePtr());
+		m_Doc->eraseMark(mrk, true, mrk->getItemPtr(), true);
+	}
 	else
+	{
 		m_Doc->setUndoDelMark(mrk);
-	m_Doc->eraseMark(mrk, true, mrk->getItemPtr(), true);
+		m_Doc->eraseMark(mrk, true, mrk->getItemPtr(), true);
+	}
 	m_Doc->changed();
 	m_Doc->regionsChanged()->update(QRectF());
 	updateListView();
@@ -312,7 +340,13 @@ void MarksManager::on_listView_doubleClicked(const QModelIndex &index)
 
 void MarksManager::on_listView_itemSelectionChanged()
 {
-	bool isMark = (getMarkFromListView() != nullptr);
+	Mark* mark = getMarkFromListView();
+	bool isMark = (mark != nullptr);
 	EditButton->setEnabled(isMark);
 	DeleteButton->setEnabled(isMark);
+	const bool needsRepair = isBrokenCrossReference(mark);
+	EditButton->setText(needsRepair ? tr("Repair") : tr("Edit"));
+	EditButton->setToolTip(needsRepair
+		? tr("Choose an existing target for this broken page reference")
+		: tr("Edit the selected reference or mark"));
 }

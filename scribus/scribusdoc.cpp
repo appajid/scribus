@@ -2442,6 +2442,11 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 		}
 	}
 
+	if (markAction == "delete" && static_cast<MarkType>(is->getInt("type")) == MARKAnchorType)
+	{
+		flag_updateMarksLabels = true;
+		updateMarks(false);
+	}
 	scMW()->emitUpdateRequest(reqMarksUpdate);
 	if (currItem != nullptr && !isAutoNoteFrame)
 	{
@@ -18677,6 +18682,35 @@ void ScribusDoc::retargetMarkReferences(MarkType targetType, const QString& oldL
 	}
 }
 
+int ScribusDoc::crossReferenceTargetUsage(const QString& name) const
+{
+	const QString targetName = name.trimmed();
+	int count = 0;
+	for (const Mark* reference : m_docMarksList)
+	{
+		if (reference && reference->isType(MARK2MarkType)
+			&& reference->getDestMarkType() == MARKAnchorType
+			&& reference->getDestMarkName() == targetName)
+			++count;
+	}
+	return count;
+}
+
+bool ScribusDoc::deleteCrossReferenceTarget(const QString& name)
+{
+	Mark* target = crossReferenceTarget(name.trimmed());
+	if (!target)
+		return false;
+	setUndoDelMark(target);
+	eraseMark(target, true, target->getItemPtr(), true);
+	flag_updateMarksLabels = true;
+	changed();
+	regionsChanged()->update(QRectF());
+	if (scMW())
+		scMW()->emitUpdateRequest(reqMarksUpdate);
+	return true;
+}
+
 bool ScribusDoc::renameCrossReferenceTarget(const QString& oldName, const QString& newName)
 {
 	Mark* target = crossReferenceTarget(oldName.trimmed());
@@ -18880,6 +18914,16 @@ bool ScribusDoc::eraseMark(Mark *mrk, bool fromText, PageItem *item, bool force)
 			MarkType t = m->getDestMarkType();
 			if (mrk == getMark(l, t))
 			{
+				if (mrk->isType(MARKAnchorType))
+				{
+					// Keep page-reference fields repairable when their target is
+					// deleted. Preflight will report their missing destination.
+					m->clearString();
+					PageItem* lastItem = nullptr;
+					for (PageItem* refItem = findMarkItem(m, lastItem); refItem; refItem = findMarkItem(m, lastItem))
+						refItem->invalidateLayout();
+					continue;
+				}
 				setUndoDelMark(m);
 				eraseMark(m, true, nullptr, true);
 			}

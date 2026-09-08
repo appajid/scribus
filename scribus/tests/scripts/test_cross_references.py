@@ -196,4 +196,26 @@ check(
     "saving silently deleted or rewrote the broken reference",
 )
 
+step("deleting a used target without deleting its page-reference fields")
+expect_error(
+    lambda: scribus.deleteCrossReferenceTarget("does-not-exist"),
+    "deleting a missing target did not report an error",
+)
+scribus.deleteCrossReferenceTarget(target_name)
+check(scribus.listCrossReferenceTargets() == [], "deleted target remains in the target list")
+check("BrokenCrossReference" in preflight_errors(), "target deletion did not flag dependent references")
+scribus.saveDoc()
+saved_data = read_sla(output_path)
+check(
+    b'label="chapter-renamed" type="0"' not in saved_data,
+    "deleted target was still serialized",
+)
+check(
+    b'MARKlabel="chapter-renamed"' in saved_data,
+    "target deletion silently removed a dependent page-reference field",
+)
+scribus.closeDoc()
+check(scribus.openDoc(output_path), "could not reopen the document after target deletion")
+check("BrokenCrossReference" in preflight_errors(), "broken reference did not survive reopen")
+
 print("CROSS_REFERENCE_QA_PASSED", flush=True)

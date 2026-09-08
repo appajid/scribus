@@ -324,6 +324,7 @@ PyMethodDef scribus_methods[] = {
 	{ "defineColorRGBFloat", scribus_newcolorrgb, METH_VARARGS, tr(scribus_newcolorrgbfloat__doc__)},
 	{ "dehyphenateText", scribus_dehyphenatetext, METH_VARARGS, tr(scribus_dehyphenatetext__doc__)},
 	{ "deleteColor", scribus_deletecolor, METH_VARARGS, tr(scribus_deletecolor__doc__)},
+	{ "deleteCrossReferenceTarget", scribus_deletecrossreferencetarget, METH_VARARGS, tr(scribus_deletecrossreferencetarget__doc__)},
 	{ "deleteLayer", scribus_deletelayer, METH_VARARGS, tr(scribus_deletelayer__doc__)},
 	{ "deleteMasterPage", scribus_deletemasterpage, METH_VARARGS, tr(scribus_deletemasterpage__doc__)},
 	{ "deleteObject", scribus_deleteobject, METH_VARARGS, tr(scribus_deleteobject__doc__)},

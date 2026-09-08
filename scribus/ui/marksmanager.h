@@ -26,6 +26,7 @@ private:
 	ScribusDoc* m_Doc {nullptr};
 	PrefsContext* m_prefs {nullptr};
 	Mark* getMarkFromListView();
+	bool isBrokenCrossReference(const Mark* mark) const;
 	void addListItem(MarkType typeMrk, const QString& typeStr, const QList<Mark *> &marks, int &index);
 	QStringList m_expandedItems;
 	void storeColaption();

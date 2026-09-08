@@ -1900,6 +1900,8 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		Mark* insertCrossReferenceTarget(const QString& name, PageItem* item, int position = -1);
 		Mark* insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position = -1,
 			const QString& label = QString());
+		bool deleteCrossReferenceTarget(const QString& name);
+		int crossReferenceTargetUsage(const QString& name) const;
 		bool renameCrossReferenceTarget(const QString& oldName, const QString& newName);
 		QString crossReferencePageNumber(const QString& targetName) const;
 

@@ -894,6 +894,29 @@ PyObject *scribus_createcrossreferencetarget(PyObject* /* self */, PyObject* arg
 	return PyUnicode_FromString(target->label.toUtf8().constData());
 }
 
+PyObject *scribus_deletecrossreferencetarget(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString targetName = QString::fromUtf8(name.c_str()).trimmed();
+	if (!currentDoc->crossReferenceTarget(targetName))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(targetName).toUtf8().constData());
+		return nullptr;
+	}
+	if (!currentDoc->deleteCrossReferenceTarget(targetName))
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The cross-reference target could not be deleted.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	Py_RETURN_NONE;
+}
+
 PyObject *scribus_insertcrossreference(PyObject* /* self */, PyObject* args)
 {
 	PyESString targetName;
