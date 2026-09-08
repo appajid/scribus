@@ -1623,7 +1623,7 @@ void ActionManager::languageChange()
 	(*scrActions)["editColorsAndFills"]->setTexts( tr("Colors and Fills..."));
 	(*scrActions)["editReplaceColors"]->setTexts( tr("Replace Colors..."));
 	(*scrActions)["editStyles"]->setTexts( tr("S&tyles..."));
-	(*scrActions)["editMarks"]->setTexts( tr("Marks..."));
+	(*scrActions)["editMarks"]->setTexts( tr("References and Marks..."));
 	(*scrActions)["editVariables"]->setTexts( tr("Variables..."));
 	(*scrActions)["editNotesStyles"]->setTexts( tr("Notes Styles..."));
 	(*scrActions)["editMasterPages"]->setTexts( tr("&Master Pages..."));

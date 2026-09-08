@@ -6,6 +6,8 @@
 #include "scribusdoc.h"
 #include "undomanager.h"
 #include "util.h"
+#include "iconmanager.h"
+#include <QHeaderView>
 #include <QStandardItemModel>
 
 MarksManager::MarksManager(QWidget *parent, const char *name)
@@ -14,8 +16,13 @@ MarksManager::MarksManager(QWidget *parent, const char *name)
 	setupUi(this);
 	listView->setSelectionMode(QAbstractItemView::SingleSelection);
 	listView->setSortingEnabled(true);
-	listView->setHeaderHidden(true);
-	listView->setColumnCount(1);
+	listView->setHeaderHidden(false);
+	listView->setColumnCount(3);
+	listView->setAlternatingRowColors(true);
+	listView->setUniformRowHeights(true);
+	listView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+	listView->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	listView->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 	QString pname(name);
 	if (pname.isEmpty())
 		pname = "marksManager";
@@ -41,6 +48,7 @@ void MarksManager::addListItem(MarkType typeMrk, const QString& typeStr, const Q
 	listItem->setText(0,typeStr);
 	listItem->setFlags(listItem->flags() & (~Qt::ItemIsSelectable));
 	listItem->setBackground(0, this->palette().color(QPalette::AlternateBase));
+	listItem->setFirstColumnSpanned(true);
 	for (int i = 0; i < marks.size(); ++i)
 	{
 		if (marks[i]->isType(typeMrk))
@@ -55,7 +63,39 @@ void MarksManager::addListItem(MarkType typeMrk, const QString& typeStr, const Q
 				listItem2->setText(0, marks[i]->getString());
 			else
 				listItem2->setText(0, marks[i]->label);
-			listItem2->setData(1, Qt::UserRole, QVariant::fromValue<void*>(marks[i]));
+			listItem2->setData(0, Qt::UserRole, QVariant::fromValue<void*>(marks[i]));
+
+			PageItem* markItem = m_Doc->findFirstMarkItem(marks[i]);
+			if (markItem && markItem->OwnPage >= 0 && markItem->OwnPage < m_Doc->DocPages.count())
+				listItem2->setText(1, m_Doc->getSectionPageNumberForPageIndex(static_cast<uint>(markItem->OwnPage)));
+			else
+				listItem2->setText(1, QStringLiteral("\u2014"));
+
+			if (typeMrk == MARKAnchorType)
+			{
+				if (markItem)
+					listItem2->setText(2, tr("Target"));
+				else
+				{
+					listItem2->setText(2, tr("Not placed"));
+					listItem2->setIcon(2, IconManager::instance().loadIcon("alert-warning"));
+					listItem2->setToolTip(2, tr("This target is not present in document text."));
+				}
+			}
+			else if (typeMrk == MARK2MarkType)
+			{
+				const QString targetName = marks[i]->getDestMarkName();
+				Mark* target = m_Doc->getMark(targetName, marks[i]->getDestMarkType());
+				PageItem* targetItem = target ? m_Doc->findFirstMarkItem(target) : nullptr;
+				if (target && targetItem)
+					listItem2->setText(2, tr("To %1").arg(targetName));
+				else
+				{
+					listItem2->setText(2, tr("Missing: %1").arg(targetName));
+					listItem2->setIcon(2, IconManager::instance().loadIcon("alert-warning"));
+					listItem2->setToolTip(2, tr("Edit this page reference and choose an existing target."));
+				}
+			}
 			index++;
 			noSuchMarks = false;
 		}
@@ -155,10 +195,13 @@ void MarksManager::changeEvent(QEvent *e)
 void MarksManager::languageChange()
 {
 	retranslateUi(this);
+	setWindowTitle(tr("References and Marks"));
+	listView->setHeaderLabels({tr("Name"), tr("Page"), tr("Details")});
+	UpdateButton->setText(tr("Update References and Marks"));
 
-	listView->setToolTip(tr("Double click to find mark in text"));
-	UpdateButton->setToolTip(tr("Update all reference texts for all marks"));
-	EditButton->setToolTip(tr("Edit selected mark"));
+	listView->setToolTip(tr("Double-click an entry to locate it in the document"));
+	UpdateButton->setToolTip(tr("Update all page references, variables, and marks"));
+	EditButton->setToolTip(tr("Edit the selected reference or mark"));
 	if (m_Doc != nullptr)
 		updateListView();
 }
@@ -186,7 +229,7 @@ Mark* MarksManager::getMarkFromListView()
 	QTreeWidgetItem* selectedItem = listView->currentItem();
 	if (selectedItem == nullptr)
 		return nullptr;
-	Mark* mrk = reinterpret_cast<Mark*>(selectedItem->data(1, Qt::UserRole).value<void*>());
+	Mark* mrk = reinterpret_cast<Mark*>(selectedItem->data(0, Qt::UserRole).value<void*>());
 	return mrk;
 }
 
