@@ -853,6 +853,119 @@ PyObject *scribus_setrtl(PyObject* /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject *scribus_createcrossreferencetarget(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString objectName;
+	int position = -1;
+	if (!PyArg_ParseTuple(args, "es|esi", "utf-8", name.ptr(), "utf-8", objectName.ptr(), &position))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(objectName.c_str()));
+	if (!item)
+		return nullptr;
+	if (!item->isTextFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Cannot insert a cross-reference target into a non-text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (position < -1 || position > item->itemText.length())
+	{
+		PyErr_SetString(PyExc_IndexError, QObject::tr("Insert index out of bounds.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+
+	const QString targetName = QString::fromUtf8(name.c_str()).trimmed();
+	if (targetName.isEmpty() || currentDoc->crossReferenceTarget(targetName))
+	{
+		PyErr_SetString(NameExistsError, QObject::tr("A cross-reference target named '%1' already exists, or the name is empty.", "python error").arg(targetName).toUtf8().constData());
+		return nullptr;
+	}
+	Mark* target = currentDoc->insertCrossReferenceTarget(targetName, item, position);
+	if (!target)
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The cross-reference target could not be inserted.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	return PyUnicode_FromString(target->label.toUtf8().constData());
+}
+
+PyObject *scribus_insertcrossreference(PyObject* /* self */, PyObject* args)
+{
+	PyESString targetName;
+	PyESString objectName;
+	PyESString label;
+	int position = -1;
+	if (!PyArg_ParseTuple(args, "es|esies", "utf-8", targetName.ptr(), "utf-8", objectName.ptr(), &position,
+		"utf-8", label.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(objectName.c_str()));
+	if (!item)
+		return nullptr;
+	if (!item->isTextFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Cannot insert a cross-reference into a non-text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (position < -1 || position > item->itemText.length())
+	{
+		PyErr_SetString(PyExc_IndexError, QObject::tr("Insert index out of bounds.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+
+	const QString requestedTarget = QString::fromUtf8(targetName.c_str()).trimmed();
+	if (!currentDoc->crossReferenceTarget(requestedTarget))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(requestedTarget).toUtf8().constData());
+		return nullptr;
+	}
+	Mark* reference = currentDoc->insertCrossReferencePageNumber(requestedTarget, item, position,
+		QString::fromUtf8(label.c_str()));
+	if (!reference)
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The page reference could not be inserted.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	return PyUnicode_FromString(reference->label.toUtf8().constData());
+}
+
+PyObject *scribus_getcrossreferencepage(PyObject* /* self */, PyObject* args)
+{
+	PyESString targetName;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", targetName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requestedTarget = QString::fromUtf8(targetName.c_str()).trimmed();
+	if (!currentDoc->crossReferenceTarget(requestedTarget))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(requestedTarget).toUtf8().constData());
+		return nullptr;
+	}
+	return PyUnicode_FromString(currentDoc->crossReferencePageNumber(requestedTarget).toUtf8().constData());
+}
+
+PyObject *scribus_listcrossreferencetargets(PyObject* /* self */)
+{
+	if (!checkHaveDocument())
+		return nullptr;
+	const QStringList targets = ScCore->primaryMainWindow()->doc->marksLabelsList(MARKAnchorType);
+	PyObject* list = PyList_New(targets.size());
+	if (!list)
+		return nullptr;
+	for (int i = 0; i < targets.size(); ++i)
+		PyList_SET_ITEM(list, i, PyUnicode_FromString(targets.at(i).toUtf8().constData()));
+	return list;
+}
+
 PyObject *scribus_createvariable(PyObject* /* self */, PyObject* args)
 {
 	PyESString name;

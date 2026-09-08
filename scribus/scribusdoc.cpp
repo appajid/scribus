@@ -18564,6 +18564,105 @@ Mark *ScribusDoc::newMark(const Mark* mrk)
 	return newMark;
 }
 
+Mark* ScribusDoc::crossReferenceTarget(const QString& name) const
+{
+	const QString targetName = name.trimmed();
+	for (Mark* mark : m_docMarksList)
+	{
+		if (mark && mark->isType(MARKAnchorType) && mark->label == targetName)
+			return mark;
+	}
+	return nullptr;
+}
+
+Mark* ScribusDoc::insertCrossReferenceTarget(const QString& name, PageItem* item, int position)
+{
+	const QString targetName = name.trimmed();
+	if (targetName.isEmpty() || crossReferenceTarget(targetName) || !item || !item->isTextFrame()
+		|| position < -1 || position > item->itemText.length())
+		return nullptr;
+	if (position < 0)
+		position = item->itemText.length();
+
+	MarkData data;
+	data.itemName = item->itemName();
+	data.itemPtr = item;
+	Mark* mark = newMark();
+	mark->setValues(targetName, item->OwnPage, MARKAnchorType, data);
+	item->itemText.insertMark(mark, position);
+	item->invalidateLayout();
+	flag_updateMarksLabels = true;
+
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new ScItemsState(UndoManager::InsertMark);
+		state->set("MARK", QStringLiteral("new"));
+		state->set("ETEA", mark->label);
+		state->set("label", mark->label);
+		state->set("type", static_cast<int>(mark->getType()));
+		state->set("strtxt", mark->getString());
+		state->set("at", position);
+		state->insertItem("inItem", item);
+		m_undoManager->action(this, state);
+	}
+	changed();
+	return mark;
+}
+
+Mark* ScribusDoc::insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position,
+	const QString& label)
+{
+	Mark* target = crossReferenceTarget(targetName);
+	if (!target || !item || !item->isTextFrame() || position < -1 || position > item->itemText.length())
+		return nullptr;
+	if (position < 0)
+		position = item->itemText.length();
+
+	QString referenceLabel = label.trimmed();
+	if (referenceLabel.isEmpty())
+		referenceLabel = tr("Page reference to %1").arg(target->label);
+	getUniqueName(referenceLabel, marksLabelsList(MARK2MarkType), QStringLiteral("_"));
+
+	MarkData data;
+	data.itemName = item->itemName();
+	data.destMarkName = target->label;
+	data.destMarkType = target->getType();
+	data.text = crossReferencePageNumber(target->label);
+	Mark* mark = newMark();
+	mark->setValues(referenceLabel, item->OwnPage, MARK2MarkType, data);
+	item->itemText.insertMark(mark, position);
+	item->invalidateLayout();
+	flag_updateMarksLabels = true;
+
+	if (UndoManager::undoEnabled())
+	{
+		auto* state = new ScItemsState(UndoManager::InsertMark);
+		state->set("MARK", QStringLiteral("new"));
+		state->set("ETEA", mark->label);
+		state->set("label", mark->label);
+		state->set("type", static_cast<int>(mark->getType()));
+		state->set("strtxt", mark->getString());
+		state->set("dName", mark->getDestMarkName());
+		state->set("dType", static_cast<int>(mark->getDestMarkType()));
+		state->set("at", position);
+		state->insertItem("inItem", item);
+		m_undoManager->action(this, state);
+	}
+	changed();
+	return mark;
+}
+
+QString ScribusDoc::crossReferencePageNumber(const QString& targetName) const
+{
+	Mark* target = crossReferenceTarget(targetName);
+	if (!target)
+		return QString();
+	const PageItem* item = findFirstMarkItem(target);
+	if (!item || item->OwnPage < 0 || item->OwnPage >= DocPages.count())
+		return QString();
+	return getSectionPageNumberForPageIndex(static_cast<uint>(item->OwnPage));
+}
+
 TextNote *ScribusDoc::newNote(NotesStyle* noteStyle)
 {
 	TextNote* newNote = new TextNote(noteStyle);

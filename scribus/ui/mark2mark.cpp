@@ -13,7 +13,7 @@ Mark2Mark::Mark2Mark(const QList<Mark*>& marks, Mark* omitMark, QWidget *parent)
 
 	int index = 0;
 	typeMrk = MARKAnchorType;
-	typeStr = tr("Anchors");
+	typeStr = tr("Cross-reference Targets");
 	//adding name of marks type, and make it unselectable
 	LabelList->addItem("+++ " + typeStr);
 	qobject_cast<QStandardItemModel *>(LabelList->model())->item(++index)->setEnabled(false);
@@ -72,7 +72,7 @@ Mark2Mark::Mark2Mark(const QList<Mark*>& marks, Mark* omitMark, QWidget *parent)
 //			index++;
 //		}
 //	}
-	setWindowTitle(tr("Reference to Mark"));
+	setWindowTitle(tr("Page Reference"));
 }
 
 void Mark2Mark::values(QString& label, Mark* &mrk)

@@ -1739,11 +1739,11 @@ void ActionManager::languageChange()
 	(*scrActions)["insertGlyph"]->setTexts( tr("&Glyph..."));
 	(*scrActions)["insertSampleText"]->setTexts( tr("Sample Text..."));
 	(*scrActions)["stickyTools"]->setTexts( tr("Sticky Tools"));
-	(*scrActions)["insertMarkAnchor"]->setTexts( tr("Anchor Mark"));
+	(*scrActions)["insertMarkAnchor"]->setTexts( tr("Cross-reference Target"));
 	(*scrActions)["insertMarkVariableText"]->setTexts( tr("Variable Text"));
 	(*scrActions)["insertDynamicVariable"]->setTexts( tr("Variable..."));
 	(*scrActions)["insertMarkItem"]->setTexts( tr("Reference to Item"));
-	(*scrActions)["insertMark2Mark"]->setTexts( tr("Reference to Mark"));
+	(*scrActions)["insertMark2Mark"]->setTexts( tr("Page Reference"));
 	(*scrActions)["insertMarkNote"]->setTexts( tr("Foot/Endnote"));
 	(*scrActions)["insertMarkIndex"]->setTexts( tr("Index Entry"));
 	(*scrActions)["editMark"]->setTexts( tr("Edit Mark"));

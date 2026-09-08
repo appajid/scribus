@@ -106,10 +106,10 @@ void MarksManager::updateListView()
 	{
 		UpdateButton->setEnabled(true);
 		int index = 0;
-		addListItem(MARKAnchorType, tr("Anchors"), m_Doc->marksList(), index);
+		addListItem(MARKAnchorType, tr("Cross-reference Targets"), m_Doc->marksList(), index);
 		addListItem(MARKVariableTextType, tr("Variable Text"), m_Doc->marksList(), index);
 		addListItem(MARK2ItemType, tr("Marks to Items"), m_Doc->marksList(), index);
-		addListItem(MARK2MarkType, tr("Marks to Anchors"), m_Doc->marksList(), index);
+		addListItem(MARK2MarkType, tr("Page References"), m_Doc->marksList(), index);
 		addListItem(MARKNoteMasterType, tr("Notes marks"), m_Doc->marksList(), index);
 		addListItem(MARKIndexType, tr("Index Entries"), m_Doc->marksList(), index);
 		listView->sortByColumn(0, Qt::AscendingOrder);

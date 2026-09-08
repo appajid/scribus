@@ -1896,6 +1896,11 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		Mark* getMark(const QString& label, MarkType type); //returns mark with label and type (labels are unique only for same type marks)
 		Mark* getDynamicVariableMark(const QString& variableId) const;
 		Mark* newMark(const Mark* mrk = nullptr);
+		Mark* crossReferenceTarget(const QString& name) const;
+		Mark* insertCrossReferenceTarget(const QString& name, PageItem* item, int position = -1);
+		Mark* insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position = -1,
+			const QString& label = QString());
+		QString crossReferencePageNumber(const QString& targetName) const;
 
 		const QMap<QString, DynamicVariable>& dynamicVariables() const { return m_dynamicVariables; }
 		const DynamicVariable* dynamicVariable(const QString& id) const;

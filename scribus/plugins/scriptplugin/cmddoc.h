@@ -453,6 +453,22 @@ Sets whether the current document is right-to-left. \"rtl\" is a boolean.\n\
 "));
 PyObject *scribus_setrtl(PyObject * /*self*/, PyObject* args);
 
+PyDoc_STRVAR(scribus_createcrossreferencetarget__doc__,
+QT_TR_NOOP("createCrossReferenceTarget(name, [objectName, position=-1]) -> str\n\nCreates a named cross-reference target in a text frame and returns its name. A position of -1 appends it."));
+PyObject *scribus_createcrossreferencetarget(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_insertcrossreference__doc__,
+QT_TR_NOOP("insertCrossReference(target, [objectName, position=-1, label='']) -> str\n\nInserts a dynamic page-number reference to a named target and returns the reference label. A position of -1 appends it."));
+PyObject *scribus_insertcrossreference(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_getcrossreferencepage__doc__,
+QT_TR_NOOP("getCrossReferencePage(target) -> str\n\nReturns the current section-formatted page number for a named cross-reference target."));
+PyObject *scribus_getcrossreferencepage(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_listcrossreferencetargets__doc__,
+QT_TR_NOOP("listCrossReferenceTargets() -> list\n\nReturns the names of all cross-reference targets in the document."));
+PyObject *scribus_listcrossreferencetargets(PyObject *self);
+
 PyDoc_STRVAR(scribus_createvariable__doc__,
 QT_TR_NOOP("createVariable(name, value) -> str\n\nCreates a user-defined dynamic variable and returns its stable ID."));
 PyObject *scribus_createvariable(PyObject *self, PyObject* args);

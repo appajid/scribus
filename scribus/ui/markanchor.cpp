@@ -4,7 +4,7 @@ MarkAnchor::MarkAnchor(QWidget *parent) :
 	MarkInsert(parent)
 {
 	setupUi(this);
-	setWindowTitle(tr("Anchor Mark"));
+	setWindowTitle(tr("Cross-reference Target"));
 }
 
 void MarkAnchor:: values(QString& label)

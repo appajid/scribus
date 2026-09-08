@@ -92,6 +92,22 @@ add_running_header_test(runningheader_sections test_running_header_sections.py
 add_running_header_test(runningheader_scale test_running_header_scale.py
 	"RUNNING_HEADER_SCALE_QA_PASSED" 180)
 
+set(crossreference_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-crossreference_core")
+file(MAKE_DIRECTORY "${crossreference_prefs_dir}")
+add_test(NAME crossreference_core
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${crossreference_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_cross_references.py")
+set_tests_properties(crossreference_core PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;cross-references"
+	PASS_REGULAR_EXPRESSION "CROSS_REFERENCE_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
 find_program(PDFTOTEXT_EXECUTABLE pdftotext)
 if(NOT PDFTOTEXT_EXECUTABLE)
 	set_tests_properties(runningheader_masters PROPERTIES DISABLED TRUE)
