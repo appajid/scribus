@@ -7,6 +7,7 @@
 
 #include "textcontext.h"
 #include "pageitem.h"
+#include "pageitem_textframe.h"
 #include "sctextstruct.h"
 #include "style.h"
 #include "styles/charstyle.h"
@@ -39,7 +40,18 @@ PageItem* TextContext::object(const InlineFrame& frame)  const
 
 QRectF TextContext::getVisualBoundingBox(const InlineFrame& frame)  const
 {
-	return object(frame)->getVisualBoundingRect();
+	PageItem* embedded = object(frame);
+	if (!embedded)
+		return QRectF();
+	if (embedded->anchorPosition().mode == AnchorPosition::Mode::Custom)
+		return QRectF();
+	return embedded->getVisualBoundingRect();
+}
+
+QRectF TextContext::anchoredObjectRect(const InlineFrame& frame, int storyPosition) const
+{
+	const auto* textFrame = dynamic_cast<const PageItem_TextFrame*>(m_frame);
+	return textFrame ? textFrame->resolvedAnchoredObjectRect(frame.getInlineCharID(), storyPosition) : QRectF();
 }
 	
 QString TextContext::expand(const ExpansionPoint& expansion)

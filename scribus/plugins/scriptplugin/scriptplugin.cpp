@@ -33,6 +33,7 @@ for which a new license (GPL+exception) is in place.
 
 
 // include cmdvar.h first, as it pulls in <Python.h>
+#include "anchorposition.h"
 #include "cmdannotations.h"
 #include "cmdbarcode.h"
 #include "cmdcell.h"
@@ -339,6 +340,9 @@ PyMethodDef scribus_methods[] = {
 	{ "fileQuit", scribus_filequit, METH_VARARGS, tr(scribus_filequit__doc__)},
 	{ "flipObject", scribus_flipobject, METH_VARARGS, tr(scribus_flipobject__doc__)},
 	{ "getActiveLayer", (PyCFunction) scribus_getactivelayer, METH_NOARGS, tr(scribus_getactivelayer__doc__)},
+	{ "getAnchoredObjectOptions", scribus_getanchoredobjectoptions, METH_VARARGS, tr(scribus_getanchoredobjectoptions__doc__)},
+	{ "getAnchoredObjectRect", scribus_getanchoredobjectrect, METH_VARARGS, tr(scribus_getanchoredobjectrect__doc__)},
+	{ "getAnchoredObjectRects", scribus_getanchoredobjectrects, METH_VARARGS, tr(scribus_getanchoredobjectrects__doc__)},
 	{ "getAllObjects", (PyCFunction) scribus_getallobjects, METH_VARARGS|METH_KEYWORDS, tr(scribus_getallobjects__doc__)},
 	{ "getAllStyles", (PyCFunction) scribus_getparagraphstyles, METH_NOARGS, tr(scribus_getallstyles__doc__)}, //Deprecated
 	{ "getAllText", scribus_getalltext, METH_VARARGS, tr(scribus_getalltext__doc__)},
@@ -466,6 +470,7 @@ PyMethodDef scribus_methods[] = {
 	{ "hyphenateText", scribus_hyphenatetext, METH_VARARGS, tr(scribus_hyphenatetext__doc__)},
 	{ "importPage", scribus_importpage, METH_VARARGS, tr(scribus_importpage__doc__)},
 	{ "insertCrossReference", scribus_insertcrossreference, METH_VARARGS, tr(scribus_insertcrossreference__doc__)},
+	{ "insertAnchoredObject", scribus_insertanchoredobject, METH_VARARGS, tr(scribus_insertanchoredobject__doc__)},
 	{ "insertHtmlText", scribus_inserthtmltext, METH_VARARGS, tr(scribus_inserthtmltext__doc__)},
 	{ "insertTableColumns", scribus_inserttablecolumns, METH_VARARGS, tr(scribus_inserttablecolumns__doc__)},
 	{ "insertTableRows", scribus_inserttablerows, METH_VARARGS, tr(scribus_inserttablerows__doc__)},
@@ -547,6 +552,7 @@ PyMethodDef scribus_methods[] = {
 	{ "sendToLayer", scribus_sendtolayer, METH_VARARGS, tr(scribus_sendtolayer__doc__)},
 	{ "sentToLayer", scribus_sendtolayer, METH_VARARGS, tr(scribus_sendtolayer__doc__)}, // Deprecated, alias to sentToLayer
 	{ "setActiveLayer", scribus_setactivelayer, METH_VARARGS, tr(scribus_setactivelayer__doc__)},
+	{ "setAnchoredObjectOptions", scribus_setanchoredobjectoptions, METH_VARARGS, tr(scribus_setanchoredobjectoptions__doc__)},
 	{ "setBaseLine", scribus_setbaseline, METH_VARARGS, tr(scribus_setbaseline__doc__)},
 	{ "setBleeds", scribus_setbleeds, METH_VARARGS, tr(scribus_setbleeds__doc__)},
 	{ "setCellBottomBorder", scribus_setcellbottomborder, METH_VARARGS, tr(scribus_setcellbottomborder__doc__)},
@@ -820,6 +826,35 @@ PyObject* PyInit_scribus(void)
 	// Text direction
 	PyDict_SetItemString(d, "DIRECTION_LTR", Py_BuildValue("i", 0));
 	PyDict_SetItemString(d, "DIRECTION_RTL", Py_BuildValue("i", 1));
+	// Anchored object positioning and text wrap
+	PyDict_SetItemString(d, "ANCHOR_MODE_INLINE", PyLong_FromLong(static_cast<int>(AnchorPosition::Mode::Inline)));
+	PyDict_SetItemString(d, "ANCHOR_MODE_ABOVE_LINE", PyLong_FromLong(static_cast<int>(AnchorPosition::Mode::AboveLine)));
+	PyDict_SetItemString(d, "ANCHOR_MODE_CUSTOM", PyLong_FromLong(static_cast<int>(AnchorPosition::Mode::Custom)));
+	PyDict_SetItemString(d, "ANCHOR_HREF_CHARACTER", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalReference::AnchorCharacter)));
+	PyDict_SetItemString(d, "ANCHOR_HREF_COLUMN", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalReference::TextColumn)));
+	PyDict_SetItemString(d, "ANCHOR_HREF_FRAME", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalReference::TextFrame)));
+	PyDict_SetItemString(d, "ANCHOR_HREF_PAGE", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalReference::Page)));
+	PyDict_SetItemString(d, "ANCHOR_HREF_SPREAD", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalReference::Spread)));
+	PyDict_SetItemString(d, "ANCHOR_VREF_LINE", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalReference::AnchorLine)));
+	PyDict_SetItemString(d, "ANCHOR_VREF_PARAGRAPH", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalReference::Paragraph)));
+	PyDict_SetItemString(d, "ANCHOR_VREF_FRAME", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalReference::TextFrame)));
+	PyDict_SetItemString(d, "ANCHOR_VREF_PAGE", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalReference::Page)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_LEFT", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::Left)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_CENTER", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::Center)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_RIGHT", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::Right)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_SPINE", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::Spine)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_AWAY_FROM_SPINE", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::AwayFromSpine)));
+	PyDict_SetItemString(d, "ANCHOR_HALIGN_CUSTOM", PyLong_FromLong(static_cast<int>(AnchorPosition::HorizontalAlignment::Custom)));
+	PyDict_SetItemString(d, "ANCHOR_VALIGN_TOP", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalAlignment::Top)));
+	PyDict_SetItemString(d, "ANCHOR_VALIGN_CENTER", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalAlignment::Center)));
+	PyDict_SetItemString(d, "ANCHOR_VALIGN_BOTTOM", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalAlignment::Bottom)));
+	PyDict_SetItemString(d, "ANCHOR_VALIGN_BASELINE", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalAlignment::Baseline)));
+	PyDict_SetItemString(d, "ANCHOR_VALIGN_CUSTOM", PyLong_FromLong(static_cast<int>(AnchorPosition::VerticalAlignment::Custom)));
+	PyDict_SetItemString(d, "ANCHOR_WRAP_NONE", PyLong_FromLong(static_cast<int>(AnchorPosition::WrapMode::None)));
+	PyDict_SetItemString(d, "ANCHOR_WRAP_BOUNDING_BOX", PyLong_FromLong(static_cast<int>(AnchorPosition::WrapMode::BoundingBox)));
+	PyDict_SetItemString(d, "ANCHOR_WRAP_FRAME_SHAPE", PyLong_FromLong(static_cast<int>(AnchorPosition::WrapMode::FrameShape)));
+	PyDict_SetItemString(d, "ANCHOR_WRAP_CONTOUR", PyLong_FromLong(static_cast<int>(AnchorPosition::WrapMode::Contour)));
+	PyDict_SetItemString(d, "ANCHOR_WRAP_IMAGE_CLIP", PyLong_FromLong(static_cast<int>(AnchorPosition::WrapMode::ImageClipPath)));
 	// First line offset
 	PyDict_SetItemString(d, "FLOP_REALGLYPHHEIGHT", Py_BuildValue("i", (int) FLOPRealGlyphHeight));
 	PyDict_SetItemString(d, "FLOP_FONTASCENT", Py_BuildValue("i", (int) FLOPFontAscent));

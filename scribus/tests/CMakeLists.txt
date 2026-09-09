@@ -115,6 +115,22 @@ set_tests_properties(crossreference_core PROPERTIES
 	RUN_SERIAL TRUE
 	TIMEOUT 120)
 
+set(anchored_object_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-anchored_objects")
+file(MAKE_DIRECTORY "${anchored_object_prefs_dir}")
+add_test(NAME anchored_objects
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${anchored_object_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_anchored_objects.py")
+set_tests_properties(anchored_objects PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;anchored-objects"
+	PASS_REGULAR_EXPRESSION "ANCHORED_OBJECT_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
 find_program(PDFTOTEXT_EXECUTABLE pdftotext)
 if(NOT PDFTOTEXT_EXECUTABLE)
 	set_tests_properties(runningheader_masters PROPERTIES DISABLED TRUE)

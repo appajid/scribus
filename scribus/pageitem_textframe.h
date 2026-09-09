@@ -76,6 +76,7 @@ public:
 	 * TableCell::updateContent().
 	 */
 	void setDerivedVerticalAlignment(int val);
+	QRectF resolvedAnchoredObjectRect(int inlineCharId, int storyPosition = -1) const;
 
 	void clearContents() override;
 	void truncateContents() override;
@@ -149,6 +150,15 @@ protected:
 	void adjustParagraphEndings ();
 
 private:
+	bool updateAnchoredObjectRects();
+	QRegion anchoredObjectInteractionRegion(const PageItem* item, const QRectF& objectRect) const;
+	QRectF anchorHorizontalReferenceRect(const AnchorPosition& anchor, const QPointF& anchorPoint, const QRectF& columnRect) const;
+	QRectF anchorVerticalReferenceRect(const AnchorPosition& anchor, const QRectF& paragraphRect) const;
+	QRectF pageRectInFrameCoordinates(int pageIndex) const;
+	QRectF spreadRectInFrameCoordinates(int pageIndex) const;
+
+	QHash<int, QRectF> m_anchoredObjectRects;
+	int m_anchorLayoutDepth { 0 };
 	bool cursorBiasBackward {false};
 	// If the last paragraph had to be split, this is how many lines of the paragraph are in this frame.
 	// Used for orphan/widow control

@@ -238,6 +238,58 @@ empty flowing is reverted.
 PyObject *scribus_settextflowmode(PyObject * /*self*/, PyObject* args);
 
 /*! docstring */
+PyDoc_STRVAR(scribus_insertanchoredobject__doc__,
+QT_TR_NOOP("insertAnchoredObject(\"object\", \"textFrame\" [, position=-1]) -> int\n\
+\n\
+Moves an existing page object into the document's inline-item collection and\n\
+inserts it at the requested character position in a text frame. Image frames,\n\
+tables, shapes and groups are supported. A negative position appends to the\n\
+story. The returned integer is the embedded-object identifier.\n\
+"));
+PyObject *scribus_insertanchoredobject(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_getanchoredobjectoptions__doc__,
+QT_TR_NOOP("getAnchoredObjectOptions(\"name\") -> dict\n\
+\n\
+Returns the positioning and text-wrap options for an inline or anchored object.\n\
+Distances are returned in the document's current measurement unit.\n\
+"));
+PyObject *scribus_getanchoredobjectoptions(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_setanchoredobjectoptions__doc__,
+QT_TR_NOOP("setAnchoredObjectOptions(\"name\", options)\n\
+\n\
+Updates an inline object's anchor options from a dictionary. Supported keys are\n\
+mode, horizontalReference, verticalReference, horizontalAlignment,\n\
+verticalAlignment, wrapMode, xOffset, yOffset, wrapLeft, wrapTop, wrapRight,\n\
+wrapBottom, keepWithinBounds and preventManualPositioning. Missing keys retain\n\
+their current values. Distances use the document's current measurement unit.\n\
+Use the ANCHOR_* constants exposed by the scribus module for enum values.\n\
+"));
+PyObject *scribus_setanchoredobjectoptions(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_getanchoredobjectrect__doc__,
+QT_TR_NOOP("getAnchoredObjectRect(\"name\", \"textFrame\") -> (x, y, width, height)\n\
+\n\
+Returns the resolved anchored-object rectangle relative to the text frame, in\n\
+the document's current measurement unit. The frame is laid out first.\n\
+"));
+PyObject *scribus_getanchoredobjectrect(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_getanchoredobjectrects__doc__,
+QT_TR_NOOP("getAnchoredObjectRects(\"name\", \"textFrame\") -> list\n\
+\n\
+Returns one resolved rectangle for every occurrence of the anchored object in\n\
+the supplied story, ordered by story position. Distances are in the document's\n\
+current measurement unit.\n\
+"));
+PyObject *scribus_getanchoredobjectrects(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
 PyDoc_STRVAR(scribus_objectexists__doc__,
 QT_TR_NOOP("objectExists([\"name\"]) -> bool\n\
 \n\
@@ -410,4 +462,3 @@ Returns the page number for the given page item.\n\
 PyObject *scribus_getitempagenumber(PyObject * /* self */, PyObject *args);
 
 #endif
-

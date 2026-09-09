@@ -34,6 +34,7 @@ public:
 	virtual /* const */ PageItem* object(const InlineFrame& frame) const;
 	
 	virtual QRectF getVisualBoundingBox(const InlineFrame& frame) const;
+	virtual QRectF anchoredObjectRect(const InlineFrame& frame, int storyPosition) const;
 	virtual const CharStyle& charStyle() const;
 	virtual const ParagraphStyle& paragraphStyle() const;
 	virtual QString expand(const ExpansionPoint& expansion); 

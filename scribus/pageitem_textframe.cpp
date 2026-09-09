@@ -211,7 +211,224 @@ QRegion PageItem_TextFrame::calcAvailableRegion()
 		} // for all docItems
 	} // if(OnMasterPage.isEmpty()
 
+	for (auto it = m_anchoredObjectRects.constBegin(); it != m_anchoredObjectRects.constEnd(); ++it)
+	{
+		const int storyPosition = it.key();
+		PageItem* anchoredItem = storyPosition >= 0 && storyPosition < itemText.length() && itemText.hasObject(storyPosition)
+			? itemText.object(storyPosition).getPageItem(m_Doc) : nullptr;
+		if (!anchoredItem || !anchoredItem->anchorPosition().hasTextWrap())
+			continue;
+		result = result.subtracted(anchoredObjectInteractionRegion(anchoredItem, it.value()));
+	}
+
 	return result;
+}
+
+QRectF PageItem_TextFrame::resolvedAnchoredObjectRect(int inlineCharId, int storyPosition) const
+{
+	if (storyPosition >= 0)
+	{
+		if (storyPosition < itemText.length() && itemText.hasObject(storyPosition)
+			&& itemText.object(storyPosition).getInlineCharID() == inlineCharId)
+			return m_anchoredObjectRects.value(storyPosition);
+		return QRectF();
+	}
+	for (int position = 0; position < itemText.length(); ++position)
+	{
+		if (itemText.hasObject(position) && itemText.object(position).getInlineCharID() == inlineCharId)
+			return m_anchoredObjectRects.value(position);
+	}
+	return QRectF();
+}
+
+QRectF PageItem_TextFrame::pageRectInFrameCoordinates(int pageIndex) const
+{
+	if (pageIndex < 0 || pageIndex >= m_Doc->Pages->count())
+		return QRectF(0.0, 0.0, width(), height());
+
+	const ScPage* page = m_Doc->Pages->at(pageIndex);
+	QRectF pageRect(page->xOffset(), page->yOffset(), page->width(), page->height());
+	QTransform frameToCanvas;
+	frameToCanvas.translate(xPos(), yPos());
+	frameToCanvas.rotate(rotation());
+	bool invertible = false;
+	QTransform canvasToFrame = frameToCanvas.inverted(&invertible);
+	return invertible ? canvasToFrame.mapRect(pageRect) : QRectF(0.0, 0.0, width(), height());
+}
+
+QRectF PageItem_TextFrame::spreadRectInFrameCoordinates(int pageIndex) const
+{
+	if (pageIndex < 0 || pageIndex >= m_Doc->Pages->count())
+		return QRectF(0.0, 0.0, width(), height());
+
+	const ScPage* anchorPage = m_Doc->Pages->at(pageIndex);
+	QRectF spreadRect(anchorPage->xOffset(), anchorPage->yOffset(), anchorPage->width(), anchorPage->height());
+	for (const ScPage* page : *m_Doc->Pages)
+	{
+		if (qAbs(page->yOffset() - anchorPage->yOffset()) > 0.5)
+			continue;
+		spreadRect = spreadRect.united(QRectF(page->xOffset(), page->yOffset(), page->width(), page->height()));
+	}
+
+	QTransform frameToCanvas;
+	frameToCanvas.translate(xPos(), yPos());
+	frameToCanvas.rotate(rotation());
+	bool invertible = false;
+	QTransform canvasToFrame = frameToCanvas.inverted(&invertible);
+	return invertible ? canvasToFrame.mapRect(spreadRect) : QRectF(0.0, 0.0, width(), height());
+}
+
+QRectF PageItem_TextFrame::anchorHorizontalReferenceRect(const AnchorPosition& anchor, const QPointF& anchorPoint, const QRectF& columnRect) const
+{
+	switch (anchor.horizontalReference)
+	{
+		case AnchorPosition::HorizontalReference::AnchorCharacter:
+			return QRectF(anchorPoint, QSizeF());
+		case AnchorPosition::HorizontalReference::TextColumn:
+			return columnRect;
+		case AnchorPosition::HorizontalReference::TextFrame:
+			return QRectF(0.0, 0.0, width(), height());
+		case AnchorPosition::HorizontalReference::Page:
+			return pageRectInFrameCoordinates(OwnPage);
+		case AnchorPosition::HorizontalReference::Spread:
+			return spreadRectInFrameCoordinates(OwnPage);
+	}
+	return columnRect;
+}
+
+QRectF PageItem_TextFrame::anchorVerticalReferenceRect(const AnchorPosition& anchor, const QRectF& paragraphRect) const
+{
+	switch (anchor.verticalReference)
+	{
+		case AnchorPosition::VerticalReference::AnchorLine:
+			return QRectF();
+		case AnchorPosition::VerticalReference::Paragraph:
+			return paragraphRect;
+		case AnchorPosition::VerticalReference::TextFrame:
+			return QRectF(0.0, 0.0, width(), height());
+		case AnchorPosition::VerticalReference::Page:
+			return pageRectInFrameCoordinates(OwnPage);
+	}
+	return paragraphRect;
+}
+
+QRegion PageItem_TextFrame::anchoredObjectInteractionRegion(const PageItem* item, const QRectF& objectRect) const
+{
+	const AnchorPosition& anchor = item->anchorPosition();
+	QRegion region;
+	if (anchor.wrapMode == AnchorPosition::WrapMode::BoundingBox)
+		region = QRegion(objectRect.toAlignedRect());
+	else
+	{
+		QPolygon sourcePolygon;
+		if (anchor.wrapMode == AnchorPosition::WrapMode::Contour && !item->ContourLine.empty())
+		{
+			QList<uint> segments;
+			sourcePolygon = flattenPath(item->ContourLine, segments);
+		}
+		else if (anchor.wrapMode == AnchorPosition::WrapMode::ImageClipPath && !item->imageClip.empty())
+		{
+			QList<uint> segments;
+			sourcePolygon = flattenPath(item->imageClip, segments);
+		}
+		else
+			sourcePolygon = item->Clip;
+
+		QTransform rotationTransform;
+		rotationTransform.rotate(item->rotation());
+		QPolygon transformed = rotationTransform.map(sourcePolygon);
+		if (!transformed.isEmpty())
+		{
+			QRect sourceBounds = transformed.boundingRect();
+			transformed.translate(qRound(objectRect.left()) - sourceBounds.left(), qRound(objectRect.top()) - sourceBounds.top());
+			region = QRegion(transformed);
+		}
+		else
+			region = QRegion(objectRect.toAlignedRect());
+	}
+
+	const int left = qMax(0, qCeil(anchor.wrapOffsets.left()));
+	const int top = qMax(0, qCeil(anchor.wrapOffsets.top()));
+	const int right = qMax(0, qCeil(anchor.wrapOffsets.right()));
+	const int bottom = qMax(0, qCeil(anchor.wrapOffsets.bottom()));
+	QRegion horizontallyExpanded;
+	for (int x = -left; x <= right; ++x)
+		horizontallyExpanded = horizontallyExpanded.united(region.translated(x, 0));
+	QRegion expanded;
+	for (int y = -top; y <= bottom; ++y)
+		expanded = expanded.united(horizontallyExpanded.translated(0, y));
+	return expanded;
+}
+
+bool PageItem_TextFrame::updateAnchoredObjectRects()
+{
+	QHash<int, QRectF> resolvedRects;
+	const Box* root = textLayout.box();
+	if (!root)
+		return false;
+
+	auto paragraphRectForPosition = [this, root](int position) {
+		const uint paragraph = itemText.nrOfParagraph(position);
+		const int paragraphStart = itemText.startOfParagraph(paragraph);
+		const int paragraphEnd = itemText.endOfParagraph(paragraph);
+		QRectF paragraphRect;
+		for (const Box* column : root->boxes())
+		{
+			for (const Box* line : column->boxes())
+			{
+				if (line->lastChar() < paragraphStart || line->firstChar() > paragraphEnd)
+					continue;
+				QRectF lineRect(column->x() + line->x(), column->y() + line->y(), line->width(), line->height());
+				paragraphRect = paragraphRect.isNull() ? lineRect : paragraphRect.united(lineRect);
+			}
+		}
+		return paragraphRect;
+	};
+
+	for (const Box* column : root->boxes())
+	{
+		const QRectF columnRect = column->bbox();
+		for (const Box* line : column->boxes())
+		{
+			for (const Box* child : line->boxes())
+			{
+				if (child->type() != Box::T_Object)
+					continue;
+				const auto* objectBox = dynamic_cast<const ObjectBox*>(child);
+				PageItem* object = objectBox ? objectBox->object() : nullptr;
+				if (!object || object->anchorPosition().isInline())
+					continue;
+
+				const QPointF anchorPoint(column->x() + line->x() + child->x(),
+					column->y() + line->y() + line->ascent() + child->y());
+				const AnchorPosition& anchor = object->anchorPosition();
+				const QRectF horizontalReference = anchorHorizontalReferenceRect(anchor, anchorPoint, columnRect);
+				const QRectF verticalReference = anchorVerticalReferenceRect(anchor, paragraphRectForPosition(child->firstChar()));
+				const bool leftPage = OwnPage >= 0 && OwnPage < m_Doc->Pages->count()
+					&& m_Doc->locationOfPage(OwnPage) == LeftPage;
+				resolvedRects.insert(child->firstChar(),
+					anchor.resolvedRect(horizontalReference, verticalReference, anchorPoint,
+						object->getVisualBoundingRect().size(), leftPage));
+			}
+		}
+	}
+
+	bool changed = resolvedRects.size() != m_anchoredObjectRects.size();
+	if (!changed)
+	{
+		for (auto it = resolvedRects.constBegin(); it != resolvedRects.constEnd(); ++it)
+		{
+			const QRectF oldRect = m_anchoredObjectRects.value(it.key());
+			if (qAbs(oldRect.left() - it->left()) > 0.01 || qAbs(oldRect.top() - it->top()) > 0.01
+				|| qAbs(oldRect.width() - it->width()) > 0.01 || qAbs(oldRect.height() - it->height()) > 0.01)
+			{
+				changed = true;
+				break;
+			}
+		}
+	}
+	m_anchoredObjectRects = resolvedRects;
+	return changed;
 }
 
 void PageItem_TextFrame::setShadow()
@@ -3059,6 +3276,31 @@ void PageItem_TextFrame::layout()
 			}
 		}
 	}
+	if (m_anchorLayoutDepth == 0)
+	{
+		const bool anchorRectsChanged = updateAnchoredObjectRects();
+		bool hasAnchoredWrap = false;
+		for (auto it = m_anchoredObjectRects.constBegin(); it != m_anchoredObjectRects.constEnd(); ++it)
+		{
+			const int storyPosition = it.key();
+			PageItem* anchoredItem = storyPosition >= 0 && storyPosition < itemText.length() && itemText.hasObject(storyPosition)
+				? itemText.object(storyPosition).getPageItem(m_Doc) : nullptr;
+			if (anchoredItem && anchoredItem->anchorPosition().hasTextWrap())
+			{
+				hasAnchoredWrap = true;
+				break;
+			}
+		}
+		if (anchorRectsChanged && hasAnchoredWrap)
+		{
+			++m_anchorLayoutDepth;
+			invalid = true;
+			itemText.blockSignals(false);
+			layout();
+			--m_anchorLayoutDepth;
+			return;
+		}
+	}
 	invalid = false;
 	if (!isNoteFrame() && (!m_Doc->notesList().isEmpty() || m_Doc->notesChanged()))
 	{ //if notes are used
@@ -3076,6 +3318,7 @@ void PageItem_TextFrame::layout()
 		PageItem_TextFrame * nextFrame = dynamic_cast<PageItem_TextFrame*>(m_nextBox);
 		while (nextFrame)
 		{
+			nextFrame->m_anchoredObjectRects.clear();
 			nextFrame->invalid   = true;
 			nextFrame->firstChar = m_maxChars;
 			nextFrame = dynamic_cast<PageItem_TextFrame*>(nextFrame->m_nextBox);
@@ -3086,6 +3329,31 @@ void PageItem_TextFrame::layout()
 	return;
 
 NoRoom:
+	if (m_anchorLayoutDepth == 0)
+	{
+		const bool noRoomAnchorRectsChanged = updateAnchoredObjectRects();
+		bool noRoomHasAnchoredWrap = false;
+		for (auto it = m_anchoredObjectRects.constBegin(); it != m_anchoredObjectRects.constEnd(); ++it)
+		{
+			const int storyPosition = it.key();
+			PageItem* anchoredItem = storyPosition >= 0 && storyPosition < itemText.length() && itemText.hasObject(storyPosition)
+				? itemText.object(storyPosition).getPageItem(m_Doc) : nullptr;
+			if (anchoredItem && anchoredItem->anchorPosition().hasTextWrap())
+			{
+				noRoomHasAnchoredWrap = true;
+				break;
+			}
+		}
+		if (noRoomAnchorRectsChanged && noRoomHasAnchoredWrap)
+		{
+			++m_anchorLayoutDepth;
+			invalid = true;
+			itemText.blockSignals(false);
+			layout();
+			--m_anchorLayoutDepth;
+			return;
+		}
+	}
 	invalid = false;
 	
 	adjustParagraphEndings ();
@@ -3135,6 +3403,8 @@ NoRoom:
 		}
 		while (next)
 		{
+			if (PageItem_TextFrame* textFrame = dynamic_cast<PageItem_TextFrame*>(next))
+				textFrame->m_anchoredObjectRects.clear();
 			next->invalid   = true;
 			next->firstChar = m_maxChars;
 			next = dynamic_cast<PageItem_TextFrame*>(next->m_nextBox);
@@ -3147,18 +3417,23 @@ NoRoom:
 void PageItem_TextFrame::invalidateLayout(bool wholeChain)
 {
 	//const bool wholeChain = true;
+	m_anchoredObjectRects.clear();
 	invalid = true;
 	if (wholeChain)
 	{
 		PageItem *prevFrame = this->prevInChain();
 		while (prevFrame != nullptr)
 		{
+			if (PageItem_TextFrame* textFrame = dynamic_cast<PageItem_TextFrame*>(prevFrame))
+				textFrame->m_anchoredObjectRects.clear();
 			prevFrame->invalid = true;
 			prevFrame = prevFrame->prevInChain();
 		}
 		PageItem *nextFrame = this->nextInChain();
 		while (nextFrame != nullptr)
 		{
+			if (PageItem_TextFrame* textFrame = dynamic_cast<PageItem_TextFrame*>(nextFrame))
+				textFrame->m_anchoredObjectRects.clear();
 			nextFrame->invalid = true;
 			nextFrame = nextFrame->nextInChain();
 		}
@@ -3173,6 +3448,7 @@ void PageItem_TextFrame::invalidateLayout(int firstChar)
 
 void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int endItem)
 {
+	m_anchoredObjectRects.clear();
 	PageItem* firstFrame = firstInChain();
 	firstItem = itemText.prevParagraph(firstItem);
 	const int changedParagraphEnd = itemText.isEmpty() ? 0 : itemText.nextParagraph(qMin(endItem, itemText.length() - 1));
@@ -3190,6 +3466,7 @@ void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int endItem)
 	PageItem_TextFrame* invalidFrame = firstInvalid;
 	while (invalidFrame)
 	{
+		invalidFrame->m_anchoredObjectRects.clear();
 		invalidFrame->invalid = true;
 		invalidFrame = dynamic_cast<PageItem_TextFrame*>(invalidFrame->m_nextBox);
 	}

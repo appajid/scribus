@@ -60,6 +60,7 @@ for which a new license (GPL+exception) is in place.
 #include "pageitem_spiral.h"
 #include "pageitem_table.h"
 #include "pageitem_textframe.h"
+#include "pageitemiterator.h"
 #include "prefsmanager.h"
 #include "resourcecollection.h"
 #include "sccolorengine.h"
@@ -89,6 +90,45 @@ for which a new license (GPL+exception) is in place.
 
 
 using namespace std;
+
+namespace
+{
+void storeAnchorPosition(SimpleState* state, const QString& prefix, const AnchorPosition& anchor)
+{
+	state->set(prefix + "MODE", static_cast<int>(anchor.mode));
+	state->set(prefix + "HREF", static_cast<int>(anchor.horizontalReference));
+	state->set(prefix + "VREF", static_cast<int>(anchor.verticalReference));
+	state->set(prefix + "HALIGN", static_cast<int>(anchor.horizontalAlignment));
+	state->set(prefix + "VALIGN", static_cast<int>(anchor.verticalAlignment));
+	state->set(prefix + "WRAP", static_cast<int>(anchor.wrapMode));
+	state->set(prefix + "X", anchor.xOffset);
+	state->set(prefix + "Y", anchor.yOffset);
+	state->set(prefix + "WLEFT", anchor.wrapOffsets.left());
+	state->set(prefix + "WTOP", anchor.wrapOffsets.top());
+	state->set(prefix + "WRIGHT", anchor.wrapOffsets.right());
+	state->set(prefix + "WBOTTOM", anchor.wrapOffsets.bottom());
+	state->set(prefix + "KEEP", anchor.keepWithinBounds);
+	state->set(prefix + "LOCK", anchor.preventManualPositioning);
+}
+
+AnchorPosition storedAnchorPosition(const SimpleState* state, const QString& prefix)
+{
+	AnchorPosition anchor;
+	anchor.mode = static_cast<AnchorPosition::Mode>(state->getInt(prefix + "MODE"));
+	anchor.horizontalReference = static_cast<AnchorPosition::HorizontalReference>(state->getInt(prefix + "HREF"));
+	anchor.verticalReference = static_cast<AnchorPosition::VerticalReference>(state->getInt(prefix + "VREF"));
+	anchor.horizontalAlignment = static_cast<AnchorPosition::HorizontalAlignment>(state->getInt(prefix + "HALIGN"));
+	anchor.verticalAlignment = static_cast<AnchorPosition::VerticalAlignment>(state->getInt(prefix + "VALIGN"));
+	anchor.wrapMode = static_cast<AnchorPosition::WrapMode>(state->getInt(prefix + "WRAP"));
+	anchor.xOffset = state->getDouble(prefix + "X");
+	anchor.yOffset = state->getDouble(prefix + "Y");
+	anchor.wrapOffsets = QMarginsF(state->getDouble(prefix + "WLEFT"), state->getDouble(prefix + "WTOP"),
+		state->getDouble(prefix + "WRIGHT"), state->getDouble(prefix + "WBOTTOM"));
+	anchor.keepWithinBounds = state->getBool(prefix + "KEEP");
+	anchor.preventManualPositioning = state->getBool(prefix + "LOCK");
+	return anchor;
+}
+}
 
 PageItem::PageItem(const PageItem & other)
 	: QObject(other.parent()),
@@ -1561,6 +1601,32 @@ void PageItem::setVerticalAlignment(int val)
 		undoManager->action(this, ss);
 	}
 	verticalAlign = val;
+}
+
+void PageItem::setAnchorPosition(const AnchorPosition& position)
+{
+	if (position == m_anchorPosition)
+		return;
+	if (!m_Doc->isLoading() && UndoManager::undoEnabled())
+	{
+		auto* state = new SimpleState(QObject::tr("Change Anchored Object"));
+		state->set("ANCHOR_POSITION");
+		storeAnchorPosition(state, "OLD_", m_anchorPosition);
+		storeAnchorPosition(state, "NEW_", position);
+		undoManager->action(this, state);
+	}
+	m_anchorPosition = position;
+	if (m_Doc->isLoading())
+		return;
+	for (PageItemIterator it(m_Doc, PageItemIterator::IterateAll); *it; ++it)
+	{
+		PageItem* textItem = *it;
+		if (textItem->isTextFrame() || textItem->isPathText())
+			textItem->itemText.invalidateObject(this);
+	}
+	m_Doc->changed();
+	m_Doc->regionsChanged()->update(QRectF());
+	m_Doc->changedPagePreview();
 }
 
 void PageItem::setCornerRadius(double newRadius)
@@ -4893,7 +4959,9 @@ void PageItem::restore(UndoState *state, bool isUndo)
 	bool actionFound = checkGradientUndoRedo(ss, isUndo);
 	if (!actionFound)
 	{
-		if (ss->contains("ARC"))
+		if (ss->contains("ANCHOR_POSITION"))
+			restoreAnchorPosition(ss, isUndo);
+		else if (ss->contains("ARC"))
 			restoreArc(ss, isUndo);
 		else if (ss->contains("MASKTYPE"))
 			restoreMaskType(ss, isUndo);
@@ -5750,6 +5818,20 @@ void PageItem::restoreArc(SimpleState *state, bool isUndo)
 	}
 	update();
 	//doc()->changed();
+}
+
+void PageItem::restoreAnchorPosition(SimpleState *state, bool isUndo)
+{
+	m_anchorPosition = storedAnchorPosition(state, isUndo ? "OLD_" : "NEW_");
+	for (PageItemIterator it(m_Doc, PageItemIterator::IterateAll); *it; ++it)
+	{
+		PageItem* textItem = *it;
+		if (textItem->isTextFrame() || textItem->isPathText())
+			textItem->itemText.invalidateObject(this);
+	}
+	m_Doc->changed();
+	m_Doc->regionsChanged()->update(QRectF());
+	m_Doc->changedPagePreview();
 }
 
 void PageItem::restoreImageNbr(SimpleState *state, bool isUndo)

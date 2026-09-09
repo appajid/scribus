@@ -1444,7 +1444,7 @@ public:	// Start public variables
 	bool isEmbedded {false};
 	int inlineCharID {0};
 	const AnchorPosition& anchorPosition() const { return m_anchorPosition; }
-	void setAnchorPosition(const AnchorPosition& position) { m_anchorPosition = position; }
+	void setAnchorPosition(const AnchorPosition& position);
 	AnchorPosition m_anchorPosition;
 	/** Radius of rounded corners */
 	double m_roundedCornerRadius {0.0};
@@ -1563,6 +1563,7 @@ protected: // Start protected functions
 	/*@{*/
 	void restoreAppMode(SimpleState *state, bool isUndo);
 	void restoreArc(SimpleState *state,bool isUndo);
+	void restoreAnchorPosition(SimpleState *state, bool isUndo);
 	void restoreArrow(SimpleState *state, bool isUndo, bool isStart);
 	void restoreBottomTextFrameDist(SimpleState *state, bool isUndo);
 	void restoreCharStyle(SimpleState *state, bool isUndo);

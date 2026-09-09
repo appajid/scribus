@@ -2281,6 +2281,16 @@ void StoryText::removeSelection()
 
 void StoryText::invalidateObject(const PageItem * embedded)
 {
+	if (!embedded)
+		return;
+	for (int pos = 0; pos < length(); ++pos)
+	{
+		if (!hasObject(pos))
+			continue;
+		PageItem* objectItem = object(pos).getPageItem(m_doc);
+		if (objectItem == embedded)
+			invalidate(pos, pos + 1);
+	}
 }
 
 void StoryText::invalidateLayout()

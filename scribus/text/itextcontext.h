@@ -37,6 +37,7 @@ public:
 	virtual double width() const = 0;
 	virtual /* const */ PageItem* object(const InlineFrame& frame) const = 0;
 	virtual QRectF getVisualBoundingBox(const InlineFrame& frame) const = 0;
+	virtual QRectF anchoredObjectRect(const InlineFrame& frame, int storyPosition) const = 0;
 	virtual const CharStyle& charStyle() const = 0;
 	virtual const ParagraphStyle& paragraphStyle() const = 0;
 	virtual QString expand(const ExpansionPoint& expansion) = 0;

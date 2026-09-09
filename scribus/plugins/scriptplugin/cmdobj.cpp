@@ -6,9 +6,14 @@ for which a new license (GPL+exception) is in place.
 */
 #include "cmdobj.h"
 
+#include <array>
+#include <utility>
+
+#include "anchorposition.h"
 #include "appmodes.h"
 #include "cmdutil.h"
 #include "commonstrings.h"
+#include "pageitem_textframe.h"
 #include "pageitem_table.h"
 #include "pyesstring.h"
 #include "scribuscore.h"
@@ -16,6 +21,124 @@ for which a new license (GPL+exception) is in place.
 #include "scribusview.h"
 #include "selection.h"
 #include "util_math.h"
+
+namespace
+{
+PageItem* findPageOrInlineItem(const QString& name)
+{
+	ScribusDoc* doc = ScCore->primaryMainWindow()->doc;
+	for (PageItem* item : *doc->Items)
+	{
+		if (item->itemName() == name)
+			return item;
+	}
+	for (PageItem* item : std::as_const(doc->FrameItems))
+	{
+		if (item && item->itemName() == name)
+			return item;
+	}
+	PyErr_SetString(NoValidObjectError, QObject::tr("Object not found.", "python error").toUtf8().constData());
+	return nullptr;
+}
+
+bool dictHasOnlyAnchorKeys(PyObject* options)
+{
+	static const std::array<const char*, 14> keys = {
+		"mode", "horizontalReference", "verticalReference", "horizontalAlignment",
+		"verticalAlignment", "wrapMode", "xOffset", "yOffset", "wrapLeft",
+		"wrapTop", "wrapRight", "wrapBottom", "keepWithinBounds",
+		"preventManualPositioning"
+	};
+	PyObject* key = nullptr;
+	PyObject* value = nullptr;
+	Py_ssize_t pos = 0;
+	while (PyDict_Next(options, &pos, &key, &value))
+	{
+		if (!PyUnicode_Check(key))
+		{
+			PyErr_SetString(PyExc_TypeError, "Anchor option keys must be strings.");
+			return false;
+		}
+		const char* keyString = PyUnicode_AsUTF8(key);
+		if (!keyString)
+			return false;
+		bool known = false;
+		for (const char* candidate : keys)
+		{
+			if (qstrcmp(keyString, candidate) == 0)
+			{
+				known = true;
+				break;
+			}
+		}
+		if (!known)
+		{
+			PyErr_Format(PyExc_ValueError, "Unknown anchor option: %s", keyString);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool readEnumOption(PyObject* options, const char* key, int minimum, int maximum, int& target)
+{
+	PyObject* value = PyDict_GetItemString(options, key);
+	if (!value)
+		return true;
+	if (!PyLong_Check(value))
+	{
+		PyErr_Format(PyExc_TypeError, "%s must be an integer.", key);
+		return false;
+	}
+	const long parsed = PyLong_AsLong(value);
+	if (PyErr_Occurred())
+		return false;
+	if (parsed < minimum || parsed > maximum)
+	{
+		PyErr_Format(PyExc_ValueError, "%s is outside the supported range %d..%d.", key, minimum, maximum);
+		return false;
+	}
+	target = static_cast<int>(parsed);
+	return true;
+}
+
+bool readDistanceOption(PyObject* options, const char* key, double& target)
+{
+	PyObject* value = PyDict_GetItemString(options, key);
+	if (!value)
+		return true;
+	if (!PyFloat_Check(value) && !PyLong_Check(value))
+	{
+		PyErr_Format(PyExc_TypeError, "%s must be numeric.", key);
+		return false;
+	}
+	const double parsed = PyFloat_AsDouble(value);
+	if (PyErr_Occurred())
+		return false;
+	target = ValueToPoint(parsed);
+	return true;
+}
+
+bool readBoolOption(PyObject* options, const char* key, bool& target)
+{
+	PyObject* value = PyDict_GetItemString(options, key);
+	if (!value)
+		return true;
+	if (!PyBool_Check(value))
+	{
+		PyErr_Format(PyExc_TypeError, "%s must be a bool.", key);
+		return false;
+	}
+	target = value == Py_True;
+	return true;
+}
+
+void setDictItemSteal(PyObject* dictionary, const char* key, PyObject* value)
+{
+	PyDict_SetItemString(dictionary, key, value);
+	Py_DECREF(value);
+}
+}
 
 
 PyObject *scribus_createrect(PyObject* /* self */, PyObject* args)
@@ -580,6 +703,232 @@ PyObject *scribus_settextflowmode(PyObject* /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject *scribus_insertanchoredobject(PyObject* /* self */, PyObject* args)
+{
+	PyESString objectName;
+	PyESString frameName;
+	int position = -1;
+	if (!PyArg_ParseTuple(args, "eses|i", "utf-8", objectName.ptr(), "utf-8", frameName.ptr(), &position))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* doc = ScCore->primaryMainWindow()->doc;
+	PageItem* object = findPageOrInlineItem(QString::fromUtf8(objectName.c_str()));
+	if (!object)
+		return nullptr;
+	PageItem* destinationItem = GetUniqueItem(QString::fromUtf8(frameName.c_str()));
+	if (!destinationItem)
+		return nullptr;
+	PageItem_TextFrame* destination = destinationItem->asTextFrame();
+	if (!destination)
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("The destination must be a text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (object == destinationItem)
+	{
+		PyErr_SetString(PyExc_ValueError, "An object cannot be anchored inside itself.");
+		return nullptr;
+	}
+	if (position < -1 || position > destination->itemText.length())
+	{
+		PyErr_SetString(PyExc_ValueError, "The anchor position is outside the destination story.");
+		return nullptr;
+	}
+
+	int inlineId = object->inlineCharID;
+	if (!doc->FrameItems.contains(inlineId) || doc->FrameItems.value(inlineId) != object)
+	{
+		const int itemIndex = doc->Items->indexOf(object);
+		if (itemIndex < 0)
+		{
+			PyErr_SetString(NoValidObjectError, "The object is not available as a page or inline item.");
+			return nullptr;
+		}
+		doc->m_Selection->removeItem(object);
+		object->isEmbedded = true;
+		object->setIsAnnotation(false);
+		object->isBookmark = false;
+		object->gXpos = 0.0;
+		object->gYpos = 0.0;
+		object->gWidth = object->width();
+		object->gHeight = object->height();
+		inlineId = doc->addToInlineFrames(object);
+		doc->Items->takeAt(itemIndex);
+	}
+
+	destination->itemText.insertObject(position, inlineId);
+	destination->invalidateLayout(false);
+	destination->layout();
+	destination->update();
+	doc->changed();
+	doc->regionsChanged()->update(QRectF());
+	doc->changedPagePreview();
+	return PyLong_FromLong(inlineId);
+}
+
+PyObject *scribus_getanchoredobjectoptions(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = findPageOrInlineItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+
+	const AnchorPosition& anchor = item->anchorPosition();
+	PyObject* result = PyDict_New();
+	setDictItemSteal(result, "mode", PyLong_FromLong(static_cast<int>(anchor.mode)));
+	setDictItemSteal(result, "horizontalReference", PyLong_FromLong(static_cast<int>(anchor.horizontalReference)));
+	setDictItemSteal(result, "verticalReference", PyLong_FromLong(static_cast<int>(anchor.verticalReference)));
+	setDictItemSteal(result, "horizontalAlignment", PyLong_FromLong(static_cast<int>(anchor.horizontalAlignment)));
+	setDictItemSteal(result, "verticalAlignment", PyLong_FromLong(static_cast<int>(anchor.verticalAlignment)));
+	setDictItemSteal(result, "wrapMode", PyLong_FromLong(static_cast<int>(anchor.wrapMode)));
+	setDictItemSteal(result, "xOffset", PyFloat_FromDouble(PointToValue(anchor.xOffset)));
+	setDictItemSteal(result, "yOffset", PyFloat_FromDouble(PointToValue(anchor.yOffset)));
+	setDictItemSteal(result, "wrapLeft", PyFloat_FromDouble(PointToValue(anchor.wrapOffsets.left())));
+	setDictItemSteal(result, "wrapTop", PyFloat_FromDouble(PointToValue(anchor.wrapOffsets.top())));
+	setDictItemSteal(result, "wrapRight", PyFloat_FromDouble(PointToValue(anchor.wrapOffsets.right())));
+	setDictItemSteal(result, "wrapBottom", PyFloat_FromDouble(PointToValue(anchor.wrapOffsets.bottom())));
+	setDictItemSteal(result, "keepWithinBounds", PyBool_FromLong(anchor.keepWithinBounds));
+	setDictItemSteal(result, "preventManualPositioning", PyBool_FromLong(anchor.preventManualPositioning));
+	return result;
+}
+
+PyObject *scribus_setanchoredobjectoptions(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyObject* options = nullptr;
+	if (!PyArg_ParseTuple(args, "esO!", "utf-8", name.ptr(), &PyDict_Type, &options))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	if (!dictHasOnlyAnchorKeys(options))
+		return nullptr;
+	PageItem* item = findPageOrInlineItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+
+	AnchorPosition anchor = item->anchorPosition();
+	int mode = static_cast<int>(anchor.mode);
+	int horizontalReference = static_cast<int>(anchor.horizontalReference);
+	int verticalReference = static_cast<int>(anchor.verticalReference);
+	int horizontalAlignment = static_cast<int>(anchor.horizontalAlignment);
+	int verticalAlignment = static_cast<int>(anchor.verticalAlignment);
+	int wrapMode = static_cast<int>(anchor.wrapMode);
+	double xOffset = anchor.xOffset;
+	double yOffset = anchor.yOffset;
+	double wrapLeft = anchor.wrapOffsets.left();
+	double wrapTop = anchor.wrapOffsets.top();
+	double wrapRight = anchor.wrapOffsets.right();
+	double wrapBottom = anchor.wrapOffsets.bottom();
+	if (!readEnumOption(options, "mode", 0, 2, mode)
+		|| !readEnumOption(options, "horizontalReference", 0, 4, horizontalReference)
+		|| !readEnumOption(options, "verticalReference", 0, 3, verticalReference)
+		|| !readEnumOption(options, "horizontalAlignment", 0, 5, horizontalAlignment)
+		|| !readEnumOption(options, "verticalAlignment", 0, 4, verticalAlignment)
+		|| !readEnumOption(options, "wrapMode", 0, 4, wrapMode)
+		|| !readDistanceOption(options, "xOffset", xOffset)
+		|| !readDistanceOption(options, "yOffset", yOffset)
+		|| !readDistanceOption(options, "wrapLeft", wrapLeft)
+		|| !readDistanceOption(options, "wrapTop", wrapTop)
+		|| !readDistanceOption(options, "wrapRight", wrapRight)
+		|| !readDistanceOption(options, "wrapBottom", wrapBottom)
+		|| !readBoolOption(options, "keepWithinBounds", anchor.keepWithinBounds)
+		|| !readBoolOption(options, "preventManualPositioning", anchor.preventManualPositioning))
+		return nullptr;
+	if (wrapLeft < 0.0 || wrapTop < 0.0 || wrapRight < 0.0 || wrapBottom < 0.0)
+	{
+		PyErr_SetString(PyExc_ValueError, "Text-wrap offsets cannot be negative.");
+		return nullptr;
+	}
+
+	anchor.mode = static_cast<AnchorPosition::Mode>(mode);
+	anchor.horizontalReference = static_cast<AnchorPosition::HorizontalReference>(horizontalReference);
+	anchor.verticalReference = static_cast<AnchorPosition::VerticalReference>(verticalReference);
+	anchor.horizontalAlignment = static_cast<AnchorPosition::HorizontalAlignment>(horizontalAlignment);
+	anchor.verticalAlignment = static_cast<AnchorPosition::VerticalAlignment>(verticalAlignment);
+	anchor.wrapMode = static_cast<AnchorPosition::WrapMode>(wrapMode);
+	anchor.xOffset = xOffset;
+	anchor.yOffset = yOffset;
+	anchor.wrapOffsets = QMarginsF(wrapLeft, wrapTop, wrapRight, wrapBottom);
+	item->setAnchorPosition(anchor);
+	ScCore->primaryMainWindow()->view->DrawNew();
+	Py_RETURN_NONE;
+}
+
+PyObject *scribus_getanchoredobjectrect(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString frameName;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", name.ptr(), "utf-8", frameName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = findPageOrInlineItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	PageItem* frameItem = GetUniqueItem(QString::fromUtf8(frameName.c_str()));
+	if (!frameItem)
+		return nullptr;
+	PageItem_TextFrame* frame = frameItem->asTextFrame();
+	if (!frame)
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("The context must be a text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	frame->layout();
+	const QRectF rect = frame->resolvedAnchoredObjectRect(item->inlineCharID);
+	if (rect.isNull() && !item->anchorPosition().isInline())
+	{
+		PyErr_SetString(PyExc_ValueError, "The object is not laid out in the supplied text frame.");
+		return nullptr;
+	}
+	return Py_BuildValue("(dddd)", PointToValue(rect.x()), PointToValue(rect.y()),
+		PointToValue(rect.width()), PointToValue(rect.height()));
+}
+
+PyObject *scribus_getanchoredobjectrects(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString frameName;
+	if (!PyArg_ParseTuple(args, "eses", "utf-8", name.ptr(), "utf-8", frameName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = findPageOrInlineItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	PageItem* frameItem = GetUniqueItem(QString::fromUtf8(frameName.c_str()));
+	if (!frameItem)
+		return nullptr;
+	PageItem_TextFrame* frame = frameItem->asTextFrame();
+	if (!frame)
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("The context must be a text frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	frame->layout();
+	PyObject* result = PyList_New(0);
+	for (int position = 0; position < frame->itemText.length(); ++position)
+	{
+		if (!frame->itemText.hasObject(position)
+			|| frame->itemText.object(position).getInlineCharID() != item->inlineCharID)
+			continue;
+		const QRectF rect = frame->resolvedAnchoredObjectRect(item->inlineCharID, position);
+		if (rect.isNull() && !item->anchorPosition().isInline())
+			continue;
+		PyObject* tuple = Py_BuildValue("(dddd)", PointToValue(rect.x()), PointToValue(rect.y()),
+			PointToValue(rect.width()), PointToValue(rect.height()));
+		PyList_Append(result, tuple);
+		Py_DECREF(tuple);
+	}
+	return result;
+}
+
 
 PyObject *scribus_objectexists(PyObject* /* self */, PyObject* args)
 {
@@ -1120,4 +1469,3 @@ void cmdobjdocwarnings()
 	  << scribus_settextflowmode__doc__
 	  << scribus_textflowmode__doc__;
 }
-

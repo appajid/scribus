@@ -269,6 +269,8 @@ public:
 	ObjectBox(const GlyphCluster& run, const ITextContext* ctx)
 		: GlyphBox(run)
 		, m_object(ctx->object(run.object()))
+		, m_context(ctx)
+		, m_inlineFrame(run.object())
 	{
 		m_type = T_Object;
 	}
@@ -277,9 +279,12 @@ public:
 	void render(ScreenPainter*, ITextContext *ctx) const override;
 
 	void update();
+	PageItem* object() const { return m_object; }
 
 private:
 	/* const */ PageItem* m_object;
+	const ITextContext* m_context { nullptr };
+	InlineFrame m_inlineFrame;
 };
 
 #endif // BOXES_H

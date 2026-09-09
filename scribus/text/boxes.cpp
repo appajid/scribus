@@ -864,9 +864,16 @@ void ObjectBox::render(TextLayoutPainter *p) const
 	QRectF mappedRect = trans.mapRect(QRectF(-lineWidth / 2.0, -lineWidth / 2.0, objectSize.width(), objectSize.height()));
 	double dx = (mappedRect.left() < lineWidth / 2.0) ? -mappedRect.left() + lineWidth / 2.0 : 0.0;
 	double dy = (mappedRect.top() < lineWidth / 2.0) ? -mappedRect.top() + lineWidth / 2.0 : 0.0;
+	const AnchorPosition& anchor = m_object->anchorPosition();
+	QRectF anchoredRect;
+	if (!anchor.isInline() && m_context)
+		anchoredRect = m_context->anchoredObjectRect(m_inlineFrame, firstChar());
 
 	p->save();
-	p->translate(x(), y() - ascent());
+	if (!anchoredRect.isNull())
+		p->translate(anchoredRect.left() - p->x(), anchoredRect.top() - p->y());
+	else
+		p->translate(x(), y() - ascent());
 	p->translate(dx, dy);
 	p->setScale(scaleH, scaleV);
 	p->setMatrix(m_matrix);
