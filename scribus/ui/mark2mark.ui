@@ -31,7 +31,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Select marker:</string>
+        <string>Target:</string>
        </property>
       </widget>
      </item>
@@ -54,9 +54,47 @@
        </property>
       </widget>
      </item>
+   </layout>
+  </item>
+   <item row="2" column="0">
+    <layout class="QHBoxLayout" name="formatLayout">
+     <item>
+      <widget class="QLabel" name="formatLabel">
+       <property name="text">
+        <string>Format:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="formatCombo"/>
+     </item>
     </layout>
    </item>
-   <item row="2" column="0">
+   <item row="3" column="0">
+    <layout class="QHBoxLayout" name="affixLayout">
+     <item>
+      <widget class="QLabel" name="prefixLabel">
+       <property name="text">
+        <string>Prefix:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="prefixEdit"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="suffixLabel">
+       <property name="text">
+        <string>Suffix:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="suffixEdit"/>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>

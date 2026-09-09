@@ -2434,10 +2434,15 @@ void StoryText::saxx(SaxHandler& handler, const Xml_string& elemtag) const
 			{
 				QString l = mrk->getDestMarkName();
 				MarkType t = mrk->getDestMarkType();
-				if (m_doc->getMark(l, t) != nullptr)
+				if (!l.isEmpty())
 				{
 					mark_attr.insert("mark_l", l);
 					mark_attr.insert("mark_t", QString::number((int) t));
+					mark_attr.insert("xref_format", QString::number((int) mrk->getCrossReferenceFormat()));
+					if (!mrk->getCrossReferencePrefix().isEmpty())
+						mark_attr.insert("xref_prefix", mrk->getCrossReferencePrefix());
+					if (!mrk->getCrossReferenceSuffix().isEmpty())
+						mark_attr.insert("xref_suffix", mrk->getCrossReferenceSuffix());
 				}
 			}
 			else if (mrk->isType(MARKNoteMasterType))
@@ -2709,13 +2714,24 @@ public:
 					}
 					if (mrk->isType(MARK2MarkType) && (m_lIt != attr.end()) && (m_tIt != attr.end()))
 					{
-						Mark* targetMark = doc->getMark(Xml_data(m_lIt), (MarkType) parseInt(Xml_data(m_tIt)));
-						mrk->setDestMark(targetMark);
-						if (targetMark == nullptr)
-							mrk->setString("0");
+						const QString targetName = Xml_data(m_lIt);
+						const MarkType targetType = (MarkType) parseInt(Xml_data(m_tIt));
+						Mark* targetMark = doc->getMark(targetName, targetType);
+						if (targetMark)
+							mrk->setDestMark(targetMark);
 						else
-							mrk->setString(doc->getSectionPageNumberForPageIndex(targetMark->OwnPage));
-						mrk->setItemName(Xml_data(m_lIt));
+							mrk->setDestMark(targetName, targetType);
+						Xml_attr::iterator formatIt = attr.find("xref_format");
+						if (formatIt != attr.end() && parseInt(Xml_data(formatIt)) == CrossReferenceParagraphText)
+							mrk->setCrossReferenceFormat(CrossReferenceParagraphText);
+						Xml_attr::iterator prefixIt = attr.find("xref_prefix");
+						if (prefixIt != attr.end())
+							mrk->setCrossReferencePrefix(Xml_data(prefixIt));
+						Xml_attr::iterator suffixIt = attr.find("xref_suffix");
+						if (suffixIt != attr.end())
+							mrk->setCrossReferenceSuffix(Xml_data(suffixIt));
+						mrk->setString(doc->crossReferenceValue(mrk));
+						mrk->setItemName(targetName);
 					}
 					if (mrk->isType(MARKNoteMasterType))
 					{

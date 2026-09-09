@@ -1900,10 +1900,17 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		Mark* insertCrossReferenceTarget(const QString& name, PageItem* item, int position = -1);
 		Mark* insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position = -1,
 			const QString& label = QString());
+		Mark* insertCrossReference(const QString& targetName, PageItem* item, int position = -1,
+			const QString& label = QString(), CrossReferenceFormat format = CrossReferencePageNumber,
+			const QString& prefix = QString(), const QString& suffix = QString());
 		bool deleteCrossReferenceTarget(const QString& name);
 		int crossReferenceTargetUsage(const QString& name) const;
 		bool renameCrossReferenceTarget(const QString& oldName, const QString& newName);
 		QString crossReferencePageNumber(const QString& targetName) const;
+		QString crossReferenceParagraphText(const QString& targetName) const;
+		QString crossReferenceParagraphText(const Mark* target) const;
+		QString crossReferenceValue(const Mark* reference) const;
+		bool invalidateCrossReferenceFrames(const Mark* target, bool forceUpdate = false);
 
 		const QMap<QString, DynamicVariable>& dynamicVariables() const { return m_dynamicVariables; }
 		const DynamicVariable* dynamicVariable(const QString& id) const;

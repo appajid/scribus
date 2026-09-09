@@ -9892,16 +9892,29 @@ bool ScribusMainWindow::insertMarkDialog(PageItem_TextFrame* currItem, MarkType 
 			markData.text = QString::number(markData.itemPtr->OwnPage +1);
 			break;
 		case MARK2MarkType:
-			//gets pointer to referenced mark
-			Mark* markPtr;
-			insertMDialog->values(label, markPtr);
-			if (markPtr == nullptr)
-				return false; //FIX ME here user should be warned that inserting of mark fails and why
-			if (label.isEmpty())
-				label = tr("Mark to %1 mark").arg(markPtr->label);
-			markData.text = QString::number(markPtr->OwnPage + 1);
-			markData.destMarkName = markPtr->label;
-			markData.destMarkType = markPtr->getType();
+			{
+				Mark* markPtr = nullptr;
+				CrossReferenceFormat format = CrossReferencePageNumber;
+				QString prefix;
+				QString suffix;
+				auto* referenceDialog = dynamic_cast<Mark2Mark*>(insertMDialog.get());
+				if (!referenceDialog)
+					return false;
+				referenceDialog->crossReferenceValues(label, markPtr, format, prefix, suffix);
+				if (markPtr == nullptr)
+					return false; //FIX ME here user should be warned that inserting of mark fails and why
+				if (label.isEmpty())
+					label = tr("Cross-reference to %1").arg(markPtr->label);
+				markData.destMarkName = markPtr->label;
+				markData.destMarkType = markPtr->getType();
+				markData.crossReferenceFormat = format;
+				markData.crossReferencePrefix = prefix;
+				markData.crossReferenceSuffix = suffix;
+				const QString value = (format == CrossReferenceParagraphText)
+					? doc->crossReferenceParagraphText(markPtr)
+					: doc->getSectionPageNumberForPageIndex(markPtr->OwnPage);
+				markData.text = value.isEmpty() ? QString() : prefix + value + suffix;
+			}
 			break;
 		case MARKNoteMasterType:
 			//gets pointer to chosen notes style
@@ -10019,6 +10032,9 @@ bool ScribusMainWindow::insertMarkDialog(PageItem_TextFrame* currItem, MarkType 
 				MarkType dType = mrk->getDestMarkType();
 				is->set("dName", dName);
 				is->set("dType", (int) dType);
+				is->set("xrefFormat", (int) mrk->getCrossReferenceFormat());
+				is->set("xrefPrefix", mrk->getCrossReferencePrefix());
+				is->set("xrefSuffix", mrk->getCrossReferenceSuffix());
 			}
 			if (mrk->isType(MARK2ItemType))
 				is->insertItem("itemPtr", mrk->getItemPtr());
@@ -10068,11 +10084,13 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 			break;
 		case MARK2MarkType:
 			{
-				editMDialog = (MarkInsert*) new Mark2Mark(doc->marksList(), mrk, this);
+				auto* referenceDialog = new Mark2Mark(doc->marksList(), mrk, this);
+				editMDialog = referenceDialog;
 				QString l = mrk->getDestMarkName();
 				MarkType t = mrk->getDestMarkType();
 				Mark* m = doc->getMark(l, t);
-				editMDialog->setValues(mrk->label, m);
+				referenceDialog->setCrossReferenceValues(mrk->label, m, mrk->getCrossReferenceFormat(),
+					mrk->getCrossReferencePrefix(), mrk->getCrossReferenceSuffix());
 			}
 			break;
 		case MARKNoteMasterType:
@@ -10213,19 +10231,29 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 				break;
 			case MARK2MarkType:
 				{
-					//gets pointer to referenced mark
 					Mark* markPtr = nullptr;
-					editMDialog->values(label, markPtr);
+					CrossReferenceFormat format = CrossReferencePageNumber;
+					QString prefix;
+					QString suffix;
+					auto* referenceDialog = dynamic_cast<Mark2Mark*>(editMDialog);
+					if (!referenceDialog)
+						return false;
+					referenceDialog->crossReferenceValues(label, markPtr, format, prefix, suffix);
 					if (markPtr == nullptr)
 						return false; //FIX ME here user should be warned that inserting of mark fails and why
 					if (label.isEmpty())
-						label = tr("Mark to %1 mark").arg(markPtr->label);
+						label = tr("Cross-reference to %1").arg(markPtr->label);
 					QString destLabel = markPtr->label;
 					MarkType destType = markPtr->getType();
-					if (oldData.destMarkName != destLabel || oldData.destMarkType != destType)
+					if (oldData.destMarkName != destLabel || oldData.destMarkType != destType
+						|| oldData.crossReferenceFormat != format || oldData.crossReferencePrefix != prefix
+						|| oldData.crossReferenceSuffix != suffix)
 					{
 						mrk->setDestMark(markPtr);
-						mrk->setString(doc->getSectionPageNumberForPageIndex(markPtr->OwnPage));
+						mrk->setCrossReferenceFormat(format);
+						mrk->setCrossReferencePrefix(prefix);
+						mrk->setCrossReferenceSuffix(suffix);
+						mrk->setString(doc->crossReferenceValue(mrk));
 						docWasChanged = true;
 					}
 					if (mrk->label != label)
@@ -10278,6 +10306,9 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 				{
 					is->set("dName", mrk->getDestMarkName());
 					is->set("dType", (int) mrk->getDestMarkType());
+					is->set("xrefFormat", (int) mrk->getCrossReferenceFormat());
+					is->set("xrefPrefix", mrk->getCrossReferencePrefix());
+					is->set("xrefSuffix", mrk->getCrossReferenceSuffix());
 				}
 				if (mrk->isType(MARK2ItemType))
 					is->insertItem("itemPtr", mrk->getItemPtr());
@@ -10312,6 +10343,17 @@ bool ScribusMainWindow::editMarkDlg(Mark *mrk, PageItem_TextFrame* currItem)
 						is->set("dTypeOLD", (int) oldData.destMarkType);
 						is->set("dNameNEW", dName);
 						is->set("dTypeNEW", (int) dType);
+					}
+					if (mrk->getCrossReferenceFormat() != oldData.crossReferenceFormat
+						|| mrk->getCrossReferencePrefix() != oldData.crossReferencePrefix
+						|| mrk->getCrossReferenceSuffix() != oldData.crossReferenceSuffix)
+					{
+						is->set("xrefFormatOLD", (int) oldData.crossReferenceFormat);
+						is->set("xrefPrefixOLD", oldData.crossReferencePrefix);
+						is->set("xrefSuffixOLD", oldData.crossReferenceSuffix);
+						is->set("xrefFormatNEW", (int) mrk->getCrossReferenceFormat());
+						is->set("xrefPrefixNEW", mrk->getCrossReferencePrefix());
+						is->set("xrefSuffixNEW", mrk->getCrossReferenceSuffix());
 					}
 				}
 				if (mrk->isType(MARK2ItemType) && mrk->getItemPtr() != oldData.itemPtr)

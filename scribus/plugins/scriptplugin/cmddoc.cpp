@@ -922,9 +922,12 @@ PyObject *scribus_insertcrossreference(PyObject* /* self */, PyObject* args)
 	PyESString targetName;
 	PyESString objectName;
 	PyESString label;
+	PyESString formatName;
+	PyESString prefix;
+	PyESString suffix;
 	int position = -1;
-	if (!PyArg_ParseTuple(args, "es|esies", "utf-8", targetName.ptr(), "utf-8", objectName.ptr(), &position,
-		"utf-8", label.ptr()))
+	if (!PyArg_ParseTuple(args, "es|esieseseses", "utf-8", targetName.ptr(), "utf-8", objectName.ptr(), &position,
+		"utf-8", label.ptr(), "utf-8", formatName.ptr(), "utf-8", prefix.ptr(), "utf-8", suffix.ptr()))
 		return nullptr;
 	if (!checkHaveDocument())
 		return nullptr;
@@ -950,14 +953,40 @@ PyObject *scribus_insertcrossreference(PyObject* /* self */, PyObject* args)
 		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(requestedTarget).toUtf8().constData());
 		return nullptr;
 	}
-	Mark* reference = currentDoc->insertCrossReferencePageNumber(requestedTarget, item, position,
-		QString::fromUtf8(label.c_str()));
+	const QString requestedFormat = QString::fromUtf8(formatName.c_str()).trimmed().toLower();
+	CrossReferenceFormat format = CrossReferencePageNumber;
+	if (requestedFormat == QLatin1String("paragraph") || requestedFormat == QLatin1String("paragraph-text"))
+		format = CrossReferenceParagraphText;
+	else if (!requestedFormat.isEmpty() && requestedFormat != QLatin1String("page") && requestedFormat != QLatin1String("page-number"))
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Cross-reference format must be 'page' or 'paragraph'.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	Mark* reference = currentDoc->insertCrossReference(requestedTarget, item, position,
+		QString::fromUtf8(label.c_str()), format, QString::fromUtf8(prefix.c_str()), QString::fromUtf8(suffix.c_str()));
 	if (!reference)
 	{
 		PyErr_SetString(ScribusException, QObject::tr("The page reference could not be inserted.", "python error").toUtf8().constData());
 		return nullptr;
 	}
 	return PyUnicode_FromString(reference->label.toUtf8().constData());
+}
+
+PyObject *scribus_getcrossreferencetext(PyObject* /* self */, PyObject* args)
+{
+	PyESString targetName;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", targetName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requestedTarget = QString::fromUtf8(targetName.c_str()).trimmed();
+	if (!currentDoc->crossReferenceTarget(requestedTarget))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference target '%1' was not found.", "python error").arg(requestedTarget).toUtf8().constData());
+		return nullptr;
+	}
+	return PyUnicode_FromString(currentDoc->crossReferenceParagraphText(requestedTarget).toUtf8().constData());
 }
 
 PyObject *scribus_getcrossreferencepage(PyObject* /* self */, PyObject* args)

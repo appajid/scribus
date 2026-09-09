@@ -464,8 +464,12 @@ QT_TR_NOOP("deleteCrossReferenceTarget(target)\n\nDeletes a named target. Existi
 PyObject *scribus_deletecrossreferencetarget(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_insertcrossreference__doc__,
-QT_TR_NOOP("insertCrossReference(target, [objectName, position=-1, label='']) -> str\n\nInserts a dynamic page-number reference to a named target and returns the reference label. A position of -1 appends it."));
+QT_TR_NOOP("insertCrossReference(target, [objectName, position=-1, label='', format='page', prefix='', suffix='']) -> str\n\nInserts a dynamic reference to a named target and returns the reference label. Format is 'page' or 'paragraph'. A position of -1 appends it."));
 PyObject *scribus_insertcrossreference(PyObject *self, PyObject* args);
+
+PyDoc_STRVAR(scribus_getcrossreferencetext__doc__,
+QT_TR_NOOP("getCrossReferenceText(target) -> str\n\nReturns the current paragraph text containing a named cross-reference target."));
+PyObject *scribus_getcrossreferencetext(PyObject *self, PyObject* args);
 
 PyDoc_STRVAR(scribus_getcrossreferencepage__doc__,
 QT_TR_NOOP("getCrossReferencePage(target) -> str\n\nReturns the current section-formatted page number for a named cross-reference target."));

@@ -363,6 +363,7 @@ PyMethodDef scribus_methods[] = {
 	{ "getColumnGuides", (PyCFunction) scribus_getColumnGuides, METH_VARARGS|METH_KEYWORDS, tr(scribus_getColumnGuides__doc__)},
 	{ "getCornerRadius", scribus_getcornerradius, METH_VARARGS, tr(scribus_getcornerradius__doc__)},
 	{ "getCrossReferencePage", scribus_getcrossreferencepage, METH_VARARGS, tr(scribus_getcrossreferencepage__doc__)},
+	{ "getCrossReferenceText", scribus_getcrossreferencetext, METH_VARARGS, tr(scribus_getcrossreferencetext__doc__)},
 	{ "getCurrentPageSize", (PyCFunction) scribus_getcurrentpagesize, METH_NOARGS, tr(scribus_getcurrentpagesize__doc__)},
 	{ "getCustomLineStyle", scribus_getcustomlinestyle, METH_VARARGS, tr(scribus_getcustomlinestyle__doc__)},
 	{ "getDocName", (PyCFunction) scribus_getdocname, METH_NOARGS, tr(scribus_getdocname__doc__)},

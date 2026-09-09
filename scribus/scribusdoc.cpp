@@ -2251,6 +2251,12 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			}
 			if (is->contains("dNameOLD"))
 				mrk->setDestMark(is->get("dNameOLD"), (MarkType) is->getInt("dTypeOLD"));
+			if (is->contains("xrefFormatOLD"))
+			{
+				mrk->setCrossReferenceFormat((CrossReferenceFormat) is->getInt("xrefFormatOLD"));
+				mrk->setCrossReferencePrefix(is->get("xrefPrefixOLD"));
+				mrk->setCrossReferenceSuffix(is->get("xrefSuffixOLD"));
+			}
 			if (is->getItem("itemPtrOLD") != nullptr)
 				mrk->setItemPtr((PageItem*) is->getItem("itemPtrOLD"));
 		}
@@ -2287,6 +2293,12 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			}
 			if (is->contains("dName"))
 				mrk->setDestMark(is->get("dName"), (MarkType) is->getInt("dType"));
+			if (is->contains("xrefFormat"))
+			{
+				mrk->setCrossReferenceFormat((CrossReferenceFormat) is->getInt("xrefFormat"));
+				mrk->setCrossReferencePrefix(is->get("xrefPrefix"));
+				mrk->setCrossReferenceSuffix(is->get("xrefSuffix"));
+			}
 			if (is->getItem("itemPtr") != nullptr)
 				mrk->setItemPtr((PageItem*) is->getItem("itemPtr"));
 		}
@@ -2345,6 +2357,12 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 				mrk->setString(is->get("strtxt"));
 			if (is->contains("dName"))
 				mrk->setDestMark(is->get("dName"), (MarkType) is->getInt("dType"));
+			if (is->contains("xrefFormat"))
+			{
+				mrk->setCrossReferenceFormat((CrossReferenceFormat) is->getInt("xrefFormat"));
+				mrk->setCrossReferencePrefix(is->get("xrefPrefix"));
+				mrk->setCrossReferenceSuffix(is->get("xrefSuffix"));
+			}
 			if (is->getItem("itemPtr") != nullptr)
 				mrk->setItemPtr((PageItem*) is->getItem("itemPtr"));
 			if (mrk->isType(MARKNoteMasterType))
@@ -2386,6 +2404,12 @@ void ScribusDoc::restoreMarks(UndoState* state, bool isUndo)
 			}
 			if (is->contains("dNameNEW"))
 				mrk->setDestMark(is->get("dNameNEW"), (MarkType) is->getInt("dTypeNEW"));
+			if (is->contains("xrefFormatNEW"))
+			{
+				mrk->setCrossReferenceFormat((CrossReferenceFormat) is->getInt("xrefFormatNEW"));
+				mrk->setCrossReferencePrefix(is->get("xrefPrefixNEW"));
+				mrk->setCrossReferenceSuffix(is->get("xrefSuffixNEW"));
+			}
 			if (is->getItem("itemPtrNEW") != nullptr)
 				mrk->setItemPtr((PageItem*) is->getItem("itemPtrNEW"));
 		}
@@ -18625,8 +18649,15 @@ Mark* ScribusDoc::insertCrossReferenceTarget(const QString& name, PageItem* item
 Mark* ScribusDoc::insertCrossReferencePageNumber(const QString& targetName, PageItem* item, int position,
 	const QString& label)
 {
+	return insertCrossReference(targetName, item, position, label, CrossReferencePageNumber);
+}
+
+Mark* ScribusDoc::insertCrossReference(const QString& targetName, PageItem* item, int position,
+	const QString& label, CrossReferenceFormat format, const QString& prefix, const QString& suffix)
+{
 	Mark* target = crossReferenceTarget(targetName);
-	if (!target || !item || !item->isTextFrame() || position < -1 || position > item->itemText.length())
+	if (!target || !item || !item->isTextFrame() || position < -1 || position > item->itemText.length()
+		|| (format != CrossReferencePageNumber && format != CrossReferenceParagraphText))
 		return nullptr;
 	if (position < 0)
 		position = item->itemText.length();
@@ -18640,9 +18671,12 @@ Mark* ScribusDoc::insertCrossReferencePageNumber(const QString& targetName, Page
 	data.itemName = item->itemName();
 	data.destMarkName = target->label;
 	data.destMarkType = target->getType();
-	data.text = crossReferencePageNumber(target->label);
+	data.crossReferenceFormat = format;
+	data.crossReferencePrefix = prefix;
+	data.crossReferenceSuffix = suffix;
 	Mark* mark = newMark();
 	mark->setValues(referenceLabel, item->OwnPage, MARK2MarkType, data);
+	mark->setString(crossReferenceValue(mark));
 	item->itemText.insertMark(mark, position);
 	item->invalidateLayout();
 	flag_updateMarksLabels = true;
@@ -18657,6 +18691,9 @@ Mark* ScribusDoc::insertCrossReferencePageNumber(const QString& targetName, Page
 		state->set("strtxt", mark->getString());
 		state->set("dName", mark->getDestMarkName());
 		state->set("dType", static_cast<int>(mark->getDestMarkType()));
+		state->set("xrefFormat", static_cast<int>(mark->getCrossReferenceFormat()));
+		state->set("xrefPrefix", mark->getCrossReferencePrefix());
+		state->set("xrefSuffix", mark->getCrossReferenceSuffix());
 		state->set("at", position);
 		state->insertItem("inItem", item);
 		m_undoManager->action(this, state);
@@ -18756,6 +18793,98 @@ QString ScribusDoc::crossReferencePageNumber(const QString& targetName) const
 	if (!item || item->OwnPage < 0 || item->OwnPage >= DocPages.count())
 		return QString();
 	return getSectionPageNumberForPageIndex(static_cast<uint>(item->OwnPage));
+}
+
+QString ScribusDoc::crossReferenceParagraphText(const QString& targetName) const
+{
+	return crossReferenceParagraphText(crossReferenceTarget(targetName));
+}
+
+QString ScribusDoc::crossReferenceParagraphText(const Mark* target) const
+{
+	PageItem* item = target ? findFirstMarkItem(target) : nullptr;
+	if (!item || !item->isTextFrame())
+		return QString();
+
+	const StoryText& story = item->itemText;
+	const int markPosition = story.findMark(target);
+	if (markPosition < 0)
+		return QString();
+	int start = markPosition;
+	while (start > 0 && story.text(start - 1) != SpecialChars::PARSEP)
+		--start;
+	int end = markPosition;
+	while (end < story.length() && story.text(end) != SpecialChars::PARSEP)
+		++end;
+
+	QString result;
+	for (int i = start; i < end; ++i)
+	{
+		if (story.hasMark(i))
+		{
+			Mark* embeddedMark = story.mark(i);
+			if (embeddedMark && embeddedMark != target)
+				result += embeddedMark->getString();
+			continue;
+		}
+		const QChar character = story.text(i);
+		if (character == SpecialChars::LINEBREAK || character == SpecialChars::COLBREAK || character == SpecialChars::FRAMEBREAK)
+			result += QLatin1Char(' ');
+		else if (character != SpecialChars::OBJECT)
+			result += character;
+	}
+	return result.simplified();
+}
+
+QString ScribusDoc::crossReferenceValue(const Mark* reference) const
+{
+	if (!reference || !reference->isType(MARK2MarkType))
+		return QString();
+	Mark* target = nullptr;
+	for (Mark* candidate : m_docMarksList)
+	{
+		if (candidate && candidate->label == reference->getDestMarkName()
+			&& candidate->isType(reference->getDestMarkType()))
+		{
+			target = candidate;
+			break;
+		}
+	}
+	const PageItem* targetItem = target ? findFirstMarkItem(target) : nullptr;
+	if (!targetItem || targetItem->OwnPage < 0 || targetItem->OwnPage >= DocPages.count())
+		return QString();
+	QString value;
+	if (reference->getCrossReferenceFormat() == CrossReferenceParagraphText)
+		value = crossReferenceParagraphText(target);
+	else
+		value = getSectionPageNumberForPageIndex(static_cast<uint>(targetItem->OwnPage));
+	if (value.isEmpty())
+		return QString();
+	return reference->getCrossReferencePrefix() + value + reference->getCrossReferenceSuffix();
+}
+
+bool ScribusDoc::invalidateCrossReferenceFrames(const Mark* target, bool forceUpdate)
+{
+	if (!target)
+		return false;
+	bool found = false;
+	for (Mark* reference : std::as_const(m_docMarksList))
+	{
+		if (!reference || !reference->isType(MARK2MarkType)
+			|| reference->getCrossReferenceFormat() != CrossReferenceParagraphText
+			|| reference->getDestMarkName() != target->label
+			|| reference->getDestMarkType() != target->getType())
+			continue;
+		PageItem* lastItem = nullptr;
+		for (PageItem* item = findMarkItem(reference, lastItem); item; item = findMarkItem(reference, lastItem))
+		{
+			found = true;
+			item->asTextFrame()->invalidateLayout(false);
+			if (forceUpdate)
+				item->layout();
+		}
+	}
+	return found;
 }
 
 TextNote *ScribusDoc::newNote(NotesStyle* noteStyle)
@@ -18961,6 +19090,9 @@ void ScribusDoc::setUndoDelMark(const Mark *mrk)
 			{
 				ims->set("dName", mrk->getDestMarkName());
 				ims->set("dType", (int) mrk->getDestMarkType());
+				ims->set("xrefFormat", (int) mrk->getCrossReferenceFormat());
+				ims->set("xrefPrefix", mrk->getCrossReferencePrefix());
+				ims->set("xrefSuffix", mrk->getCrossReferenceSuffix());
 			}
 			if (mrk->isType(MARK2ItemType))
 				ims->insertItem("itemPtr", mrk->getItemPtr());
@@ -19156,7 +19288,7 @@ bool ScribusDoc::updateMarks(bool updateNotesMarks)
 				if (dItem != nullptr)
 				{
 					destMark->OwnPage = dItem->OwnPage;
-					mrk->setString(getSectionPageNumberForPageIndex(destMark->OwnPage));
+					mrk->setString(crossReferenceValue(mrk));
 					if (mItem != nullptr)
 					{
 						mItem->asTextFrame()->invalidateLayout(false);

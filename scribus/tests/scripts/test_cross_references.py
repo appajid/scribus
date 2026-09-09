@@ -93,6 +93,8 @@ source_frame = scribus.createText(40, 40, 300, 60, "ReferenceSource")
 scribus.setText("See page ", source_frame)
 second_source_frame = scribus.createText(40, 120, 300, 60, "SecondReferenceSource")
 scribus.setText("Also see page ", second_source_frame)
+paragraph_source_frame = scribus.createText(40, 200, 300, 60, "ParagraphReferenceSource")
+scribus.setText("Read ", paragraph_source_frame)
 scribus.gotoPage(2)
 target_frame = scribus.createText(40, 120, 300, 60, "ReferenceTarget")
 scribus.setText("Chapter Two", target_frame)
@@ -108,9 +110,34 @@ second_reference_label = scribus.insertCrossReference(
     target_name, second_source_frame, -1, "Second Chapter Two page"
 )
 check(second_reference_label == "Second Chapter Two page", "second page-reference insertion failed")
+paragraph_reference_label = scribus.insertCrossReference(
+    target_name,
+    paragraph_source_frame,
+    -1,
+    "Chapter Two title",
+    "paragraph",
+    "Chapter: ",
+    ".",
+)
+check(paragraph_reference_label == "Chapter Two title", "paragraph-reference insertion failed")
+check(scribus.getCrossReferenceText(target_name) == "Chapter Two", "target paragraph text did not resolve")
 rendered_text = rendered_source_text()
 if rendered_text is not None:
     check("See page 2" in rendered_text, "inserted page reference did not render its target page")
+    check("Read Chapter: Chapter Two." in rendered_text, "paragraph reference did not render with its prefix and suffix")
+
+step("updating paragraph references after target text edits")
+scribus.insertText("Revised ", 1, target_frame)
+check(
+    scribus.getCrossReferenceText(target_name) == "Revised Chapter Two",
+    "edited target paragraph text did not resolve",
+)
+rendered_text = rendered_source_text()
+if rendered_text is not None:
+    check(
+        "Read Chapter: Revised Chapter Two." in rendered_text,
+        "paragraph reference did not update after target text changed",
+    )
 
 step("rejecting invalid target and reference inputs")
 expect_error(
@@ -129,7 +156,11 @@ expect_error(
     lambda: scribus.insertCrossReference("missing-target", source_frame),
     "a reference to a missing target was accepted",
 )
-shape_name = scribus.createRect(40, 220, 100, 50, "NotText")
+expect_error(
+    lambda: scribus.insertCrossReference(target_name, source_frame, -1, "Invalid", "unknown"),
+    "an unsupported cross-reference format was accepted",
+)
+shape_name = scribus.createRect(360, 220, 100, 50, "NotText")
 expect_error(
     lambda: scribus.createCrossReferenceTarget("shape-target", shape_name),
     "a target was inserted into a non-text frame",
@@ -172,15 +203,28 @@ saved_data = read_sla(output_path)
 check(b'label="chapter-renamed" type="0"' in saved_data, "renamed target was not serialized")
 check(b'label="Chapter Two page" type="2"' in saved_data, "page reference was not serialized")
 check(
-    saved_data.count(b'MARKlabel="chapter-renamed"') == 2,
+    saved_data.count(b'MARKlabel="chapter-renamed"') == 3,
     "not every page-reference destination followed the target rename",
 )
+check(b'xrefFormat="1"' in saved_data, "paragraph-reference format was not serialized")
+check(b'xrefPrefix="Chapter: "' in saved_data, "cross-reference prefix was not serialized")
+check(b'xrefSuffix="."' in saved_data, "cross-reference suffix was not serialized")
 check(b'MARKlabel="chapter-two"' not in saved_data, "a stale destination survived target rename")
 scribus.closeDoc()
 check(scribus.openDoc(output_path), "could not reopen the cross-reference document")
 check(scribus.listCrossReferenceTargets() == [target_name], "renamed target did not survive reopen")
 check(scribus.getCrossReferencePage(target_name) == "2", "target page did not survive reopen")
+check(
+    scribus.getCrossReferenceText(target_name) == "Revised Chapter Two",
+    "target paragraph text did not survive reopen",
+)
 check("BrokenCrossReference" not in preflight_errors(), "valid page reference failed Preflight")
+rendered_text = rendered_source_text()
+if rendered_text is not None:
+    check(
+        "Read Chapter: Revised Chapter Two." in rendered_text,
+        "reopened paragraph reference lost its format or affixes",
+    )
 
 step("preserving and reporting an externally broken reference")
 scribus.closeDoc()

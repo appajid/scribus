@@ -89,7 +89,14 @@ void MarksManager::addListItem(MarkType typeMrk, const QString& typeStr, const Q
 				Mark* target = m_Doc->getMark(targetName, marks[i]->getDestMarkType());
 				PageItem* targetItem = target ? m_Doc->findFirstMarkItem(target) : nullptr;
 				if (target && targetItem)
-					listItem2->setText(2, tr("To %1").arg(targetName));
+				{
+					const QString formatName = marks[i]->getCrossReferenceFormat() == CrossReferenceParagraphText
+						? tr("Paragraph text") : tr("Page number");
+					listItem2->setText(2, tr("To %1 · %2").arg(targetName, formatName));
+					if (!marks[i]->getCrossReferencePrefix().isEmpty() || !marks[i]->getCrossReferenceSuffix().isEmpty())
+						listItem2->setToolTip(2, tr("Prefix: “%1”\nSuffix: “%2”")
+							.arg(marks[i]->getCrossReferencePrefix(), marks[i]->getCrossReferenceSuffix()));
+				}
 				else
 				{
 					listItem2->setText(2, tr("Missing: %1").arg(targetName));

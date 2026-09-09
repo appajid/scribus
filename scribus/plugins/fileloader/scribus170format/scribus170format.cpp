@@ -4001,6 +4001,11 @@ bool Scribus170Format::readMarks(ScribusDoc* doc, ScXmlStreamReader& reader)
 				}
 				if (type == MARK2MarkType && attrs.hasAttribute("MARKlabel"))
 				{
+					const int rawFormat = attrs.valueAsInt("xrefFormat", CrossReferencePageNumber);
+					if (rawFormat == CrossReferenceParagraphText)
+						mark->setCrossReferenceFormat(CrossReferenceParagraphText);
+					mark->setCrossReferencePrefix(attrs.valueAsString("xrefPrefix"));
+					mark->setCrossReferenceSuffix(attrs.valueAsString("xrefSuffix"));
 					QString mark2Label = attrs.valueAsString("MARKlabel");
 					MarkType mark2Type = (MarkType) attrs.valueAsInt("MARKtype");
 					Mark* mark2 = doc->getMark(mark2Label, mark2Type);

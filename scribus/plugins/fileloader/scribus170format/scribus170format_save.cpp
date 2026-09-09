@@ -1517,6 +1517,12 @@ void Scribus170Format::writeMarks(ScXmlStreamWriter & docu) const
 			MarkType type = mrk->getDestMarkType();
 			docu.writeAttribute("MARKlabel", label);
 			docu.writeAttribute("MARKtype", type);
+			if (mrk->getCrossReferenceFormat() != CrossReferencePageNumber)
+				docu.writeAttribute("xrefFormat", static_cast<int>(mrk->getCrossReferenceFormat()));
+			if (!mrk->getCrossReferencePrefix().isEmpty())
+				docu.writeAttribute("xrefPrefix", mrk->getCrossReferencePrefix());
+			if (!mrk->getCrossReferenceSuffix().isEmpty())
+				docu.writeAttribute("xrefSuffix", mrk->getCrossReferenceSuffix());
 		}
 	}
 	docu.writeEndElement();

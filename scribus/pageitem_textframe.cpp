@@ -3171,10 +3171,11 @@ void PageItem_TextFrame::invalidateLayout(int firstChar)
 	slotInvalidateLayout(firstChar, storyLen);
 }
 
-void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int /*endItem*/)
+void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int endItem)
 {
 	PageItem* firstFrame = firstInChain();
 	firstItem = itemText.prevParagraph(firstItem);
+	const int changedParagraphEnd = itemText.isEmpty() ? 0 : itemText.nextParagraph(qMin(endItem, itemText.length() - 1));
 
 	PageItem_TextFrame* firstInvalid = dynamic_cast<PageItem_TextFrame*>(firstFrame);
 	while (firstInvalid)
@@ -3193,7 +3194,14 @@ void PageItem_TextFrame::slotInvalidateLayout(int firstItem, int /*endItem*/)
 		invalidFrame = dynamic_cast<PageItem_TextFrame*>(invalidFrame->m_nextBox);
 	}
 	if (m_Doc && !m_Doc->isLoading())
+	{
 		m_Doc->invalidateRunningHeaderFrames(false);
+		for (int i = firstItem; i <= changedParagraphEnd && i < itemText.length(); ++i)
+		{
+			if (itemText.hasMark(i, MARKAnchorType))
+				m_Doc->invalidateCrossReferenceFrames(itemText.mark(i), false);
+		}
+	}
 }
 
 void PageItem_TextFrame::slotSpellCheckTextChanged(int /*firstItem*/, int /*endItem*/)
