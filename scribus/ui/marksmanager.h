@@ -26,6 +26,9 @@ private:
 	ScribusDoc* m_Doc {nullptr};
 	PrefsContext* m_prefs {nullptr};
 	Mark* getMarkFromListView();
+	Mark* navigationMark(Mark* mark) const;
+	bool canNavigateToMark(Mark* mark) const;
+	QString navigationLabel(const Mark* mark) const;
 	bool isBrokenCrossReference(const Mark* mark) const;
 	void addListItem(MarkType typeMrk, const QString& typeStr, const QList<Mark *> &marks, int &index);
 	QStringList m_expandedItems;
@@ -40,10 +43,12 @@ public slots:
 
 private slots:
 	void on_UpdateButton_clicked();
+	void on_GoToButton_clicked();
 	void on_EditButton_clicked();
 	void on_DeleteButton_clicked();
 	void on_listView_doubleClicked(const QModelIndex &index);
 	void on_listView_itemSelectionChanged();
+	void showContextMenu(const QPoint& point);
 };
 
 #endif // MARKSMANAGER_H

@@ -121,6 +121,18 @@ paragraph_reference_label = scribus.insertCrossReference(
 )
 check(paragraph_reference_label == "Chapter Two title", "paragraph-reference insertion failed")
 check(scribus.getCrossReferenceText(target_name) == "Chapter Two", "target paragraph text did not resolve")
+
+step("navigating from a cross-reference to its target")
+scribus.gotoPage(1)
+scribus.deselectAll()
+scribus.goToCrossReferenceTarget(reference_label)
+check(scribus.currentPage() == 2, "cross-reference navigation did not switch to the target page")
+check(scribus.getSelectedObject() == target_frame, "cross-reference navigation did not select the target frame")
+expect_error(
+    lambda: scribus.goToCrossReferenceTarget("missing-reference"),
+    "navigation accepted a missing cross-reference",
+)
+
 rendered_text = rendered_source_text()
 if rendered_text is not None:
     check("See page 2" in rendered_text, "inserted page reference did not render its target page")
@@ -234,6 +246,10 @@ with open(output_path, "wb") as saved_file:
     saved_file.write(saved_data)
 check(scribus.openDoc(output_path), "could not reopen the malformed reference fixture")
 check("BrokenCrossReference" in preflight_errors(), "broken reference was not reported by Preflight")
+expect_error(
+    lambda: scribus.goToCrossReferenceTarget(reference_label),
+    "navigation accepted a cross-reference with a missing target",
+)
 scribus.saveDoc()
 check(
     b'MARKlabel="missing-target"' in read_sla(output_path),

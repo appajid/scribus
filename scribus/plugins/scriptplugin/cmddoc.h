@@ -467,6 +467,10 @@ PyDoc_STRVAR(scribus_insertcrossreference__doc__,
 QT_TR_NOOP("insertCrossReference(target, [objectName, position=-1, label='', format='page', prefix='', suffix='']) -> str\n\nInserts a dynamic reference to a named target and returns the reference label. Format is 'page' or 'paragraph'. A position of -1 appends it."));
 PyObject *scribus_insertcrossreference(PyObject *self, PyObject* args);
 
+PyDoc_STRVAR(scribus_gotocrossreferencetarget__doc__,
+QT_TR_NOOP("goToCrossReferenceTarget(reference)\n\nNavigates to the target of a cross-reference, selects its text frame, and places the text cursor at the target."));
+PyObject *scribus_gotocrossreferencetarget(PyObject *self, PyObject* args);
+
 PyDoc_STRVAR(scribus_getcrossreferencetext__doc__,
 QT_TR_NOOP("getCrossReferenceText(target) -> str\n\nReturns the current paragraph text containing a named cross-reference target."));
 PyObject *scribus_getcrossreferencetext(PyObject *self, PyObject* args);

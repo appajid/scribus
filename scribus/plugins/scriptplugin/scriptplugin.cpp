@@ -459,6 +459,7 @@ PyMethodDef scribus_methods[] = {
 	{ "stringValueToPoints", scribus_stringvaluetopoints, METH_VARARGS, tr(scribus_stringvaluetopoints__doc__)},
 	{ "getVGuides", (PyCFunction) scribus_getVguides, METH_NOARGS, tr(scribus_getVguides__doc__)},
 	{ "getXFontNames", (PyCFunction) scribus_xfontnames, METH_NOARGS, tr(scribus_xfontnames__doc__)},
+	{ "goToCrossReferenceTarget", scribus_gotocrossreferencetarget, METH_VARARGS, tr(scribus_gotocrossreferencetarget__doc__)},
 	{ "gotoPage", scribus_gotopage, METH_VARARGS, tr(scribus_gotopage__doc__)},
 	{ "groupObjects", (PyCFunction) scribus_groupobjects, METH_VARARGS, tr(scribus_groupobjects__doc__)},
 	{ "haveDoc", (PyCFunction) scribus_havedoc, METH_NOARGS, tr(scribus_havedoc__doc__)},

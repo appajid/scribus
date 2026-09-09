@@ -1909,6 +1909,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QString crossReferencePageNumber(const QString& targetName) const;
 		QString crossReferenceParagraphText(const QString& targetName) const;
 		QString crossReferenceParagraphText(const Mark* target) const;
+		Mark* crossReferenceDestination(const Mark* reference) const;
 		QString crossReferenceValue(const Mark* reference) const;
 		bool invalidateCrossReferenceFrames(const Mark* target, bool forceUpdate = false);
 
@@ -1949,6 +1950,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		TextNote* newNote(NotesStyle* NS);
 
 		bool isMarkUsed(const Mark* mrk, bool visible = false) const;
+		bool navigateToMark(const Mark* mark);
 		//set cursor in text where given mark will be found
 		void setCursor2MarkPos(const Mark* mark);
 		//return false if mark was not found

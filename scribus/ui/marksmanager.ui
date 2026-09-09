@@ -59,6 +59,11 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
+     <widget class="QPushButton" name="GoToButton">
+      <property name="text">
+       <string>Go to Target</string>
+      </property>
+     </widget>
      <widget class="QPushButton" name="EditButton">
       <property name="text">
        <string>Edit</string>

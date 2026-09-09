@@ -8,6 +8,7 @@
 #include "util.h"
 #include "iconmanager.h"
 #include <QHeaderView>
+#include <QMenu>
 #include <QMessageBox>
 #include <QStandardItemModel>
 
@@ -21,6 +22,7 @@ MarksManager::MarksManager(QWidget *parent, const char *name)
 	listView->setColumnCount(3);
 	listView->setAlternatingRowColors(true);
 	listView->setUniformRowHeights(true);
+	listView->setContextMenuPolicy(Qt::CustomContextMenu);
 	listView->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 	listView->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 	listView->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
@@ -28,8 +30,10 @@ MarksManager::MarksManager(QWidget *parent, const char *name)
 	if (pname.isEmpty())
 		pname = "marksManager";
 	m_prefs = PrefsManager::instance().prefsFile->getContext(pname);
+	connect(listView, &QTreeWidget::customContextMenuRequested, this, &MarksManager::showContextMenu);
 	setDoc(nullptr);
 	languageChange();
+	GoToButton->setEnabled(false);
 	EditButton->setEnabled(false);
 	DeleteButton->setEnabled(false);
 	UpdateButton->setEnabled(false);
@@ -157,7 +161,7 @@ void MarksManager::updateListView()
 		addListItem(MARKAnchorType, tr("Cross-reference Targets"), m_Doc->marksList(), index);
 		addListItem(MARKVariableTextType, tr("Variable Text"), m_Doc->marksList(), index);
 		addListItem(MARK2ItemType, tr("Marks to Items"), m_Doc->marksList(), index);
-		addListItem(MARK2MarkType, tr("Page References"), m_Doc->marksList(), index);
+		addListItem(MARK2MarkType, tr("Cross-references"), m_Doc->marksList(), index);
 		addListItem(MARKNoteMasterType, tr("Notes marks"), m_Doc->marksList(), index);
 		addListItem(MARKIndexType, tr("Index Entries"), m_Doc->marksList(), index);
 		listView->sortByColumn(0, Qt::AscendingOrder);
@@ -173,6 +177,9 @@ void MarksManager::setDoc(ScribusDoc *doc)
 		disconnect(m_Doc->scMW(), SIGNAL(UpdateRequest(int)), this , SLOT(handleUpdateRequest(int)));
 
 	UpdateButton->setEnabled(false);
+	GoToButton->setEnabled(false);
+	EditButton->setEnabled(false);
+	DeleteButton->setEnabled(false);
 	listView->setEnabled(false);
 
 	m_Doc = doc;
@@ -207,11 +214,13 @@ void MarksManager::languageChange()
 	listView->setHeaderLabels({tr("Name"), tr("Page"), tr("Details")});
 	UpdateButton->setText(tr("Update References and Marks"));
 
-	listView->setToolTip(tr("Double-click an entry to locate it in the document"));
+	listView->setToolTip(tr("Double-click an entry to locate its target in the document"));
 	UpdateButton->setToolTip(tr("Update all page references, variables, and marks"));
+	GoToButton->setToolTip(tr("Locate the selected target or mark in the document"));
 	EditButton->setToolTip(tr("Edit the selected reference or mark"));
 	if (m_Doc != nullptr)
 		updateListView();
+	on_listView_itemSelectionChanged();
 }
 
 void MarksManager::paletteChange()
@@ -241,12 +250,38 @@ Mark* MarksManager::getMarkFromListView()
 	return mrk;
 }
 
+Mark* MarksManager::navigationMark(Mark* mark) const
+{
+	if (!m_Doc || !mark)
+		return nullptr;
+	return mark->isType(MARK2MarkType) ? m_Doc->crossReferenceDestination(mark) : mark;
+}
+
+bool MarksManager::canNavigateToMark(Mark* mark) const
+{
+	Mark* destination = navigationMark(mark);
+	return destination && m_Doc->findFirstMarkItem(destination);
+}
+
+QString MarksManager::navigationLabel(const Mark* mark) const
+{
+	return mark && (mark->isType(MARK2MarkType) || mark->isType(MARKAnchorType))
+		? tr("Go to Target") : tr("Go to Mark");
+}
+
 bool MarksManager::isBrokenCrossReference(const Mark* mark) const
 {
 	if (!m_Doc || !mark || !mark->isType(MARK2MarkType))
 		return false;
 	Mark* target = m_Doc->getMark(mark->getDestMarkName(), mark->getDestMarkType());
 	return !target || !m_Doc->findFirstMarkItem(target);
+}
+
+void MarksManager::on_GoToButton_clicked()
+{
+	Mark* destination = navigationMark(getMarkFromListView());
+	if (destination)
+		m_Doc->navigateToMark(destination);
 }
 
 void MarksManager::on_UpdateButton_clicked()
@@ -338,17 +373,16 @@ void MarksManager::on_DeleteButton_clicked()
 
 void MarksManager::on_listView_doubleClicked(const QModelIndex &index)
 {
-	Mark* mrk = getMarkFromListView();
-	if (mrk == nullptr)
-		return;
-	// qDebug() << "double click" << mrk->label << mrk->getString() << mrk->OwnPage;
-	m_Doc->setCursor2MarkPos(mrk);
+	Q_UNUSED(index);
+	on_GoToButton_clicked();
 }
 
 void MarksManager::on_listView_itemSelectionChanged()
 {
 	Mark* mark = getMarkFromListView();
 	bool isMark = (mark != nullptr);
+	GoToButton->setText(navigationLabel(mark));
+	GoToButton->setEnabled(canNavigateToMark(mark));
 	EditButton->setEnabled(isMark);
 	DeleteButton->setEnabled(isMark);
 	const bool needsRepair = isBrokenCrossReference(mark);
@@ -356,4 +390,29 @@ void MarksManager::on_listView_itemSelectionChanged()
 	EditButton->setToolTip(needsRepair
 		? tr("Choose an existing target for this broken page reference")
 		: tr("Edit the selected reference or mark"));
+}
+
+void MarksManager::showContextMenu(const QPoint& point)
+{
+	QTreeWidgetItem* item = listView->itemAt(point);
+	if (!item || !item->data(0, Qt::UserRole).isValid())
+		return;
+	listView->setCurrentItem(item);
+	Mark* mark = getMarkFromListView();
+	if (!mark)
+		return;
+
+	QMenu menu(this);
+	QAction* goToAction = menu.addAction(navigationLabel(mark));
+	goToAction->setEnabled(canNavigateToMark(mark));
+	menu.addSeparator();
+	QAction* editAction = menu.addAction(isBrokenCrossReference(mark) ? tr("Repair") : tr("Edit"));
+	QAction* deleteAction = menu.addAction(tr("Delete"));
+	QAction* selectedAction = menu.exec(listView->viewport()->mapToGlobal(point));
+	if (selectedAction == goToAction)
+		on_GoToButton_clicked();
+	else if (selectedAction == editAction)
+		on_EditButton_clicked();
+	else if (selectedAction == deleteAction)
+		on_DeleteButton_clicked();
 }

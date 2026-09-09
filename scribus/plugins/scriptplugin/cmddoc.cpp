@@ -972,6 +972,36 @@ PyObject *scribus_insertcrossreference(PyObject* /* self */, PyObject* args)
 	return PyUnicode_FromString(reference->label.toUtf8().constData());
 }
 
+PyObject *scribus_gotocrossreferencetarget(PyObject* /* self */, PyObject* args)
+{
+	PyESString referenceName;
+	if (!PyArg_ParseTuple(args, "es", "utf-8", referenceName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* currentDoc = ScCore->primaryMainWindow()->doc;
+	const QString requestedReference = QString::fromUtf8(referenceName.c_str()).trimmed();
+	Mark* reference = currentDoc->getMark(requestedReference, MARK2MarkType);
+	if (!reference)
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Cross-reference '%1' was not found.", "python error").arg(requestedReference).toUtf8().constData());
+		return nullptr;
+	}
+	Mark* target = currentDoc->crossReferenceDestination(reference);
+	if (!target)
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("The target of cross-reference '%1' was not found.", "python error").arg(requestedReference).toUtf8().constData());
+		return nullptr;
+	}
+	if (!currentDoc->navigateToMark(target))
+	{
+		PyErr_SetString(ScribusException, QObject::tr("The target of cross-reference '%1' is not placed in document text.", "python error").arg(requestedReference).toUtf8().constData());
+		return nullptr;
+	}
+	Py_RETURN_NONE;
+}
+
 PyObject *scribus_getcrossreferencetext(PyObject* /* self */, PyObject* args)
 {
 	PyESString targetName;

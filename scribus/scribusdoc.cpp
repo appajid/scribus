@@ -18836,20 +18836,22 @@ QString ScribusDoc::crossReferenceParagraphText(const Mark* target) const
 	return result.simplified();
 }
 
-QString ScribusDoc::crossReferenceValue(const Mark* reference) const
+Mark* ScribusDoc::crossReferenceDestination(const Mark* reference) const
 {
 	if (!reference || !reference->isType(MARK2MarkType))
-		return QString();
-	Mark* target = nullptr;
+		return nullptr;
 	for (Mark* candidate : m_docMarksList)
 	{
 		if (candidate && candidate->label == reference->getDestMarkName()
 			&& candidate->isType(reference->getDestMarkType()))
-		{
-			target = candidate;
-			break;
-		}
+			return candidate;
 	}
+	return nullptr;
+}
+
+QString ScribusDoc::crossReferenceValue(const Mark* reference) const
+{
+	Mark* target = crossReferenceDestination(reference);
 	const PageItem* targetItem = target ? findFirstMarkItem(target) : nullptr;
 	if (!targetItem || targetItem->OwnPage < 0 || targetItem->OwnPage >= DocPages.count())
 		return QString();
@@ -18969,10 +18971,10 @@ bool ScribusDoc::isMarkUsed(const Mark* mrk, bool visible) const
 	return false;
 }
 
-void ScribusDoc::setCursor2MarkPos(const Mark *mark)
+bool ScribusDoc::navigateToMark(const Mark* mark)
 {
 	if (mark == nullptr)
-		return;
+		return false;
 
 	PageItem* item = nullptr;
 	if (mark->isType(MARKNoteFrameType) || mark->isType(MARKNoteMasterType))
@@ -18982,14 +18984,27 @@ void ScribusDoc::setCursor2MarkPos(const Mark *mark)
 	if (item == nullptr)
 		item = findFirstMarkItem(mark);
 	if (item == nullptr)
-		return;
+		return false;
 
 	int cursorPos = findMarkCPos(mark, item);
-	if (cursorPos > -1)
-	{
-		scMW()->deselectAll();
-		scMW()->selectItemFromOutlines(item, true, cursorPos + 1);
-	}
+	if (cursorPos < 0 || !scMW())
+		return false;
+
+	PageItem* visibleItem = item->frameOfChar(cursorPos);
+	if (visibleItem == nullptr)
+		visibleItem = item;
+	scMW()->deselectAll();
+	scMW()->selectItemFromOutlines(visibleItem, true, cursorPos + 1);
+
+	QPointF canvasPos;
+	if (view() && textCanvasPosition(item, cursorPos, canvasPos))
+		view()->setCanvasCenterPos(canvasPos.x(), canvasPos.y());
+	return true;
+}
+
+void ScribusDoc::setCursor2MarkPos(const Mark* mark)
+{
+	navigateToMark(mark);
 }
 
 bool ScribusDoc::eraseMark(Mark *mrk, bool fromText, PageItem *item, bool force)
