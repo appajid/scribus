@@ -219,6 +219,7 @@ PageItem::PageItem(const PageItem & other)
 	ChangedMasterItem(other.ChangedMasterItem),
 	OnMasterPage(other.OnMasterPage),
 	isEmbedded(other.isEmbedded),
+	m_anchorPosition(other.m_anchorPosition),
 	m_roundedCornerRadius(other.m_roundedCornerRadius),
 	oldXpos(other.oldXpos),
 	oldYpos(other.oldYpos),

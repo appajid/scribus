@@ -40,6 +40,7 @@ for which a new license (GPL+exception) is in place.
 #include <QTemporaryFile>
 
 #include "scribusapi.h"
+#include "anchorposition.h"
 #include "annotation.h"
 #include "commonstrings.h"
 #include "colormgmt/sccolormgmtstructs.h"
@@ -1442,6 +1443,9 @@ public:	// Start public variables
 	QString OnMasterPage;
 	bool isEmbedded {false};
 	int inlineCharID {0};
+	const AnchorPosition& anchorPosition() const { return m_anchorPosition; }
+	void setAnchorPosition(const AnchorPosition& position) { m_anchorPosition = position; }
+	AnchorPosition m_anchorPosition;
 	/** Radius of rounded corners */
 	double m_roundedCornerRadius {0.0};
 

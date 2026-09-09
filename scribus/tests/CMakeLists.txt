@@ -32,6 +32,13 @@ set_target_properties(${SCRIBUS_TESTS_LIB}
 
 set(TESTS_LIBRARIES Qt6::Test Qt6::Core)
 
+# Unit tests for anchored-object positioning and wrap geometry
+set(ANCHORPOSITIONTESTS_SOURCES anchorpositiontests.cpp ../anchorposition.cpp)
+add_executable(anchorpositiontests ${ANCHORPOSITIONTESTS_SOURCES})
+target_link_libraries(anchorpositiontests ${TESTS_LIBRARIES} Qt6::Gui)
+target_compile_definitions(anchorpositiontests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME anchorpositiontests COMMAND anchorpositiontests)
+
 # Unit tests for CellArea
 set(CELLAREATESTS_SOURCES cellareatests.cpp ../cellarea.cpp)
 add_executable(cellareatests ${CELLAREATESTS_SOURCES})

@@ -4280,6 +4280,20 @@ bool Scribus170Format::readObject(ScribusDoc* doc, ScXmlStreamReader& reader, co
 //	newItem->Language = ScMW->GetLang(pg.attribute("LANGUAGE", doc->Language));
 	newItem->isAutoText = attrs.valueAsBool("AUTOTEXT", false);
 	newItem->isEmbedded = attrs.valueAsBool("isInline", false);
+	AnchorPosition anchor;
+	anchor.mode = static_cast<AnchorPosition::Mode>(qBound(0, attrs.valueAsInt("ANCHORMODE", 0), 2));
+	anchor.horizontalReference = static_cast<AnchorPosition::HorizontalReference>(qBound(0, attrs.valueAsInt("ANCHORHREF", 0), 4));
+	anchor.verticalReference = static_cast<AnchorPosition::VerticalReference>(qBound(0, attrs.valueAsInt("ANCHORVREF", 0), 3));
+	anchor.horizontalAlignment = static_cast<AnchorPosition::HorizontalAlignment>(qBound(0, attrs.valueAsInt("ANCHORHALIGN", 0), 5));
+	anchor.verticalAlignment = static_cast<AnchorPosition::VerticalAlignment>(qBound(0, attrs.valueAsInt("ANCHORVALIGN", 3), 4));
+	anchor.wrapMode = static_cast<AnchorPosition::WrapMode>(qBound(0, attrs.valueAsInt("ANCHORWRAP", 0), 4));
+	anchor.xOffset = attrs.valueAsDouble("ANCHORX", 0.0);
+	anchor.yOffset = attrs.valueAsDouble("ANCHORY", 0.0);
+	anchor.wrapOffsets = QMarginsF(attrs.valueAsDouble("ANCHORWLEFT", 0.0), attrs.valueAsDouble("ANCHORWTOP", 0.0),
+		attrs.valueAsDouble("ANCHORWRIGHT", 0.0), attrs.valueAsDouble("ANCHORWBOTTOM", 0.0));
+	anchor.keepWithinBounds = attrs.valueAsBool("ANCHORKEEP", false);
+	anchor.preventManualPositioning = attrs.valueAsBool("ANCHORLOCK", false);
+	newItem->setAnchorPosition(anchor);
 	newItem->gXpos   = attrs.valueAsDouble("gXpos", 0.0);
 	newItem->gYpos   = attrs.valueAsDouble("gYpos", 0.0);
 	newItem->gWidth  = attrs.valueAsDouble("gWidth", newItem->width());

@@ -36,6 +36,7 @@ set(SCRIBUS_FSW_SRC
 set(SCRIBUS_SOURCES
 	actionmanager.cpp
 	actionsearch.cpp
+	anchorposition.cpp
 	appmodehelper.cpp
 	canvas.cpp
 	canvasgesture_cellselect.cpp

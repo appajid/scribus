@@ -2095,6 +2095,24 @@ void Scribus170Format::WriteObjects(ScribusDoc *doc, ScXmlStreamWriter& docu, co
 			docu.writeAttribute("ImageRes", item->pixm.imgInfo.lowResType);
 		if (item->isEmbedded)
 			docu.writeAttribute("isInline", 1);
+		const AnchorPosition& anchor = item->anchorPosition();
+		if (!anchor.isDefault())
+		{
+			docu.writeAttribute("ANCHORMODE", static_cast<int>(anchor.mode));
+			docu.writeAttribute("ANCHORHREF", static_cast<int>(anchor.horizontalReference));
+			docu.writeAttribute("ANCHORVREF", static_cast<int>(anchor.verticalReference));
+			docu.writeAttribute("ANCHORHALIGN", static_cast<int>(anchor.horizontalAlignment));
+			docu.writeAttribute("ANCHORVALIGN", static_cast<int>(anchor.verticalAlignment));
+			docu.writeAttribute("ANCHORWRAP", static_cast<int>(anchor.wrapMode));
+			docu.writeAttribute("ANCHORX", anchor.xOffset);
+			docu.writeAttribute("ANCHORY", anchor.yOffset);
+			docu.writeAttribute("ANCHORWLEFT", anchor.wrapOffsets.left());
+			docu.writeAttribute("ANCHORWTOP", anchor.wrapOffsets.top());
+			docu.writeAttribute("ANCHORWRIGHT", anchor.wrapOffsets.right());
+			docu.writeAttribute("ANCHORWBOTTOM", anchor.wrapOffsets.bottom());
+			docu.writeAttribute("ANCHORKEEP", static_cast<int>(anchor.keepWithinBounds));
+			docu.writeAttribute("ANCHORLOCK", static_cast<int>(anchor.preventManualPositioning));
+		}
 		if (!item->fillRule)
 			docu.writeAttribute("fillRule", 0);
 		if (item->doOverprint)
