@@ -1,0 +1,54 @@
+name: Cross-platform portability
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-tests:
+    name: ${{ matrix.name }} / Qt ${{ matrix.qt-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-24.04
+            qt-arch: linux_gcc_64
+            qt-version: 6.11.2
+          - name: Windows x64
+            os: windows-2022
+            qt-arch: win64_msvc2022_64
+            qt-version: 6.11.2
+          - name: macOS ARM64
+            os: macos-15
+            qt-arch: clang_64
+            qt-version: 6.11.2
+
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt-version }}
+          arch: ${{ matrix.qt-arch }}
+          cache: true
+
+      - name: Configure portable tests
+        run: cmake -S ci/portable -B build/portable -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build portable tests
+        run: cmake --build build/portable --config Release --parallel 4
+
+      - name: Run portable tests
+        run: ctest --test-dir build/portable -C Release --output-on-failure
