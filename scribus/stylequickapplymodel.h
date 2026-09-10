@@ -15,7 +15,7 @@
 
 #include "scribusapi.h"
 
-enum class StyleSearchType { paragraph, character };
+enum class StyleSearchType { paragraph, character, table, cell };
 
 struct StyleSearchItem
 {

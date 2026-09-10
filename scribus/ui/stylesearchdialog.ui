@@ -48,7 +48,7 @@
    <item>
     <widget class="QLabel" name="descriptionLabel">
      <property name="text">
-      <string>Apply a paragraph or character style without leaving the canvas.</string>
+      <string>Apply an available paragraph, character, table, or cell style without leaving the canvas.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -58,7 +58,7 @@
    <item>
     <widget class="QLineEdit" name="filterLineEdit">
      <property name="placeholderText">
-      <string>Search styles; use p: for paragraph or c: for character</string>
+      <string>Search styles; filter with p:, c:, tb:, or cl:</string>
      </property>
      <property name="clearButtonEnabled">
       <bool>true</bool>

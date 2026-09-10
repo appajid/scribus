@@ -29,8 +29,22 @@ namespace
 {
 QString storageKey(const StyleSearchItem& style)
 {
-	const QString prefix = style.type == StyleSearchType::paragraph
-		? QStringLiteral("P/") : QStringLiteral("C/");
+	QString prefix;
+	switch (style.type)
+	{
+		case StyleSearchType::paragraph:
+			prefix = QStringLiteral("P/");
+			break;
+		case StyleSearchType::character:
+			prefix = QStringLiteral("C/");
+			break;
+		case StyleSearchType::table:
+			prefix = QStringLiteral("T/");
+			break;
+		case StyleSearchType::cell:
+			prefix = QStringLiteral("L/");
+			break;
+	}
 	return prefix + QString::fromLatin1(QUrl::toPercentEncoding(style.name));
 }
 
@@ -53,7 +67,7 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 	ModernUI::applySurfaceStyle(this, "commandPalette");
 	ui->filterLineEdit->setAccessibleName(tr("Search styles"));
 	ui->filterLineEdit->setAccessibleDescription(
-		tr("Search paragraph and character styles by name. Use p: or c: to filter by type."));
+		tr("Search available styles by name. Use p:, c:, tb:, or cl: to filter by type."));
 	ui->stylesListWidget->setAccessibleName(tr("Matching styles"));
 	ui->stylesListWidget->setIconSize(QSize(20, 20));
 	ui->favoriteButton->setAccessibleName(tr("Favourite style"));
@@ -236,7 +250,21 @@ void StyleSearchDialog::updatePreview()
 	ui->previewSampleLabel->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 
 	QStringList details;
-	details.append(style->type == StyleSearchType::paragraph ? tr("Paragraph Style") : tr("Character Style"));
+	switch (style->type)
+	{
+		case StyleSearchType::paragraph:
+			details.append(tr("Paragraph Style"));
+			break;
+		case StyleSearchType::character:
+			details.append(tr("Character Style"));
+			break;
+		case StyleSearchType::table:
+			details.append(tr("Table Style"));
+			break;
+		case StyleSearchType::cell:
+			details.append(tr("Cell Style"));
+			break;
+	}
 	if (!style->fontFamily.isEmpty())
 		details.append(style->fontStyle.isEmpty()
 			? style->fontFamily : tr("%1 %2").arg(style->fontFamily, style->fontStyle));
@@ -286,8 +314,22 @@ void StyleSearchDialog::toggleFavorite()
 	QListWidgetItem* item = ui->stylesListWidget->currentItem();
 	if (item)
 	{
-		const QString typeName = selected.type == StyleSearchType::paragraph
-			? tr("Paragraph Style") : tr("Character Style");
+		QString typeName;
+		switch (selected.type)
+		{
+			case StyleSearchType::paragraph:
+				typeName = tr("Paragraph Style");
+				break;
+			case StyleSearchType::character:
+				typeName = tr("Character Style");
+				break;
+			case StyleSearchType::table:
+				typeName = tr("Table Style");
+				break;
+			case StyleSearchType::cell:
+				typeName = tr("Cell Style");
+				break;
+		}
 		StyleSearchItem updated = selected;
 		updated.favorite = favorite;
 		item->setText(displayText(updated, typeName, tr("Recent")));
@@ -308,13 +350,34 @@ void StyleSearchDialog::updateList()
 	IconManager &im = IconManager::instance();
 	const QIcon iconParagraph(im.loadPixmap("paragraph-style"));
 	const QIcon iconCharacter(im.loadPixmap("character-style"));
+	const QIcon iconTable(im.loadPixmap("table-style"));
+	const QIcon iconCell(im.loadPixmap("table-cell-style"));
 	const QList<StyleSearchItem> matches = StyleQuickApplyModel::matches(styles, ui->filterLineEdit->text());
 	for (const StyleSearchItem& style : matches)
 	{
-		const bool paragraph = style.type == StyleSearchType::paragraph;
-		const QString typeName = paragraph ? tr("Paragraph Style") : tr("Character Style");
+		QString typeName;
+		QIcon icon;
+		switch (style.type)
+		{
+			case StyleSearchType::paragraph:
+				typeName = tr("Paragraph Style");
+				icon = iconParagraph;
+				break;
+			case StyleSearchType::character:
+				typeName = tr("Character Style");
+				icon = iconCharacter;
+				break;
+			case StyleSearchType::table:
+				typeName = tr("Table Style");
+				icon = iconTable;
+				break;
+			case StyleSearchType::cell:
+				typeName = tr("Cell Style");
+				icon = iconCell;
+				break;
+		}
 		auto* item = new QListWidgetItem(
-			paragraph ? iconParagraph : iconCharacter,
+			icon,
 			displayText(style, typeName, tr("Recent")),
 			ui->stylesListWidget);
 		item->setData(Qt::UserRole, style.name);

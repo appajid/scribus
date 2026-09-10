@@ -18,6 +18,7 @@ private slots:
 	void ranksStrongMatchesFirst();
 	void supportsMultiTermAndFuzzyMatching();
 	void filtersByStyleTypePrefix();
+	void filtersTableAndCellStyles();
 	void prioritizesFavoritesAndRecentStyles();
 	void supportsUnicodeStyleNames();
 };
@@ -79,6 +80,31 @@ void StyleQuickApplyTests::filtersByStyleTypePrefix()
 	const auto characters = StyleQuickApplyModel::matches(styles, QStringLiteral("character: emphasis"));
 	QCOMPARE(characters.size(), 1);
 	QCOMPARE(characters[0].type, StyleSearchType::character);
+}
+
+void StyleQuickApplyTests::filtersTableAndCellStyles()
+{
+	const QList<StyleSearchItem> styles = {
+		{ QStringLiteral("Body"), StyleSearchType::paragraph },
+		{ QStringLiteral("Body"), StyleSearchType::character },
+		{ QStringLiteral("Body"), StyleSearchType::table },
+		{ QStringLiteral("Body"), StyleSearchType::cell },
+	};
+
+	const auto tables = StyleQuickApplyModel::matches(styles, QStringLiteral("table: body"));
+	QCOMPARE(tables.size(), 1);
+	QCOMPARE(tables[0].type, StyleSearchType::table);
+
+	const auto cells = StyleQuickApplyModel::matches(styles, QStringLiteral("cl: body"));
+	QCOMPARE(cells.size(), 1);
+	QCOMPARE(cells[0].type, StyleSearchType::cell);
+
+	const auto all = StyleQuickApplyModel::matches(styles, QStringLiteral("body"));
+	QCOMPARE(all.size(), 4);
+	QCOMPARE(all[0].type, StyleSearchType::paragraph);
+	QCOMPARE(all[1].type, StyleSearchType::character);
+	QCOMPARE(all[2].type, StyleSearchType::table);
+	QCOMPARE(all[3].type, StyleSearchType::cell);
 }
 
 void StyleQuickApplyTests::prioritizesFavoritesAndRecentStyles()

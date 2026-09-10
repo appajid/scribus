@@ -34,6 +34,10 @@ ParsedQuery parseQuery(const QString& query)
 		{ QStringLiteral("character:"), StyleSearchType::character },
 		{ QStringLiteral("char:"), StyleSearchType::character },
 		{ QStringLiteral("c:"), StyleSearchType::character },
+		{ QStringLiteral("table:"), StyleSearchType::table },
+		{ QStringLiteral("tb:"), StyleSearchType::table },
+		{ QStringLiteral("cell:"), StyleSearchType::cell },
+		{ QStringLiteral("cl:"), StyleSearchType::cell },
 	};
 	for (const auto& prefix : prefixes)
 	{
@@ -135,7 +139,7 @@ QList<StyleSearchItem> StyleQuickApplyModel::matches(const QList<StyleSearchItem
 		const int nameOrder = QString::compare(left.style.name, right.style.name, Qt::CaseInsensitive);
 		if (nameOrder != 0)
 			return nameOrder < 0;
-		return left.style.type == StyleSearchType::paragraph && right.style.type == StyleSearchType::character;
+		return static_cast<int>(left.style.type) < static_cast<int>(right.style.type);
 	});
 
 	QList<StyleSearchItem> result;
