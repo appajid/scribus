@@ -81,10 +81,21 @@ scribus.renameVariable(variable_id, "Edition Label")
 check(scribus.getVariable("Edition Label") == "Third Edition", "update or rename failed")
 check(scribus.listVariables() == [(variable_id, "Edition Label", "Third Edition")], "variable list is incorrect")
 
+unicode_name = "ప్రచురణ స్థితి"
+unicode_value = "Edition & समीक्षा <2026> — సంచిక"
+unicode_id = scribus.createVariable(unicode_name, unicode_value)
+check(scribus.getVariable(unicode_name) == unicode_value, "Unicode variable lookup failed")
+
+# Display labels are translated UI text, not persistent identifiers. A custom
+# variable with such a name must remain valid when an SLA moves between locales.
+display_name_id = scribus.createVariable("Document Title", "Custom display-label value")
+check(scribus.getVariable("Document Title") == "Custom display-label value", "display-label name lookup failed")
+check(scribus.getVariable("document-title") == "Dynamic Variables Test", "stable built-in lookup was shadowed")
+
 step("inserting variables")
 frame_name = scribus.createText(40, 40, 300, 80, "DynamicVariableFrame")
-scribus.setFont("Arial Regular", frame_name)
 check(scribus.insertVariable(variable_id, frame_name) == variable_id, "user variable insertion failed")
+check(scribus.insertVariable(unicode_id, frame_name) == unicode_id, "Unicode variable insertion failed")
 title_id = scribus.insertVariable("document-title", frame_name)
 check(title_id == "builtin:document-title", "built-in insertion returned the wrong ID")
 check(scribus.getVariable("current-page", frame_name) == "1", "contextual current-page lookup failed")
@@ -243,6 +254,11 @@ step("reopening document")
 check(scribus.openDoc(output_path), "could not reopen the saved test document")
 check(scribus.getVariable(variable_id) == "Third Edition", "user variable did not survive save/reopen")
 check(scribus.getVariable("Edition Label") == "Third Edition", "saved name lookup failed")
+check(scribus.getVariable(unicode_id) == unicode_value, "Unicode/XML value did not survive save/reopen")
+check(
+    scribus.getVariable(display_name_id) == "Custom display-label value",
+    "locale-independent display-label name did not survive save/reopen",
+)
 check(
     scribus.getVariable("API First Header", frame_name) == "First Visual Heading",
     "API-created running header did not survive save/reopen",
@@ -343,7 +359,6 @@ master_page_name = "Running Header Master"
 scribus.createMasterPage(master_page_name)
 scribus.editMasterPage(master_page_name)
 master_header = scribus.createText(40, 760, 300, 40, "MasterRunningHeader")
-scribus.setFont("Arial Regular", master_header)
 check(
     scribus.insertVariable(running_header_id, master_header) == running_header_id,
     "could not insert a running header on the master page",
@@ -437,6 +452,8 @@ check(b'variableId="running-header-test"' in round_trip_data, "running-header ma
 
 step("deleting variable")
 scribus.deleteVariable(variable_id)
+scribus.deleteVariable(unicode_id)
+scribus.deleteVariable(display_name_id)
 scribus.deleteVariable(running_header_id)
 scribus.deleteVariable(first_on_page_id)
 scribus.deleteVariable(last_on_page_id)

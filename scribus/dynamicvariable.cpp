@@ -320,7 +320,10 @@ bool DynamicVariableResolver::isReservedName(const QString& name)
 		return true;
 	for (const DynamicVariable& variable : builtInVariables())
 	{
-		if (variable.type == candidate || variable.name == candidate)
+		// Only stable, non-translated identifiers belong to the reserved
+		// namespace. Reserving display labels would make an SLA valid or invalid
+		// depending on the UI language used to open it.
+		if (variable.type == candidate)
 			return true;
 	}
 	return false;

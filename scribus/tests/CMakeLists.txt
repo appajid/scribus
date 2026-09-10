@@ -79,6 +79,23 @@ set_tests_properties(runningheader_test_install PROPERTIES
 	LABELS "integration;running-headers"
 	TIMEOUT 180)
 
+set(dynamic_variable_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-dynamic_variables")
+set(dynamic_variable_output "${CMAKE_CURRENT_BINARY_DIR}/dynamic_variables.sla")
+file(MAKE_DIRECTORY "${dynamic_variable_prefs_dir}")
+add_test(NAME dynamic_variables
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${dynamic_variable_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_dynamic_variables.py")
+set_tests_properties(dynamic_variables PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_DYNAMIC_VARIABLE_TEST_OUTPUT=${dynamic_variable_output}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;dynamic-variables;phase-1"
+	PASS_REGULAR_EXPRESSION "DYNAMIC_VARIABLE_TEST_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 180)
+
 function(add_running_header_test test_name script_name pass_marker timeout_seconds)
 	set(test_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-${test_name}")
 	file(MAKE_DIRECTORY "${test_prefs_dir}")
