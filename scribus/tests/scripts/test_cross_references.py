@@ -52,9 +52,11 @@ def preflight_errors():
     return errors
 
 
-output_path = os.path.join(tempfile.gettempdir(), "scribus_cross_reference_test.sla")
-pdf_path = os.path.join(tempfile.gettempdir(), "scribus_cross_reference_test.pdf")
-text_path = os.path.join(tempfile.gettempdir(), "scribus_cross_reference_test.txt")
+output_dir = os.environ.get("SCRIBUS_TEST_OUTPUT_DIR", tempfile.gettempdir())
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, "scribus_cross_reference_test.sla")
+pdf_path = os.path.join(output_dir, "scribus_cross_reference_test.pdf")
+text_path = os.path.join(output_dir, "scribus_cross_reference_test.txt")
 for path in (output_path, pdf_path, text_path):
     if os.path.exists(path):
         os.remove(path)

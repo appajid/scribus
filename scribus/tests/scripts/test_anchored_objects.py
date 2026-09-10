@@ -39,7 +39,9 @@ def step(message):
     print("ANCHORED_OBJECT_QA: " + message, flush=True)
 
 
-output_path = os.path.join(tempfile.gettempdir(), "scribus_anchored_object_test.sla")
+output_dir = os.environ.get("SCRIBUS_TEST_OUTPUT_DIR", tempfile.gettempdir())
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, "scribus_anchored_object_test.sla")
 if os.path.exists(output_path):
     os.remove(output_path)
 
@@ -154,6 +156,14 @@ expect_error(
 expect_error(
     lambda: scribus.setAnchoredObjectOptions(image, {"wrapLeft": -1.0}),
     "a negative wrap offset was accepted",
+)
+expect_error(
+    lambda: scribus.setAnchoredObjectOptions(image, {"xOffset": float("nan")}),
+    "a non-finite position offset was accepted",
+)
+expect_error(
+    lambda: scribus.setAnchoredObjectOptions(image, {"wrapRight": float("inf")}),
+    "a non-finite wrap offset was accepted",
 )
 shape = scribus.createRect(400, 760, 20, 20, "NotATextFrame")
 expect_error(

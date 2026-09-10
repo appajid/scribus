@@ -38,6 +38,7 @@ add_executable(anchorpositiontests ${ANCHORPOSITIONTESTS_SOURCES})
 target_link_libraries(anchorpositiontests ${TESTS_LIBRARIES} Qt6::Gui)
 target_compile_definitions(anchorpositiontests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
 add_test(NAME anchorpositiontests COMMAND anchorpositiontests)
+set_tests_properties(anchorpositiontests PROPERTIES LABELS "anchored-objects;phase-3")
 
 # Unit tests for CellArea
 set(CELLAREATESTS_SOURCES cellareatests.cpp ../cellarea.cpp)
@@ -59,6 +60,7 @@ add_executable(stylequickapplytests ${STYLEQUICKAPPLYTESTS_SOURCES})
 target_link_libraries(stylequickapplytests Qt6::Test Qt6::Core)
 target_compile_definitions(stylequickapplytests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
 add_test(NAME stylequickapplytests COMMAND stylequickapplytests)
+set_tests_properties(stylequickapplytests PROPERTIES LABELS "phase-3;quick-apply")
 
 # End-to-end running-header tests use the installed application because the
 # Scripter and file-format plugins are loaded from the installation layout.
@@ -126,7 +128,9 @@ add_running_header_test(runningheader_scale test_running_header_scale.py
 	"RUNNING_HEADER_SCALE_QA_PASSED" 180)
 
 set(crossreference_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-crossreference_core")
+set(crossreference_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-crossreference_core")
 file(MAKE_DIRECTORY "${crossreference_prefs_dir}")
+file(MAKE_DIRECTORY "${crossreference_output_dir}")
 add_test(NAME crossreference_core
 	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
 		--no-splash
@@ -134,15 +138,17 @@ add_test(NAME crossreference_core
 		--no-gui
 		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_cross_references.py")
 set_tests_properties(crossreference_core PROPERTIES
-	ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${crossreference_output_dir}"
 	FIXTURES_REQUIRED runningheader_test_app
-	LABELS "integration;cross-references"
+	LABELS "integration;cross-references;phase-3"
 	PASS_REGULAR_EXPRESSION "CROSS_REFERENCE_QA_PASSED"
 	RUN_SERIAL TRUE
 	TIMEOUT 120)
 
 set(anchored_object_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-anchored_objects")
+set(anchored_object_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-anchored_objects")
 file(MAKE_DIRECTORY "${anchored_object_prefs_dir}")
+file(MAKE_DIRECTORY "${anchored_object_output_dir}")
 add_test(NAME anchored_objects
 	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
 		--no-splash
@@ -150,9 +156,9 @@ add_test(NAME anchored_objects
 		--no-gui
 		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_anchored_objects.py")
 set_tests_properties(anchored_objects PROPERTIES
-	ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${anchored_object_output_dir}"
 	FIXTURES_REQUIRED runningheader_test_app
-	LABELS "integration;anchored-objects"
+	LABELS "integration;anchored-objects;phase-3"
 	PASS_REGULAR_EXPRESSION "ANCHORED_OBJECT_QA_PASSED"
 	RUN_SERIAL TRUE
 	TIMEOUT 120)

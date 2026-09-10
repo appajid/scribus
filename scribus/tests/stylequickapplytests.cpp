@@ -19,6 +19,7 @@ private slots:
 	void supportsMultiTermAndFuzzyMatching();
 	void filtersByStyleTypePrefix();
 	void prioritizesFavoritesAndRecentStyles();
+	void supportsUnicodeStyleNames();
 };
 
 void StyleQuickApplyTests::showsAllStylesForEmptyQuery()
@@ -98,6 +99,23 @@ void StyleQuickApplyTests::prioritizesFavoritesAndRecentStyles()
 	QCOMPARE(matches[1].name, QStringLiteral("Gamma"));
 	QCOMPARE(matches[2].name, QStringLiteral("Delta"));
 	QCOMPARE(matches[3].name, QStringLiteral("Alpha"));
+}
+
+void StyleQuickApplyTests::supportsUnicodeStyleNames()
+{
+	const QList<StyleSearchItem> styles = {
+		{ QStringLiteral("ప్రధాన శీర్షిక"), StyleSearchType::paragraph },
+		{ QStringLiteral("मुख्य शीर्षक"), StyleSearchType::character },
+		{ QStringLiteral("Body"), StyleSearchType::paragraph },
+	};
+
+	const auto telugu = StyleQuickApplyModel::matches(styles, QStringLiteral("శీర్షిక"));
+	QCOMPARE(telugu.size(), 1);
+	QCOMPARE(telugu[0].name, QStringLiteral("ప్రధాన శీర్షిక"));
+
+	const auto hindi = StyleQuickApplyModel::matches(styles, QStringLiteral("शीर्षक"));
+	QCOMPARE(hindi.size(), 1);
+	QCOMPARE(hindi[0].name, QStringLiteral("मुख्य शीर्षक"));
 }
 
 QTEST_APPLESS_MAIN(StyleQuickApplyTests)

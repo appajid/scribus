@@ -9,6 +9,8 @@ for which a new license (GPL+exception) is in place.
 #include <array>
 #include <utility>
 
+#include <QtGlobal>
+
 #include "anchorposition.h"
 #include "appmodes.h"
 #include "cmdutil.h"
@@ -116,6 +118,11 @@ bool readDistanceOption(PyObject* options, const char* key, double& target)
 	if (PyErr_Occurred())
 		return false;
 	target = ValueToPoint(parsed);
+	if (!qIsFinite(target))
+	{
+		PyErr_Format(PyExc_ValueError, "%s must be finite.", key);
+		return false;
+	}
 	return true;
 }
 
