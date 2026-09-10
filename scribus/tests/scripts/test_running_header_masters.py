@@ -27,7 +27,7 @@ def step(message):
     print("RUNNING_HEADER_MASTERS_QA: " + message, flush=True)
 
 
-output_dir = tempfile.gettempdir()
+output_dir = os.environ.get("SCRIBUS_TEST_OUTPUT_DIR", tempfile.gettempdir())
 document_path = os.path.join(output_dir, "scribus_running_header_masters.sla")
 pdf_path = os.path.join(output_dir, "scribus_running_header_masters.pdf")
 text_path = os.path.join(output_dir, "scribus_running_header_masters.txt")

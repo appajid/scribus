@@ -48,7 +48,8 @@ def create_heading(page, name, value, y=140):
     return frame
 
 
-output_path = os.path.join(tempfile.gettempdir(), "scribus_running_header_sections.sla")
+output_dir = os.environ.get("SCRIBUS_TEST_OUTPUT_DIR", tempfile.gettempdir())
+output_path = os.path.join(output_dir, "scribus_running_header_sections.sla")
 if os.path.exists(output_path):
     os.remove(output_path)
 

@@ -98,7 +98,9 @@ set_tests_properties(dynamic_variables PROPERTIES
 
 function(add_running_header_test test_name script_name pass_marker timeout_seconds)
 	set(test_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-${test_name}")
+	set(test_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-${test_name}")
 	file(MAKE_DIRECTORY "${test_prefs_dir}")
+	file(MAKE_DIRECTORY "${test_output_dir}")
 	add_test(NAME ${test_name}
 		COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
 			--no-splash
@@ -106,9 +108,9 @@ function(add_running_header_test test_name script_name pass_marker timeout_secon
 			--no-gui
 			--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/${script_name}")
 	set_tests_properties(${test_name} PROPERTIES
-		ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+		ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${test_output_dir}"
 		FIXTURES_REQUIRED runningheader_test_app
-		LABELS "integration;running-headers"
+		LABELS "integration;running-headers;phase-2"
 		PASS_REGULAR_EXPRESSION "${pass_marker}"
 		RUN_SERIAL TRUE
 		TIMEOUT ${timeout_seconds})
