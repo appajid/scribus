@@ -62,6 +62,21 @@ target_compile_definitions(stylequickapplytests PRIVATE COMPILE_SCRIBUS_MAIN_APP
 add_test(NAME stylequickapplytests COMMAND stylequickapplytests)
 set_tests_properties(stylequickapplytests PROPERTIES LABELS "phase-3;quick-apply")
 
+# Unit tests for the inherited object-style value model and named resources
+set(OBJECTSTYLETESTS_SOURCES
+	objectstyletests.cpp
+	../styles/objectstyle.cpp
+	../styles/style.cpp
+	../styles/stylecontext.cpp
+	../styles/stylecontextproxy.cpp
+	../updatemanager.cpp
+	../observable.h)
+add_executable(objectstyletests ${OBJECTSTYLETESTS_SOURCES})
+target_link_libraries(objectstyletests Qt6::Test Qt6::Core Qt6::Gui)
+target_compile_definitions(objectstyletests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME objectstyletests COMMAND objectstyletests)
+set_tests_properties(objectstyletests PROPERTIES LABELS "object-styles;phase-3")
+
 # End-to-end running-header tests use the installed application because the
 # Scripter and file-format plugins are loaded from the installation layout.
 if(APPLEBUNDLE)

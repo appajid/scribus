@@ -400,6 +400,7 @@
     <ClInclude Include="..\..\..\scribus\spellcheckfunctions.h" />
     <ClInclude Include="..\..\..\scribus\stylesearch.h" />
     <ClInclude Include="..\..\..\scribus\styles\cellstyle.h" />
+    <ClInclude Include="..\..\..\scribus\styles\objectstyle.h" />
     <moc Include="..\..\..\scribus\ui\charselect.h" />
     <moc Include="..\..\..\scribus\ui\charselectenhanced.h" />
     <ClInclude Include="..\..\..\scribus\styles\charstyle.h" />
@@ -1102,6 +1103,7 @@
     <ClCompile Include="..\..\..\scribus\canvasmode_rotate.cpp" />
     <ClCompile Include="..\..\..\scribus\cellarea.cpp" />
     <ClCompile Include="..\..\..\scribus\styles\cellstyle.cpp" />
+    <ClCompile Include="..\..\..\scribus\styles\objectstyle.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\charselect.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\charselectenhanced.cpp" />
     <ClCompile Include="..\..\..\scribus\styles\charstyle.cpp" />

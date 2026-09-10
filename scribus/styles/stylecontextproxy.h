@@ -20,7 +20,6 @@
 #include <cassert>
 #include <QList>
 #include <QString>
-#include "scfonts.h"
 #include "scribusapi.h"
 #include "sccolor.h"
 #include "styles/stylecontext.h"

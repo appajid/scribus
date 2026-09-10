@@ -12,6 +12,8 @@ set(FORK_APPLICATION_FILES
 	scribus/anchorposition.h
 	scribus/dynamicvariable.cpp
 	scribus/dynamicvariable.h
+	scribus/styles/objectstyle.cpp
+	scribus/styles/objectstyle.h
 	scribus/stylequickapplymodel.cpp
 	scribus/stylequickapplymodel.h
 	scribus/ui/dynamicvariableinsert.cpp

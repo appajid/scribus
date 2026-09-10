@@ -18,6 +18,7 @@
 
 
 #include "style.h"
+#include "scfonts.h"
 
 class ResourceCollection;
 

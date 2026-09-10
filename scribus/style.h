@@ -19,7 +19,6 @@
 
 #include <cassert>
 #include <QString>
-#include "scfonts.h"
 #include "scribusapi.h"
 #include "styles/stylecontext.h"
 #include "desaxe/saxio.h"

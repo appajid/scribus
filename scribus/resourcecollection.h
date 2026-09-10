@@ -53,6 +53,7 @@ class SCRIBUS_API ResourceCollection
 		void collectStyle(const QString& name)              { if (!name.isEmpty()) m_pstyles.insert(name, name); }
 		void collectCharStyle(const QString& name)          { if (!name.isEmpty()) m_cstyles.insert(name, name); }
 		void collectLineStyle(const QString& name)          { if (!name.isEmpty()) m_linestyles.insert(name, name); }
+		void collectObjectStyle(const QString& name)        { if (!name.isEmpty()) m_objectStyles.insert(name, name); }
 		void collectTableStyle(const QString& name)         { if (!name.isEmpty()) m_tableStyles.insert(name, name); }
 		void collectCellStyle(const QString& name)          { if (!name.isEmpty()) m_cellStyles.insert(name, name); }
 		void collectNoteStyle(const QString& name)          { if (!name.isEmpty()) m_noteStyles.insert(name, name); }
@@ -66,6 +67,7 @@ class SCRIBUS_API ResourceCollection
 		void mapStyle(const QString& oldname, const QString& newname)               { m_pstyles.insert(oldname, newname); }
 		void mapCharStyle(const QString& oldname, const QString& newname)           { m_cstyles.insert(oldname, newname); }
 		void mapLineStyle(const QString& oldname, const QString& newname)           { m_linestyles.insert(oldname, newname); }
+		void mapObjectStyle(const QString& oldname, const QString& newname)         { m_objectStyles.insert(oldname, newname); }
 		void mapTableStyle(const QString& oldname, const QString& newname)          { m_tableStyles.insert(oldname, newname); }
 		void mapCellStyle(const QString& oldname, const QString& newname)           { m_cellStyles.insert(oldname, newname); }
 		void mapNoteStyle(const QString& oldname, const QString& newname)           { m_noteStyles.insert(oldname, newname); }
@@ -79,6 +81,7 @@ class SCRIBUS_API ResourceCollection
 		void mapStyles(const QMap<QString, QString>& newnames)              { m_pstyles = newnames; }
 		void mapCharStyles(const QMap<QString, QString>& newnames)          { m_cstyles = newnames; }
 		void mapLineStyles(const QMap<QString, QString>& newnames)          { m_linestyles = newnames; }
+		void mapObjectStyles(const QMap<QString, QString>& newnames)        { m_objectStyles = newnames; }
 		void mapTableStyles(const QMap<QString, QString>& newnames)         { m_tableStyles = newnames; }
 		void mapCellStyles(const QMap<QString, QString>& newnames)          { m_cellStyles = newnames; }
 		void mapNoteStyles(const QMap<QString, QString>& newnames)          { m_noteStyles = newnames; }
@@ -92,6 +95,7 @@ class SCRIBUS_API ResourceCollection
 		const QMap<QString, QString>& styles() const            { return m_pstyles; }
 		const QMap<QString, QString>& charStyles() const        { return m_cstyles; }
 		const QMap<QString, QString>& lineStyles() const        { return m_linestyles; }
+		const QMap<QString, QString>& objectStyles() const      { return m_objectStyles; }
 		const QMap<QString, QString>& tableStyles() const       { return m_tableStyles; }
 		const QMap<QString, QString>& cellStyles() const        { return m_cellStyles; }
 		const QMap<QString, QString>& noteStyles() const        { return m_noteStyles; }
@@ -105,6 +109,7 @@ class SCRIBUS_API ResourceCollection
 		QList<QString> styleNames() const               { return m_pstyles.keys(); }
 		QList<QString> charStyleNames() const           { return m_cstyles.keys(); }
 		QList<QString> lineStyleNames() const           { return m_linestyles.keys(); }
+		QList<QString> objectStyleNames() const         { return m_objectStyles.keys(); }
 		QList<QString> tableStyleNames() const          { return m_tableStyles.keys(); }
 		QList<QString> cellStyleNames() const           { return m_cellStyles.keys(); }
 		QList<QString> noteStyleNames() const           { return m_noteStyles.keys(); }
@@ -128,6 +133,7 @@ class SCRIBUS_API ResourceCollection
 		QMap<QString, QString> m_pstyles;
 		QMap<QString, QString> m_cstyles;
 		QMap<QString, QString> m_linestyles;
+		QMap<QString, QString> m_objectStyles;
 		QMap<QString, QString> m_tableStyles;
 		QMap<QString, QString> m_cellStyles;
 		QMap<QString, QString> m_noteStyles;
