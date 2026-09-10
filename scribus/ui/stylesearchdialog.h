@@ -40,6 +40,8 @@ private:
 	QList<StyleSearchItem> styles;
 
 	bool filterLineEditKeyPress(QKeyEvent * event);
+	void acceptCurrentStyle();
+	void selectNextEnabled(int step);
 
 private slots:
 	void moveSelectionUp();

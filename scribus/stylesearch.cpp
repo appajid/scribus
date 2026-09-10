@@ -9,12 +9,9 @@
 
 #include "stylesearch.h"
 
-#include <QAction>
-#include <QDebug>
 #include <QList>
-#include <QStringList>
 
-#include "scribus.h"
+#include "scribusdoc.h"
 #include "selection.h"
 
 StyleSearch::StyleSearch(ScribusDoc *scribusDoc)
@@ -24,23 +21,9 @@ StyleSearch::StyleSearch(ScribusDoc *scribusDoc)
 
 void StyleSearch::update()
 {
-	if (scribusDoc->m_Selection->isEmpty())
-		return;
-	// TODO: we might simply accept that it's ok if there is a selection
-	// or if there is at least one text frame in the selection
-	// for (int i = 0; i < scribusDoc->m_Selection->count(); i++)
-	// {
-	// 	PageItem *currItem = scribusDoc->m_Selection->itemAt(i);
-	// 	if (currItem->isTextFrame())
-	// 	{
-	// 		textFrames.append(currItem->asTextFrame());
-	// 	}
-	// }
-
-	// if (textFrames.empty())
-	// 	return;
-
 	styles.clear();
+	if (!scribusDoc || !scribusDoc->m_Selection || scribusDoc->m_Selection->isEmpty())
+		return;
 
 	int n = scribusDoc->paragraphStyles().count();
 	for (int i = 0; i < n; ++i )
@@ -62,7 +45,7 @@ void StyleSearch::update()
  */
 void StyleSearch::execute(const StyleSearchItem& style)
 {
-	if (scribusDoc->m_Selection->isEmpty())
+	if (!scribusDoc || !scribusDoc->m_Selection || scribusDoc->m_Selection->isEmpty())
 		return;
 
 	if (style.type == StyleSearchType::paragraph)

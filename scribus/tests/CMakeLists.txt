@@ -53,6 +53,13 @@ target_compile_definitions(actionsearchtests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
 add_test(NAME actionsearchtests COMMAND actionsearchtests)
 set_tests_properties(actionsearchtests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# Unit tests for Quick Apply style discovery, filtering and ranking
+set(STYLEQUICKAPPLYTESTS_SOURCES stylequickapplytests.cpp ../stylequickapplymodel.cpp)
+add_executable(stylequickapplytests ${STYLEQUICKAPPLYTESTS_SOURCES})
+target_link_libraries(stylequickapplytests Qt6::Test Qt6::Core)
+target_compile_definitions(stylequickapplytests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME stylequickapplytests COMMAND stylequickapplytests)
+
 # End-to-end running-header tests use the installed application because the
 # Scripter and file-format plugins are loaded from the installation layout.
 if(APPLEBUNDLE)

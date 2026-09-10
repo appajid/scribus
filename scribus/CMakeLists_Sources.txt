@@ -231,6 +231,7 @@ set(SCRIBUS_SOURCES
 	spellcheckfunctions.cpp
 	storyloader.cpp
 	styleitem.cpp
+	stylequickapplymodel.cpp
 	stylesearch.cpp
 	tableborder.cpp
 	tablecell.cpp

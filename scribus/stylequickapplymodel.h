@@ -7,31 +7,26 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef STYLESEARCH_H
-#define STYLESEARCH_H
+#ifndef STYLEQUICKAPPLYMODEL_H
+#define STYLEQUICKAPPLYMODEL_H
 
 #include <QList>
+#include <QString>
 
 #include "scribusapi.h"
-#include "stylequickapplymodel.h"
 
-class ScribusDoc;
+enum class StyleSearchType { paragraph, character };
 
-class SCRIBUS_API StyleSearch
+struct StyleSearchItem
+{
+	QString name;
+	StyleSearchType type {StyleSearchType::paragraph};
+};
+
+class SCRIBUS_API StyleQuickApplyModel
 {
 public:
-	explicit StyleSearch(ScribusDoc *scribusDoc);
-	~StyleSearch() = default;
-
-	const QList<StyleSearchItem>& getStyles() const { return styles; }
-
-	void update();
-	bool hasStyles() const { return !styles.isEmpty(); }
-	void execute(const StyleSearchItem& styleName);
-
-private:
-	ScribusDoc* scribusDoc { nullptr };
-	QList<StyleSearchItem> styles;
+	static QList<StyleSearchItem> matches(const QList<StyleSearchItem>& styles, const QString& query);
 };
 
 #endif

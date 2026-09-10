@@ -7,17 +7,17 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <utility>
-
-#include <QDebug>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QMainWindow>
 #include <QString>
 
+#include "iconmanager.h"
+#include "modernui.h"
 #include "stylesearchdialog.h"
 #include "ui_stylesearchdialog.h"
-#include "iconmanager.h"
 
 StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearchItem>& styles) :
 	QDialog{parent},
@@ -25,6 +25,12 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 	styles{styles}
 {
 	ui->setupUi(this);
+	ModernUI::applySurfaceStyle(this, "commandPalette");
+	ui->filterLineEdit->setAccessibleName(tr("Search styles"));
+	ui->filterLineEdit->setAccessibleDescription(
+		tr("Search paragraph and character styles by name. Use p: or c: to filter by type."));
+	ui->stylesListWidget->setAccessibleName(tr("Matching styles"));
+	ui->stylesListWidget->setIconSize(QSize(20, 20));
 
 	ui->filterLineEdit->installEventFilter(this);
 	installEventFilter(this);
@@ -32,7 +38,9 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 	connect(ui->filterLineEdit, &QLineEdit::textChanged,      this, &StyleSearchDialog::updateList);
 	connect(this, &StyleSearchDialog::keyArrowUpPressed,     this, &StyleSearchDialog::moveSelectionUp);
 	connect(this, &StyleSearchDialog::keyArrowDownPressed,   this, &StyleSearchDialog::moveSelectionDown);
-	connect(ui->stylesListWidget, &QListWidget::itemDoubleClicked, this, &QDialog::accept);
+	connect(ui->stylesListWidget, &QListWidget::itemDoubleClicked, this, [this]() { acceptCurrentStyle(); });
+	updateList();
+	ui->filterLineEdit->setFocus();
 }
 
 StyleSearchDialog::~StyleSearchDialog()
@@ -42,11 +50,13 @@ StyleSearchDialog::~StyleSearchDialog()
 
 StyleSearchItem StyleSearchDialog::getStyle() const
 {
-	if (ui->stylesListWidget->count() == 0)
+	QListWidgetItem* item = ui->stylesListWidget->currentItem();
+	if (!item || !item->data(Qt::UserRole + 2).toBool())
 		return {"", StyleSearchType::paragraph};
-
-	auto item = ui->stylesListWidget->currentItem();
-	return {item->text(), static_cast<StyleSearchType>(item->type() - QListWidgetItem::UserType)};
+	return {
+		item->data(Qt::UserRole).toString(),
+		static_cast<StyleSearchType>(item->data(Qt::UserRole + 1).toInt())
+	};
 }
 
 /**
@@ -70,7 +80,7 @@ bool StyleSearchDialog::filterLineEditKeyPress(QKeyEvent * event)
 	{
 		case Qt::Key_Enter:
 		case Qt::Key_Return:
-			this->accept();
+			acceptCurrentStyle();
 			return true;
 		case Qt::Key_Up:
 			emit keyArrowUpPressed();
@@ -86,53 +96,77 @@ bool StyleSearchDialog::filterLineEditKeyPress(QKeyEvent * event)
 
 void StyleSearchDialog::moveSelectionUp()
 {
-	int i = ui->stylesListWidget->currentRow();
-	if (i > 0)
-		ui->stylesListWidget->setCurrentRow(i - 1);
+	selectNextEnabled(-1);
 }
 
 void StyleSearchDialog::moveSelectionDown()
 {
-	int i = ui->stylesListWidget->currentRow();
-	if (i < ui->stylesListWidget->count() - 1)
-		ui->stylesListWidget->setCurrentRow(i + 1);
+	selectNextEnabled(1);
+}
+
+void StyleSearchDialog::acceptCurrentStyle()
+{
+	if (!getStyle().name.isEmpty())
+		accept();
+}
+
+void StyleSearchDialog::selectNextEnabled(int step)
+{
+	const int count = ui->stylesListWidget->count();
+	if (count == 0)
+		return;
+	int row = ui->stylesListWidget->currentRow();
+	if (row < 0)
+		row = (step > 0) ? -1 : count;
+	for (int attempts = 0; attempts < count; ++attempts)
+	{
+		row = (row + step + count) % count;
+		QListWidgetItem* item = ui->stylesListWidget->item(row);
+		if (item->data(Qt::UserRole + 2).toBool())
+		{
+			ui->stylesListWidget->setCurrentRow(row);
+			return;
+		}
+	}
 }
 
 
 /**
  * Fill the list with all styles that match the filter.
- * If the filter contains multiple words, acceppts all styles that
- * contain all the words
+ * Results are ranked by exact, prefix, word-prefix, substring, and fuzzy
+ * subsequence matches. An empty filter intentionally shows all styles.
  */
 void StyleSearchDialog::updateList()
 {
 	ui->stylesListWidget->clear();
 
-	const auto filter = ui->filterLineEdit->text().trimmed();
-	if (filter.isEmpty())
-		return;
-
 	IconManager &im = IconManager::instance();
-	QIcon iconParagraph;
-	QIcon iconCharacter;
-	iconParagraph.addPixmap(im.loadPixmap("paragraph-style"));
-	iconCharacter.addPixmap(im.loadPixmap("character-style"));
-	if (!filter.contains(" "))
+	const QIcon iconParagraph(im.loadPixmap("paragraph-style"));
+	const QIcon iconCharacter(im.loadPixmap("character-style"));
+	const QList<StyleSearchItem> matches = StyleQuickApplyModel::matches(styles, ui->filterLineEdit->text());
+	for (const StyleSearchItem& style : matches)
 	{
-		for (auto& style: std::as_const(styles))
-		{
-			if (style.name.contains(filter, Qt::CaseInsensitive))
-			{
-				auto qlwi = new QListWidgetItem(
-					style.type == StyleSearchType::paragraph ? iconParagraph : iconCharacter,
-					style.name,
-					nullptr,
-					static_cast<int>(QListWidgetItem::UserType) + static_cast<int>(style.type));
-				ui->stylesListWidget->addItem(qlwi);
-			}
-		}
+		const bool paragraph = style.type == StyleSearchType::paragraph;
+		const QString typeName = paragraph ? tr("Paragraph Style") : tr("Character Style");
+		auto* item = new QListWidgetItem(
+			paragraph ? iconParagraph : iconCharacter,
+			tr("%1  —  %2").arg(style.name, typeName),
+			ui->stylesListWidget);
+		item->setData(Qt::UserRole, style.name);
+		item->setData(Qt::UserRole + 1, static_cast<int>(style.type));
+		item->setData(Qt::UserRole + 2, true);
+		item->setToolTip(tr("Apply %1").arg(typeName.toLower()));
+		item->setData(Qt::AccessibleTextRole, tr("%1, %2").arg(style.name, typeName));
 	}
 
-	if (ui->stylesListWidget->count() > 0)
-		ui->stylesListWidget->setCurrentRow(0);
+	ui->resultCountLabel->setText(matches.count() == 1
+		? tr("1 style")
+		: tr("%1 styles").arg(matches.count()));
+	if (matches.isEmpty())
+	{
+		auto* item = new QListWidgetItem(tr("No matching styles"), ui->stylesListWidget);
+		item->setData(Qt::UserRole + 2, false);
+		item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+	}
+	selectNextEnabled(1);
 }

@@ -1637,7 +1637,7 @@ void ActionManager::languageChange()
 	}
 	(*scrActions)["fontSizeOther"]->setTexts( tr("&Other..."));
 
-	(*scrActions)["itemStyleSearch"]->setTexts( tr("Style &Search"));
+	(*scrActions)["itemStyleSearch"]->setTexts( tr("Quick Apply &Styles..."));
 
 	(*scrActions)["alignLeft"]->setTexts( tr("&Left"));
 	(*scrActions)["alignCenter"]->setTexts( tr("&Center"));
