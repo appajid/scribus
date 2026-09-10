@@ -97,6 +97,24 @@
     <ClInclude Include="..\..\..\scribus\actionsearch.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\scribus\anchorposition.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\dynamicvariable.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\stylequickapplymodel.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\ui\dynamicvariableinsert.h">
+      <Filter>Source Files\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\ui\dynamicvariablemanager.h">
+      <Filter>Source Files\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\ui\modernui.h">
+      <Filter>Source Files\ui</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\scribus\annotation.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -959,6 +977,24 @@
     </ClCompile>
     <ClCompile Include="..\..\..\scribus\actionsearch.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\anchorposition.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\dynamicvariable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\stylequickapplymodel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\dynamicvariableinsert.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\dynamicvariablemanager.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\widgets\inspector_header.cpp">
+      <Filter>Source Files\ui\widgets</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\scribus\api\api_application.cpp">
       <Filter>Source Files\api</Filter>
@@ -4748,6 +4784,9 @@
       <Filter>Source Files\ui</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\widgets\color_button.h">
+      <Filter>Source Files\ui\widgets</Filter>
+    </moc>
+    <moc Include="..\..\..\scribus\ui\widgets\inspector_header.h">
       <Filter>Source Files\ui\widgets</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\widgets\color_slider.h">

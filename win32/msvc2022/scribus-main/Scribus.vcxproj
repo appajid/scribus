@@ -260,6 +260,9 @@
   <ItemGroup>
     <moc Include="..\..\..\scribus\appmodehelper.h" />
     <ClInclude Include="..\..\..\scribus\actionsearch.h" />
+    <ClInclude Include="..\..\..\scribus\anchorposition.h" />
+    <ClInclude Include="..\..\..\scribus\dynamicvariable.h" />
+    <ClInclude Include="..\..\..\scribus\stylequickapplymodel.h" />
     <ClInclude Include="..\..\..\scribus\api\api_application.h" />
     <ClInclude Include="..\..\..\scribus\appmodes.h" />
     <ClInclude Include="..\..\..\scribus\collapsedtablepainterex.h" />
@@ -295,6 +298,10 @@
     <ClInclude Include="..\..\..\scribus\KarbonCurveFit.h" />
     <moc Include="..\..\..\scribus\ui\about.h" />
     <moc Include="..\..\..\scribus\ui\aboutplugins.h" />
+    <ClInclude Include="..\..\..\scribus\ui\dynamicvariableinsert.h" />
+    <ClInclude Include="..\..\..\scribus\ui\dynamicvariablemanager.h" />
+    <ClInclude Include="..\..\..\scribus\ui\modernui.h" />
+    <moc Include="..\..\..\scribus\ui\widgets\inspector_header.h" />
     <moc Include="..\..\..\scribus\actionmanager.h" />
     <moc Include="..\..\..\scribus\ui\aligndistribute.h" />
     <moc Include="..\..\..\scribus\ui\alignselect.h" />
@@ -951,6 +958,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\scribus\actionsearch.cpp" />
+    <ClCompile Include="..\..\..\scribus\anchorposition.cpp" />
+    <ClCompile Include="..\..\..\scribus\dynamicvariable.cpp" />
+    <ClCompile Include="..\..\..\scribus\stylequickapplymodel.cpp" />
     <ClCompile Include="..\..\..\scribus\api\api_application.cpp" />
     <ClCompile Include="..\..\..\scribus\appmodehelper.cpp" />
     <ClCompile Include="..\..\..\scribus\collapsedtablepainterex.cpp" />
@@ -1034,6 +1044,9 @@
     <ClCompile Include="..\..\..\scribus\third_party\fparser\fpoptimizer.cc" />
     <ClCompile Include="..\..\..\scribus\ui\about.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\aboutplugins.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\dynamicvariableinsert.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\dynamicvariablemanager.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\widgets\inspector_header.cpp" />
     <ClCompile Include="..\..\..\scribus\actionmanager.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\actionsearchdialog.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\aligndistribute.cpp" />
