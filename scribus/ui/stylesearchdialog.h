@@ -12,6 +12,8 @@
 
 #include <QDialog>
 #include <QList>
+#include <QSet>
+#include <QStringList>
 
 #include "stylesearch.h"
 
@@ -19,6 +21,7 @@ class QEvent;
 class QKeyEvent;
 class QMainWindow;
 class QString;
+class PrefsContext;
 
 namespace Ui { class StyleSearchDialog; }
 
@@ -38,10 +41,18 @@ protected:
 private:
 	Ui::StyleSearchDialog *ui { nullptr };
 	QList<StyleSearchItem> styles;
+	PrefsContext* m_prefs { nullptr };
+	QSet<QString> m_favoriteKeys;
+	QStringList m_recentKeys;
 
 	bool filterLineEditKeyPress(QKeyEvent * event);
 	void acceptCurrentStyle();
 	void selectNextEnabled(int step);
+	void restoreUsage();
+	void recordRecent(const StyleSearchItem& style);
+	void saveFavorites();
+	void updatePreview();
+	void toggleFavorite();
 
 private slots:
 	void moveSelectionUp();

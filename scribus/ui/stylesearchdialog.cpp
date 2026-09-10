@@ -8,16 +8,41 @@
  ***************************************************************************/
 
 #include <QEvent>
+#include <QFont>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMainWindow>
 #include <QString>
+#include <QToolButton>
+#include <QUrl>
 
 #include "iconmanager.h"
 #include "modernui.h"
+#include "prefscontext.h"
+#include "prefsfile.h"
+#include "prefsmanager.h"
 #include "stylesearchdialog.h"
 #include "ui_stylesearchdialog.h"
+
+namespace
+{
+QString storageKey(const StyleSearchItem& style)
+{
+	const QString prefix = style.type == StyleSearchType::paragraph
+		? QStringLiteral("P/") : QStringLiteral("C/");
+	return prefix + QString::fromLatin1(QUrl::toPercentEncoding(style.name));
+}
+
+QString displayText(const StyleSearchItem& style, const QString& typeName, const QString& recentText)
+{
+	QString text = style.favorite ? QStringLiteral("★ ") + style.name : style.name;
+	text += QStringLiteral("  —  ") + typeName;
+	if (style.recentRank >= 0)
+		text += QStringLiteral("  •  ") + recentText;
+	return text;
+}
+}
 
 StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearchItem>& styles) :
 	QDialog{parent},
@@ -31,6 +56,10 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 		tr("Search paragraph and character styles by name. Use p: or c: to filter by type."));
 	ui->stylesListWidget->setAccessibleName(tr("Matching styles"));
 	ui->stylesListWidget->setIconSize(QSize(20, 20));
+	ui->favoriteButton->setAccessibleName(tr("Favourite style"));
+	ModernUI::markSections(this);
+	m_prefs = PrefsManager::instance().prefsFile->getContext("QuickApplyStyles");
+	restoreUsage();
 
 	ui->filterLineEdit->installEventFilter(this);
 	installEventFilter(this);
@@ -39,6 +68,8 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 	connect(this, &StyleSearchDialog::keyArrowUpPressed,     this, &StyleSearchDialog::moveSelectionUp);
 	connect(this, &StyleSearchDialog::keyArrowDownPressed,   this, &StyleSearchDialog::moveSelectionDown);
 	connect(ui->stylesListWidget, &QListWidget::itemDoubleClicked, this, [this]() { acceptCurrentStyle(); });
+	connect(ui->stylesListWidget, &QListWidget::currentItemChanged, this, [this]() { updatePreview(); });
+	connect(ui->favoriteButton, &QToolButton::clicked, this, &StyleSearchDialog::toggleFavorite);
 	updateList();
 	ui->filterLineEdit->setFocus();
 }
@@ -106,8 +137,11 @@ void StyleSearchDialog::moveSelectionDown()
 
 void StyleSearchDialog::acceptCurrentStyle()
 {
-	if (!getStyle().name.isEmpty())
-		accept();
+	const StyleSearchItem style = getStyle();
+	if (style.name.isEmpty())
+		return;
+	recordRecent(style);
+	accept();
 }
 
 void StyleSearchDialog::selectNextEnabled(int step)
@@ -130,6 +164,137 @@ void StyleSearchDialog::selectNextEnabled(int step)
 	}
 }
 
+void StyleSearchDialog::restoreUsage()
+{
+	if (!m_prefs)
+		return;
+	const QStringList favorites = m_prefs->get("favorites").split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+	m_favoriteKeys = QSet<QString>(favorites.cbegin(), favorites.cend());
+	m_recentKeys = m_prefs->get("recent").split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+	for (StyleSearchItem& style : styles)
+	{
+		const QString key = storageKey(style);
+		style.favorite = m_favoriteKeys.contains(key);
+		style.recentRank = m_recentKeys.indexOf(key);
+	}
+}
+
+void StyleSearchDialog::recordRecent(const StyleSearchItem& style)
+{
+	const QString key = storageKey(style);
+	m_recentKeys.removeAll(key);
+	m_recentKeys.prepend(key);
+	while (m_recentKeys.size() > 8)
+		m_recentKeys.removeLast();
+	if (m_prefs)
+		m_prefs->set("recent", m_recentKeys.join(QLatin1Char('\n')));
+}
+
+void StyleSearchDialog::saveFavorites()
+{
+	if (!m_prefs)
+		return;
+	QStringList favorites(m_favoriteKeys.cbegin(), m_favoriteKeys.cend());
+	favorites.sort(Qt::CaseInsensitive);
+	m_prefs->set("favorites", favorites.join(QLatin1Char('\n')));
+}
+
+void StyleSearchDialog::updatePreview()
+{
+	const StyleSearchItem selected = getStyle();
+	const QString key = selected.name.isEmpty() ? QString() : storageKey(selected);
+	const StyleSearchItem* style = nullptr;
+	for (const StyleSearchItem& candidate : styles)
+	{
+		if (storageKey(candidate) == key)
+		{
+			style = &candidate;
+			break;
+		}
+	}
+	if (!style)
+	{
+		ui->previewGroup->setEnabled(false);
+		ui->previewNameLabel->setText(tr("No style selected"));
+		ui->previewSampleLabel->clear();
+		ui->previewDetailsLabel->clear();
+		ui->favoriteButton->setChecked(false);
+		return;
+	}
+
+	ui->previewGroup->setEnabled(true);
+	ui->previewNameLabel->setText(style->name);
+	ui->previewSampleLabel->setText(tr("Aa Bb Cc 123 — The quick brown fox"));
+	QFont previewFont = font();
+	if (!style->fontFamily.isEmpty())
+		previewFont.setFamily(style->fontFamily);
+	if (!style->fontStyle.isEmpty())
+		previewFont.setStyleName(style->fontStyle);
+	if (style->fontSize > 0.0)
+		previewFont.setPointSizeF(qBound(10.0, style->fontSize, 28.0));
+	ui->previewSampleLabel->setFont(previewFont);
+	ui->previewSampleLabel->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
+
+	QStringList details;
+	details.append(style->type == StyleSearchType::paragraph ? tr("Paragraph Style") : tr("Character Style"));
+	if (!style->fontFamily.isEmpty())
+		details.append(style->fontStyle.isEmpty()
+			? style->fontFamily : tr("%1 %2").arg(style->fontFamily, style->fontStyle));
+	if (style->fontSize > 0.0)
+		details.append(tr("%1 pt").arg(style->fontSize, 0, 'f', 1));
+	if (style->type == StyleSearchType::paragraph)
+	{
+		const QStringList alignments = {
+			tr("Left"), tr("Centre"), tr("Right"), tr("Justified"), tr("Forced Justified")
+		};
+		if (style->paragraphAlignment >= 0 && style->paragraphAlignment < alignments.size())
+		{
+			details.append(alignments.at(style->paragraphAlignment));
+			if (style->paragraphAlignment == 0)
+				ui->previewSampleLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+			else if (style->paragraphAlignment == 2)
+				ui->previewSampleLabel->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+		}
+	}
+	if (!style->parentStyle.isEmpty())
+		details.append(tr("Based on %1").arg(style->parentStyle));
+	ui->previewDetailsLabel->setText(details.join(QStringLiteral("  •  ")));
+	ui->favoriteButton->setChecked(style->favorite);
+	ui->favoriteButton->setText(style->favorite ? tr("★ Favourite") : tr("☆ Add Favourite"));
+}
+
+void StyleSearchDialog::toggleFavorite()
+{
+	const StyleSearchItem selected = getStyle();
+	if (selected.name.isEmpty())
+		return;
+	const QString key = storageKey(selected);
+	const bool favorite = !m_favoriteKeys.contains(key);
+	if (favorite)
+		m_favoriteKeys.insert(key);
+	else
+		m_favoriteKeys.remove(key);
+	for (StyleSearchItem& style : styles)
+	{
+		if (storageKey(style) == key)
+		{
+			style.favorite = favorite;
+			break;
+		}
+	}
+	saveFavorites();
+	QListWidgetItem* item = ui->stylesListWidget->currentItem();
+	if (item)
+	{
+		const QString typeName = selected.type == StyleSearchType::paragraph
+			? tr("Paragraph Style") : tr("Character Style");
+		StyleSearchItem updated = selected;
+		updated.favorite = favorite;
+		item->setText(displayText(updated, typeName, tr("Recent")));
+	}
+	updatePreview();
+}
+
 
 /**
  * Fill the list with all styles that match the filter.
@@ -150,7 +315,7 @@ void StyleSearchDialog::updateList()
 		const QString typeName = paragraph ? tr("Paragraph Style") : tr("Character Style");
 		auto* item = new QListWidgetItem(
 			paragraph ? iconParagraph : iconCharacter,
-			tr("%1  —  %2").arg(style.name, typeName),
+			displayText(style, typeName, tr("Recent")),
 			ui->stylesListWidget);
 		item->setData(Qt::UserRole, style.name);
 		item->setData(Qt::UserRole + 1, static_cast<int>(style.type));

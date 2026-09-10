@@ -28,14 +28,30 @@ void StyleSearch::update()
 	int n = scribusDoc->paragraphStyles().count();
 	for (int i = 0; i < n; ++i )
 	{
-		auto style = scribusDoc->paragraphStyles()[i];
-		styles.append({style.name(), StyleSearchType::paragraph});
+		const ParagraphStyle& style = scribusDoc->paragraphStyles()[i];
+		const CharStyle& charStyle = style.charStyle();
+		StyleSearchItem item;
+		item.name = style.name();
+		item.type = StyleSearchType::paragraph;
+		item.fontFamily = charStyle.font().family();
+		item.fontStyle = charStyle.font().style();
+		item.fontSize = charStyle.fontSize() / 10.0;
+		item.parentStyle = style.parent();
+		item.paragraphAlignment = static_cast<int>(style.alignment());
+		styles.append(item);
 	}
 	n = scribusDoc->charStyles().count();
 	for (int i = 0; i < n; ++i )
 	{
-		auto style = scribusDoc->charStyles()[i];
-		styles.append({style.name(), StyleSearchType::character});
+		const CharStyle& style = scribusDoc->charStyles()[i];
+		StyleSearchItem item;
+		item.name = style.name();
+		item.type = StyleSearchType::character;
+		item.fontFamily = style.font().family();
+		item.fontStyle = style.font().style();
+		item.fontSize = style.fontSize() / 10.0;
+		item.parentStyle = style.parent();
+		styles.append(item);
 	}
 }
 

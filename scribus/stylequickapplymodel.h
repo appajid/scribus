@@ -21,6 +21,13 @@ struct StyleSearchItem
 {
 	QString name;
 	StyleSearchType type {StyleSearchType::paragraph};
+	QString fontFamily;
+	QString fontStyle;
+	double fontSize {0.0};
+	QString parentStyle;
+	int paragraphAlignment {-1};
+	bool favorite {false};
+	int recentRank {-1};
 };
 
 class SCRIBUS_API StyleQuickApplyModel

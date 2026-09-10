@@ -18,6 +18,7 @@ private slots:
 	void ranksStrongMatchesFirst();
 	void supportsMultiTermAndFuzzyMatching();
 	void filtersByStyleTypePrefix();
+	void prioritizesFavoritesAndRecentStyles();
 };
 
 void StyleQuickApplyTests::showsAllStylesForEmptyQuery()
@@ -77,6 +78,26 @@ void StyleQuickApplyTests::filtersByStyleTypePrefix()
 	const auto characters = StyleQuickApplyModel::matches(styles, QStringLiteral("character: emphasis"));
 	QCOMPARE(characters.size(), 1);
 	QCOMPARE(characters[0].type, StyleSearchType::character);
+}
+
+void StyleQuickApplyTests::prioritizesFavoritesAndRecentStyles()
+{
+	QList<StyleSearchItem> styles = {
+		{ QStringLiteral("Alpha"), StyleSearchType::paragraph },
+		{ QStringLiteral("Beta"), StyleSearchType::paragraph },
+		{ QStringLiteral("Gamma"), StyleSearchType::character },
+		{ QStringLiteral("Delta"), StyleSearchType::character },
+	};
+	styles[1].favorite = true;
+	styles[2].recentRank = 0;
+	styles[3].recentRank = 1;
+
+	const auto matches = StyleQuickApplyModel::matches(styles, QString());
+	QCOMPARE(matches.size(), 4);
+	QCOMPARE(matches[0].name, QStringLiteral("Beta"));
+	QCOMPARE(matches[1].name, QStringLiteral("Gamma"));
+	QCOMPARE(matches[2].name, QStringLiteral("Delta"));
+	QCOMPARE(matches[3].name, QStringLiteral("Alpha"));
 }
 
 QTEST_APPLESS_MAIN(StyleQuickApplyTests)

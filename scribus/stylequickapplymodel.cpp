@@ -124,6 +124,14 @@ QList<StyleSearchItem> StyleQuickApplyModel::matches(const QList<StyleSearchItem
 	std::sort(ranked.begin(), ranked.end(), [](const RankedStyle& left, const RankedStyle& right) {
 		if (left.score != right.score)
 			return left.score < right.score;
+		if (left.style.favorite != right.style.favorite)
+			return left.style.favorite;
+		const bool leftRecent = left.style.recentRank >= 0;
+		const bool rightRecent = right.style.recentRank >= 0;
+		if (leftRecent != rightRecent)
+			return leftRecent;
+		if (leftRecent && left.style.recentRank != right.style.recentRank)
+			return left.style.recentRank < right.style.recentRank;
 		const int nameOrder = QString::compare(left.style.name, right.style.name, Qt::CaseInsensitive);
 		if (nameOrder != 0)
 			return nameOrder < 0;
