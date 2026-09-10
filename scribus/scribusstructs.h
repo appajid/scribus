@@ -550,6 +550,7 @@ enum UpdateRequests
 	reqMarksUpdate       = 4096,
 	reqNumUpdate         = 8192,
 	reqTableStylesUpdate = 16384,
+	reqObjectStylesUpdate = 32768,
 	reqUpdateAll = 65535
 };
 

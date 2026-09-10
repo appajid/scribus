@@ -358,6 +358,20 @@ void StyleManager::showAsEditLineStyle(const QString &name)
 	editStyleByName(4, name);
 }
 
+void StyleManager::showAsEditObjectStyle(const QString& name)
+{
+	if (name.isEmpty())
+		return;
+
+	SMObjectStyle* objectStyleItem = item<SMObjectStyle>();
+	const int styleTypeIndex = m_items.indexOf(objectStyleItem);
+	if (styleTypeIndex < 0)
+		return;
+
+	setPaletteShown(true);
+	editStyleByName(styleTypeIndex, name == CommonStrings::DefaultObjectStyle ? CommonStrings::trDefaultObjectStyle : name);
+}
+
 void StyleManager::reloadStyles()
 {
 	if (!m_doc)

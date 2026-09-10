@@ -40,6 +40,7 @@ public:
 	void showAsEditParagraphStyle(const QString& name);
 	void showAsEditCharacterStyle(const QString& name);
 	void showAsEditLineStyle(const QString& name);
+	void showAsEditObjectStyle(const QString& name);
 	/**
 	 * @brief Reload all style data from the document and rebuild the
 	 * style view tree.

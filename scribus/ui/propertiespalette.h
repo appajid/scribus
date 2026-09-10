@@ -11,8 +11,10 @@ for which a new license (GPL+exception) is in place.
 #include <QLineEdit>
 
 class QCloseEvent;
+class QComboBox;
 class QEvent;
 class QFocusEvent;
+class QToolButton;
 class QToolBox;
 class QVBoxLayout;
 class QWidget;
@@ -86,6 +88,7 @@ private:
 	PageItem* currentItemFromSelection();
 	void enablePalettes(bool enable);
 	QString itemTypeName(const PageItem* item) const;
+	void updateObjectStyleControls();
 	void updateSelectionSummary();
 	
 public slots:
@@ -108,6 +111,10 @@ private slots:
 
 	void handleNewShape(int frameType);
 	void handleShapeEdit();
+	void handleObjectStyleActivated(int index);
+	void handleObjectStyleEdit();
+	void handleUpdateRequest(int updateFlags);
+	void iconSetChange();
 
 	// Gradient Properties
 	void meshGradientToShape();
@@ -121,12 +128,15 @@ private slots:
 protected:
 
 	SectionContainer * scXYZ {nullptr};
+	SectionContainer * scObjectStyle {nullptr};
 	SectionContainer * scShape {nullptr};
 	SectionContainer * scLine {nullptr};
 	SectionContainer * scFill {nullptr};
 	SectionContainer * scShadow {nullptr};
 	SectionContainer * scAttributes {nullptr};
 	InspectorHeader *m_inspectorHeader {nullptr};
+	QComboBox *m_objectStyleCombo {nullptr};
+	QToolButton *m_objectStyleEditButton {nullptr};
 
 	bool m_haveDoc {false};
 	bool m_haveItem {false};

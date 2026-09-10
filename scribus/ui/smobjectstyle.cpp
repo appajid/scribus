@@ -170,6 +170,7 @@ void SMObjectStyle::apply()
 	m_deleted.clear();
 	m_doc->changed();
 	m_doc->changedPagePreview();
+	m_doc->scMW()->requestUpdate(reqObjectStylesUpdate);
 	m_selectionIsDirty = false;
 }
 
