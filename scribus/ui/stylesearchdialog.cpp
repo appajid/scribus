@@ -38,6 +38,9 @@ QString storageKey(const StyleSearchItem& style)
 		case StyleSearchType::character:
 			prefix = QStringLiteral("C/");
 			break;
+		case StyleSearchType::object:
+			prefix = QStringLiteral("O/");
+			break;
 		case StyleSearchType::table:
 			prefix = QStringLiteral("T/");
 			break;
@@ -67,7 +70,7 @@ StyleSearchDialog::StyleSearchDialog(QMainWindow *parent, const QList<StyleSearc
 	ModernUI::applySurfaceStyle(this, "commandPalette");
 	ui->filterLineEdit->setAccessibleName(tr("Search styles"));
 	ui->filterLineEdit->setAccessibleDescription(
-		tr("Search available styles by name. Use p:, c:, tb:, or cl: to filter by type."));
+		tr("Search available styles by name. Use p:, c:, o:, tb:, or cl: to filter by type."));
 	ui->stylesListWidget->setAccessibleName(tr("Matching styles"));
 	ui->stylesListWidget->setIconSize(QSize(20, 20));
 	ui->favoriteButton->setAccessibleName(tr("Favourite style"));
@@ -258,6 +261,9 @@ void StyleSearchDialog::updatePreview()
 		case StyleSearchType::character:
 			details.append(tr("Character Style"));
 			break;
+		case StyleSearchType::object:
+			details.append(tr("Object Style"));
+			break;
 		case StyleSearchType::table:
 			details.append(tr("Table Style"));
 			break;
@@ -323,6 +329,9 @@ void StyleSearchDialog::toggleFavorite()
 			case StyleSearchType::character:
 				typeName = tr("Character Style");
 				break;
+			case StyleSearchType::object:
+				typeName = tr("Object Style");
+				break;
 			case StyleSearchType::table:
 				typeName = tr("Table Style");
 				break;
@@ -350,6 +359,7 @@ void StyleSearchDialog::updateList()
 	IconManager &im = IconManager::instance();
 	const QIcon iconParagraph(im.loadPixmap("paragraph-style"));
 	const QIcon iconCharacter(im.loadPixmap("character-style"));
+	const QIcon iconObject(im.loadPixmap("object-outline"));
 	const QIcon iconTable(im.loadPixmap("table-style"));
 	const QIcon iconCell(im.loadPixmap("table-cell-style"));
 	const QList<StyleSearchItem> matches = StyleQuickApplyModel::matches(styles, ui->filterLineEdit->text());
@@ -366,6 +376,10 @@ void StyleSearchDialog::updateList()
 			case StyleSearchType::character:
 				typeName = tr("Character Style");
 				icon = iconCharacter;
+				break;
+			case StyleSearchType::object:
+				typeName = tr("Object Style");
+				icon = iconObject;
 				break;
 			case StyleSearchType::table:
 				typeName = tr("Table Style");

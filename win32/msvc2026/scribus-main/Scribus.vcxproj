@@ -853,6 +853,8 @@
     <moc Include="..\..\..\scribus\ui\smalignverticalselect.h" />
     <moc Include="..\..\..\scribus\ui\smcellstyle.h" />
     <moc Include="..\..\..\scribus\ui\smcellstylewidget.h" />
+    <moc Include="..\..\..\scribus\ui\smobjectstyle.h" />
+    <moc Include="..\..\..\scribus\ui\smobjectstylewidget.h" />
     <moc Include="..\..\..\scribus\ui\smcheckbox.h" />
     <moc Include="..\..\..\scribus\ui\smcolorbutton.h" />
     <moc Include="..\..\..\scribus\ui\smcolorcombo.h" />
@@ -1625,6 +1627,8 @@
     <ClCompile Include="..\..\..\scribus\ui\smalignverticalselect.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\smcellstyle.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\smcellstylewidget.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\smobjectstyle.cpp" />
+    <ClCompile Include="..\..\..\scribus\ui\smobjectstylewidget.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\smcheckbox.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\smcolorbutton.cpp" />
     <ClCompile Include="..\..\..\scribus\ui\smcolorcombo.cpp" />

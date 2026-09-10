@@ -1075,6 +1075,20 @@ int ScribusDoc::removeUnusedStyles()
 	if (newCharStyleSet.count() != m_docCharStyles.count())
 		redefineCharStyles(newCharStyleSet, true);
 
+	// Object styles
+	StyleSet<ObjectStyle> newObjectStyleSet;
+	for (int i = 0; i < m_docObjectStyles.count(); ++i)
+	{
+		const ObjectStyle& objectStyle = m_docObjectStyles[i];
+		if (objectStyle.isDefaultStyle() || !objectStyle.hasName()
+				|| usedResources.objectStyles().contains(objectStyle.name()))
+			newObjectStyleSet.create(objectStyle);
+		else
+			++removedCount;
+	}
+	if (newObjectStyleSet.count() != m_docObjectStyles.count())
+		redefineObjectStyles(newObjectStyleSet, true);
+
 	// Table styles
 
 	StyleSet<TableStyle> newTableStyleSet;
@@ -1184,9 +1198,21 @@ void ScribusDoc::getUsedStylesFromItems(ResourceCollection& lists) const
 		m_docParagraphStyles[styleIndex].getNamedResources(lists);
 	}
 
+	// An applied object style keeps every style it is based on. Expanding the
+	// references here prevents Remove Unused Styles from deleting a parent that
+	// supplies inherited appearance to an in-use child.
+	const QStringList usedObjectStyles = lists.objectStyleNames();
+	for (const QString& styleName : usedObjectStyles)
+	{
+		const int styleIndex = m_docObjectStyles.find(styleName);
+		if (styleIndex >= 0)
+			m_docObjectStyles[styleIndex].getNamedResources(lists);
+	}
+
 	// Protect default styles
 	lists.collectStyle(CommonStrings::DefaultParagraphStyle);
 	lists.collectCharStyle(CommonStrings::DefaultCharacterStyle);
+	lists.collectObjectStyle(CommonStrings::DefaultObjectStyle);
 }
 
 void ScribusDoc::getNamedResources(ResourceCollection& lists) const

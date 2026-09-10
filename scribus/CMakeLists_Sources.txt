@@ -520,6 +520,8 @@ set(SCRIBUS_SOURCES
 	ui/smalignverticalselect.cpp
 	ui/smcellstylewidget.cpp
 	ui/smcellstyle.cpp
+	ui/smobjectstylewidget.cpp
+	ui/smobjectstyle.cpp
 	ui/smcheckbox.cpp
 	ui/smcolorbutton.cpp
 	ui/smcolorcombo.cpp

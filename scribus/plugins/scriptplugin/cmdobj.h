@@ -378,6 +378,14 @@ Apply the named character style to the currently selected object.
 */
 PyObject *scribus_setcharstyle(PyObject * /*self*/, PyObject* args);
 
+PyDoc_STRVAR(scribus_getobjectstyle__doc__,
+QT_TR_NOOP("getObjectStyle([\"name\"]) -> string\n\nReturn the object style assigned to the named object, or to the first selected object. An empty string means no object style is assigned."));
+PyObject *scribus_getobjectstyle(PyObject * /*self*/, PyObject* args);
+
+PyDoc_STRVAR(scribus_setobjectstyle__doc__,
+QT_TR_NOOP("setObjectStyle(\"style\" [, \"name\"])\n\nApply a named object style to an object or the current selection. Pass an empty style name to clear the association while preserving the current appearance."));
+PyObject *scribus_setobjectstyle(PyObject * /*self*/, PyObject* args);
+
 /*! docstring */
 PyDoc_STRVAR(scribus_duplicateobject__doc__,
 QT_TR_NOOP("duplicateObject([\"name\"]) -> string\n\

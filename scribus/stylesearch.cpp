@@ -54,6 +54,16 @@ void StyleSearch::update()
 		item.parentStyle = style.parent();
 		styles.append(item);
 	}
+	n = scribusDoc->objectStyles().count();
+	for (int i = 0; i < n; ++i)
+	{
+		const ObjectStyle& style = scribusDoc->objectStyles()[i];
+		StyleSearchItem item;
+		item.name = style.name();
+		item.type = StyleSearchType::object;
+		item.parentStyle = style.parent();
+		styles.append(item);
+	}
 
 	bool hasTableSelection = false;
 	for (int i = 0; i < scribusDoc->m_Selection->count(); ++i)
@@ -114,6 +124,11 @@ void StyleSearch::execute(const StyleSearchItem& style)
 			if (!scribusDoc->charStyles().contains(style.name))
 				return;
 			scribusDoc->itemSelection_SetNamedCharStyle(style.name);
+			break;
+		case StyleSearchType::object:
+			if (!scribusDoc->objectStyles().contains(style.name))
+				return;
+			scribusDoc->itemSelection_SetNamedObjectStyle(style.name);
 			break;
 		case StyleSearchType::table:
 			if (!scribusDoc->tableStyles().contains(style.name))

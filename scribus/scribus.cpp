@@ -237,6 +237,7 @@ for which a new license (GPL+exception) is in place.
 #include "ui/selectobjects.h"
 #include "ui/smcellstyle.h"
 #include "ui/smlinestyle.h"
+#include "ui/smobjectstyle.h"
 #include "ui/smtablestyle.h"
 #include "ui/smtextstyles.h"
 #include "ui/storyeditor.h"
@@ -830,6 +831,7 @@ void ScribusMainWindow::initPalettes()
 	m_styleManager->addStyle(new SMTableStyle());
 	m_styleManager->addStyle(new SMCellStyle());
 	m_styleManager->addStyle(new SMLineStyle());
+	m_styleManager->addStyle(new SMObjectStyle());
 	connect( scrActions["editStyles"], SIGNAL(toggled(bool)), m_styleManager, SLOT(setPaletteShown(bool)) );
 	connect( m_styleManager, SIGNAL(paletteShown(bool)), scrActions["editStyles"], SLOT(setChecked(bool)));
 	m_styleManager->installEventFilter(this);

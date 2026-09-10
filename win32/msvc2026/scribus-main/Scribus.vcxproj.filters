@@ -2652,6 +2652,12 @@
     <ClCompile Include="..\..\..\scribus\ui\smcellstylewidget.cpp">
       <Filter>Source Files\ui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\smobjectstyle.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\ui\smobjectstylewidget.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\scribus\ui\smcheckbox.cpp">
       <Filter>Source Files\ui</Filter>
     </ClCompile>
@@ -4640,6 +4646,12 @@
       <Filter>Source Files\ui</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\smcellstylewidget.h">
+      <Filter>Source Files\ui</Filter>
+    </moc>
+    <moc Include="..\..\..\scribus\ui\smobjectstyle.h">
+      <Filter>Source Files\ui</Filter>
+    </moc>
+    <moc Include="..\..\..\scribus\ui\smobjectstylewidget.h">
       <Filter>Source Files\ui</Filter>
     </moc>
     <moc Include="..\..\..\scribus\ui\smcheckbox.h">

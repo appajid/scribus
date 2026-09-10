@@ -131,6 +131,23 @@ set_tests_properties(object_style_persistence PROPERTIES
 	RUN_SERIAL TRUE
 	TIMEOUT 180)
 
+set(object_style_scripter_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-object_style_scripter")
+set(object_style_scripter_output "${CMAKE_CURRENT_BINARY_DIR}/object_style_scripter.sla")
+file(MAKE_DIRECTORY "${object_style_scripter_prefs_dir}")
+add_test(NAME object_style_scripter
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${object_style_scripter_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_object_style_scripter.py")
+set_tests_properties(object_style_scripter PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_OBJECT_STYLE_SCRIPT_OUTPUT=${object_style_scripter_output}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;object-styles;phase-3;scripter"
+	PASS_REGULAR_EXPRESSION "OBJECT_STYLE_SCRIPTER_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 180)
+
 function(add_running_header_test test_name script_name pass_marker timeout_seconds)
 	set(test_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-${test_name}")
 	set(test_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-${test_name}")

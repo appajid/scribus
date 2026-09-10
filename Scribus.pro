@@ -613,6 +613,8 @@ HEADERS += scribus/actionmanager.h \
            scribus/ui/smalignselect.h \
            scribus/ui/smcellstyle.h \
            scribus/ui/smcellstylewidget.h \
+           scribus/ui/smobjectstyle.h \
+           scribus/ui/smobjectstylewidget.h \
            scribus/ui/smcheckbox.h \
            scribus/ui/smcolorbutton.h \
            scribus/ui/smcolorcombo.h \
@@ -1848,6 +1850,8 @@ SOURCES += scribus/actionmanager.cpp \
            scribus/ui/smalignselect.cpp \
            scribus/ui/smcellstyle.cpp \
            scribus/ui/smcellstylewidget.cpp \
+           scribus/ui/smobjectstyle.cpp \
+           scribus/ui/smobjectstylewidget.cpp \
            scribus/ui/smcheckbox.cpp \
            scribus/ui/smcolorbutton.cpp \
            scribus/ui/smcolorcombo.cpp \

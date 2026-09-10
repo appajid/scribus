@@ -16,6 +16,7 @@ for which a new license (GPL+exception) is in place.
 
 #include "pyesstring.h"
 #include "scribuscore.h"
+#include "styles/objectstyle.h"
 #include "styles/paragraphstyle.h"
 #include "styles/charstyle.h"
 #include "ui/stylemanager.h"
@@ -421,6 +422,131 @@ PyObject *scribus_createcustomlinestyle(PyObject * /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject *scribus_createobjectstyle(PyObject* /* self */, PyObject* args, PyObject* keywords)
+{
+	char* keywordArgs[] = {
+		const_cast<char*>("name"), const_cast<char*>("parent"),
+		const_cast<char*>("fillcolor"), const_cast<char*>("fillshade"),
+		const_cast<char*>("linecolor"), const_cast<char*>("lineshade"),
+		const_cast<char*>("linewidth"), const_cast<char*>("linestyle"),
+		const_cast<char*>("linecap"), const_cast<char*>("linejoin"),
+		const_cast<char*>("filltransparency"), const_cast<char*>("linetransparency"),
+		const_cast<char*>("fillblendmode"), const_cast<char*>("lineblendmode"),
+		const_cast<char*>("cornerradius"), const_cast<char*>("customlinestyle"),
+		const_cast<char*>("shortcut"), nullptr
+	};
+	PyESString name;
+	PyESString parent;
+	PyESString fillColor;
+	PyESString lineColor;
+	PyESString customLineStyle;
+	PyESString shortcut;
+	double fillShade = -1.0;
+	double lineShade = -1.0;
+	double lineWidth = -1.0;
+	int lineStyle = -1;
+	int lineCap = -1;
+	int lineJoin = -1;
+	double fillTransparency = -1.0;
+	double lineTransparency = -1.0;
+	int fillBlendMode = -1;
+	int lineBlendMode = -1;
+	double cornerRadius = -1.0;
+	if (!PyArg_ParseTupleAndKeywords(args, keywords, "es|esesdesddiiiddiideses", keywordArgs,
+		"utf-8", name.ptr(), "utf-8", parent.ptr(), "utf-8", fillColor.ptr(), &fillShade,
+		"utf-8", lineColor.ptr(), &lineShade, &lineWidth, &lineStyle, &lineCap, &lineJoin,
+		&fillTransparency, &lineTransparency, &fillBlendMode, &lineBlendMode, &cornerRadius,
+		"utf-8", customLineStyle.ptr(), "utf-8", shortcut.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+
+	ScribusDoc* doc = ScCore->primaryMainWindow()->doc;
+	const QString styleName = QString::fromUtf8(name.c_str());
+	const QString parentName = QString::fromUtf8(parent.c_str());
+	const QString fillName = QString::fromUtf8(fillColor.c_str());
+	const QString lineName = QString::fromUtf8(lineColor.c_str());
+	const QString customLineName = QString::fromUtf8(customLineStyle.c_str());
+	if (styleName.isEmpty())
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Cannot have an empty object style name.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (doc->objectStyles().contains(styleName))
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("An object style with this name already exists.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (!parentName.isEmpty() && !doc->objectStyles().contains(parentName))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Parent object style not found.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	auto validColor = [doc](const QString& color) {
+		return color.isEmpty() || color == CommonStrings::None || doc->PageColors.contains(color);
+	};
+	if (!validColor(fillName) || !validColor(lineName))
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Specified color is not available in document.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (!customLineName.isEmpty() && !doc->docLineStyles.contains(customLineName))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Custom line style not found.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if ((fillShade > 100.0) || (lineShade > 100.0)
+		|| (fillTransparency > 1.0) || (lineTransparency > 1.0)
+		|| (lineWidth < -1.0) || (cornerRadius < -1.0)
+		|| (fillBlendMode > 15) || (lineBlendMode > 15))
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Object style values are outside their supported range.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (lineStyle != -1 && (lineStyle < Qt::SolidLine || lineStyle > Qt::DashDotDotLine))
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Invalid object style line type.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (lineCap != -1 && lineCap != Qt::FlatCap && lineCap != Qt::SquareCap && lineCap != Qt::RoundCap)
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Invalid object style line cap.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (lineJoin != -1 && lineJoin != Qt::MiterJoin && lineJoin != Qt::BevelJoin && lineJoin != Qt::RoundJoin)
+	{
+		PyErr_SetString(PyExc_ValueError, QObject::tr("Invalid object style line join.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+
+	ObjectStyle style;
+	style.setName(styleName);
+	style.setDefaultStyle(false);
+	if (!parentName.isEmpty()) style.setParent(parentName);
+	if (!fillName.isEmpty()) style.setFillColor(fillName);
+	if (fillShade >= 0.0) style.setFillShade(fillShade);
+	if (!lineName.isEmpty()) style.setLineColor(lineName);
+	if (lineShade >= 0.0) style.setLineShade(lineShade);
+	if (lineWidth >= 0.0) style.setLineWidth(lineWidth);
+	if (lineStyle >= 0) style.setLineStyle(static_cast<Qt::PenStyle>(lineStyle));
+	if (lineCap >= 0) style.setLineCap(static_cast<Qt::PenCapStyle>(lineCap));
+	if (lineJoin >= 0) style.setLineJoin(static_cast<Qt::PenJoinStyle>(lineJoin));
+	if (fillTransparency >= 0.0) style.setFillTransparency(fillTransparency);
+	if (lineTransparency >= 0.0) style.setLineTransparency(lineTransparency);
+	if (fillBlendMode >= 0) style.setFillBlendMode(fillBlendMode);
+	if (lineBlendMode >= 0) style.setLineBlendMode(lineBlendMode);
+	if (cornerRadius >= 0.0) style.setCornerRadius(cornerRadius);
+	if (!customLineName.isEmpty()) style.setCustomLineStyle(customLineName);
+	style.setShortcut(QString::fromUtf8(shortcut.c_str()));
+
+	StyleSet<ObjectStyle> newStyles;
+	newStyles.create(style);
+	doc->redefineObjectStyles(newStyles, false);
+	doc->changed();
+	ScCore->primaryMainWindow()->styleMgr()->setDoc(doc);
+	Py_RETURN_NONE;
+}
+
 /*
  * Craig Ringer, 2004-09-09
  * Enumerate all known paragraph styles
@@ -464,6 +590,20 @@ PyObject *scribus_getcharstyles(PyObject* /* self */)
 		}
 	}
 	return charStyleList;
+}
+
+PyObject *scribus_getobjectstyles(PyObject* /* self */)
+{
+	if (!checkHaveDocument())
+		return nullptr;
+	const auto& objectStyles = ScCore->primaryMainWindow()->doc->objectStyles();
+	PyObject* styleList = PyList_New(0);
+	for (int i = 0; i < objectStyles.count(); ++i)
+	{
+		if (PyList_Append(styleList, PyUnicode_FromString(objectStyles[i].name().toUtf8())))
+			return nullptr;
+	}
+	return styleList;
 }
 
 /*
@@ -557,11 +697,13 @@ void cmdstyledocwarnings()
 	QStringList s;
 	s  << scribus_createcharstyle__doc__
 	   << scribus_createcustomlinestyle__doc__
+	   << scribus_createobjectstyle__doc__
 	   << scribus_createparagraphstyle__doc__
 	   << scribus_getallstyles__doc__
 	   << scribus_getcellstyles__doc__
 	   << scribus_getcharstyles__doc__
 	   << scribus_getlinestyles__doc__
+	   << scribus_getobjectstyles__doc__
 	   << scribus_getparagraphstyles__doc__
 	   << scribus_gettablestyles__doc__
 	   << scribus_removeunusedstyles__doc__;

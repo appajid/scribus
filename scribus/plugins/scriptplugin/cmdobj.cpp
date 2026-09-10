@@ -1180,6 +1180,53 @@ PyObject *scribus_setcharstyle(PyObject* /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject *scribus_getobjectstyle(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "|es", "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	return PyUnicode_FromString(item->objectStyleName().toUtf8());
+}
+
+PyObject *scribus_setobjectstyle(PyObject* /* self */, PyObject* args)
+{
+	PyESString style;
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "es|es", "utf-8", style.ptr(), "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	ScribusDoc* doc = ScCore->primaryMainWindow()->doc;
+	ScribusView* view = ScCore->primaryMainWindow()->view;
+	const QString styleName = QString::fromUtf8(style.c_str());
+	if (!styleName.isEmpty() && !doc->objectStyles().contains(styleName))
+	{
+		PyErr_SetString(NotFoundError, QObject::tr("Object style not found.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	const QString itemName = QString::fromUtf8(name.c_str());
+	if (!itemName.isEmpty())
+	{
+		PageItem* item = GetUniqueItem(itemName);
+		if (!item)
+			return nullptr;
+		view->deselectItems(true);
+		view->selectItem(item, false);
+	}
+	else if (!doc->m_Selection || doc->m_Selection->isEmpty())
+	{
+		PyErr_SetString(NoValidObjectError, QObject::tr("No object is selected.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	doc->itemSelection_SetNamedObjectStyle(styleName);
+	Py_RETURN_NONE;
+}
+
 PyObject *scribus_duplicateobject(PyObject * /* self */, PyObject *args)
 {
 	PyESString name;

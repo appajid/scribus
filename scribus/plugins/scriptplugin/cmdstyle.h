@@ -108,6 +108,10 @@ one subline within style. Dictionary can have those keys:\n\n\
 "));
 PyObject *scribus_createcustomlinestyle(PyObject * /* self */, PyObject* args);
 
+PyDoc_STRVAR(scribus_createobjectstyle__doc__,
+QT_TR_NOOP("createObjectStyle(name, [parent, fillcolor, fillshade, linecolor, lineshade, linewidth, linestyle, linecap, linejoin, filltransparency, linetransparency, fillblendmode, lineblendmode, cornerradius, customlinestyle, shortcut])\n\nCreates a named object style. Omitted appearance values inherit from the parent or use the geometry-neutral defaults. Shade values use 0..100 and transparency values use 0..1."));
+PyObject *scribus_createobjectstyle(PyObject* /* self */, PyObject* args, PyObject* keywords);
+
 /*! docstring */
 PyDoc_STRVAR(scribus_getparagraphstyles__doc__,
 QT_TR_NOOP("getParagraphStyles() -> list\n\
@@ -133,6 +137,10 @@ QT_TR_NOOP("getCharStyles() -> list\n\
 Return a list of the names of all character styles in the current document.\n\
 "));
 PyObject *scribus_getcharstyles(PyObject * /*self*/);
+
+PyDoc_STRVAR(scribus_getobjectstyles__doc__,
+QT_TR_NOOP("getObjectStyles() -> list\n\nReturn the names of all object styles in the current document."));
+PyObject *scribus_getobjectstyles(PyObject * /*self*/);
 
 /*! docstring */
 PyDoc_STRVAR(scribus_getlinestyles__doc__,
@@ -162,7 +170,7 @@ PyObject *scribus_gettablestyles(PyObject * /*self*/);
 PyDoc_STRVAR(scribus_removeunusedstyles__doc__,
 QT_TR_NOOP("removeUnusedStyles() -> int\n\
 \n\
-Remove all unused paragraph, character, table, cell, and line styles\n\
+Remove all unused paragraph, character, object, table, cell, and line styles\n\
 from the current document. A style is considered unused if it is not\n\
 applied to any object in the document and is not an ancestor of a\n\
 style that is in use. Default styles are never removed.\n\

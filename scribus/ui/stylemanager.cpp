@@ -25,6 +25,7 @@ for which a new license (GPL+exception) is in place.
 #include "shortcutwidget.h"
 #include "smcellstyle.h"
 #include "smlinestyle.h"
+#include "smobjectstyle.h"
 #include "smreplacedia.h"
 #include "smstyleimport.h"
 #include "smtablestyle.h"
@@ -500,6 +501,8 @@ void StyleManager::slotDelete()
 			usedMap = &usedResources.tableStyles();
 		else if (qobject_cast<SMCellStyle*>(styleitem))
 			usedMap = &usedResources.cellStyles();
+		else if (qobject_cast<SMObjectStyle*>(styleitem))
+			usedMap = &usedResources.objectStyles();
 
 		QStringList usedSelected;
 		for (int i = 0; i < selected.count(); ++i)
@@ -596,6 +599,8 @@ void StyleManager::slotDeleteUnused()
 			usedMap = &usedResources.tableStyles();
 		else if (qobject_cast<SMCellStyle*>(styleitem))
 			usedMap = &usedResources.cellStyles();
+		else if (qobject_cast<SMObjectStyle*>(styleitem))
+			usedMap = &usedResources.objectStyles();
 		else
 			continue;
 

@@ -19,6 +19,7 @@ private slots:
 	void supportsMultiTermAndFuzzyMatching();
 	void filtersByStyleTypePrefix();
 	void filtersTableAndCellStyles();
+	void filtersObjectStyles();
 	void prioritizesFavoritesAndRecentStyles();
 	void supportsUnicodeStyleNames();
 };
@@ -105,6 +106,24 @@ void StyleQuickApplyTests::filtersTableAndCellStyles()
 	QCOMPARE(all[1].type, StyleSearchType::character);
 	QCOMPARE(all[2].type, StyleSearchType::table);
 	QCOMPARE(all[3].type, StyleSearchType::cell);
+}
+
+void StyleQuickApplyTests::filtersObjectStyles()
+{
+	const QList<StyleSearchItem> styles = {
+		{ QStringLiteral("Brand Frame"), StyleSearchType::object },
+		{ QStringLiteral("Brand Frame"), StyleSearchType::paragraph },
+		{ QStringLiteral("Photo Frame"), StyleSearchType::object },
+	};
+
+	const auto longPrefix = StyleQuickApplyModel::matches(styles, QStringLiteral("object: frame"));
+	QCOMPARE(longPrefix.size(), 2);
+	QCOMPARE(longPrefix[0].type, StyleSearchType::object);
+
+	const auto shortPrefix = StyleQuickApplyModel::matches(styles, QStringLiteral("o: brand"));
+	QCOMPARE(shortPrefix.size(), 1);
+	QCOMPARE(shortPrefix[0].name, QStringLiteral("Brand Frame"));
+	QCOMPARE(shortPrefix[0].type, StyleSearchType::object);
 }
 
 void StyleQuickApplyTests::prioritizesFavoritesAndRecentStyles()
