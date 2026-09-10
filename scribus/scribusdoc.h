@@ -1211,6 +1211,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		void itemSelection_EraseCharStyle(Selection* customSelection = nullptr);
 		void itemSelection_SetNamedParagraphStyle(const QString & name, Selection* customSelection = nullptr);
 		void itemSelection_SetNamedCharStyle(const QString & name, Selection* customSelection = nullptr);
+		void itemSelection_SetNamedObjectStyle(const QString& name, Selection* customSelection = nullptr);
 		void itemSelection_SetNamedLineStyle(const QString & name, Selection* customSelection = nullptr);
 		void itemSelection_SetNamedCellStyle(const QString & name, Selection* customSelection = nullptr);
 		void itemSelection_SetNamedTableStyle(const QString & name, Selection* customSelection = nullptr);

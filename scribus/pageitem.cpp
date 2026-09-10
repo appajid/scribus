@@ -75,6 +75,7 @@ for which a new license (GPL+exception) is in place.
 #include "scribusview.h"
 #include "sctextstream.h"
 #include "selection.h"
+#include "styles/objectstyle.h"
 #include "text/storytext.h"
 #include "ui/contentpalette.h"
 #include "ui/propertiespalette.h"
@@ -317,6 +318,7 @@ PageItem::PageItem(const PageItem & other)
 	verticalAlign(other.verticalAlign),
 	m_itemType(other.m_itemType),
 	m_itemName(other.m_itemName),
+	m_objectStyleName(other.m_objectStyleName),
 	m_isAnnotation(other.m_isAnnotation),
 	m_annotation(other.m_annotation),
 	m_gradientName(other.m_gradientName),
@@ -3695,6 +3697,115 @@ void PageItem::setFillColor(const QString &newColor)
 	setFillQColor();
 }
 
+ObjectStyle PageItem::objectStyleState() const
+{
+	ObjectStyle state;
+	state.setName(m_objectStyleName);
+	state.setFillColor(m_fillColor);
+	state.setFillShade(m_fillShade);
+	state.setLineColor(m_lineColor);
+	state.setLineShade(m_lineShade);
+	state.setLineWidth(m_lineWidth);
+	state.setLineStyle(PLineArt);
+	state.setLineCap(PLineEnd);
+	state.setLineJoin(PLineJoin);
+	state.setFillTransparency(m_fillTransparency);
+	state.setLineTransparency(m_lineTransparency);
+	state.setFillBlendMode(m_fillBlendMode);
+	state.setLineBlendMode(m_lineBlendMode);
+	state.setCornerRadius(m_roundedCornerRadius);
+	state.setCustomLineStyle(NamedLStyle);
+	return state;
+}
+
+void PageItem::applyObjectStyleState(const ObjectStyle& style)
+{
+	m_objectStyleName = style.name();
+	m_fillColor = style.fillColor();
+	m_fillShade = style.fillShade();
+	m_lineColor = style.lineColor();
+	m_lineShade = style.lineShade();
+	m_oldLineWidth = m_lineWidth;
+	m_lineWidth = style.lineWidth();
+	PLineArt = style.lineStyle();
+	PLineEnd = style.lineCap();
+	PLineJoin = style.lineJoin();
+	m_fillTransparency = style.fillTransparency();
+	m_lineTransparency = style.lineTransparency();
+	m_fillBlendMode = style.fillBlendMode();
+	m_lineBlendMode = style.lineBlendMode();
+	m_roundedCornerRadius = style.cornerRadius();
+	NamedLStyle = style.customLineStyle();
+	setFillQColor();
+	setLineQColor();
+	update();
+}
+
+bool PageItem::setObjectStyle(const QString& styleName, bool createUndo)
+{
+	ObjectStyle oldState = objectStyleState();
+	ObjectStyle newState = oldState;
+	newState.setName(styleName);
+
+	if (!styleName.isEmpty())
+	{
+		if (!m_Doc->objectStyles().contains(styleName))
+		{
+			// Preserve unresolved names read from a file. This lets a document
+			// round-trip safely even when its style definition is unavailable.
+			if (!createUndo)
+			{
+				m_objectStyleName = styleName;
+				return oldState.name() != styleName;
+			}
+			return false;
+		}
+
+		const ObjectStyle& style = m_Doc->objectStyle(styleName);
+		newState.setFillColor(style.fillColor());
+		newState.setFillShade(style.fillShade());
+		newState.setLineColor(style.lineColor());
+		newState.setLineShade(style.lineShade());
+		newState.setLineWidth(style.lineWidth());
+		newState.setLineStyle(style.lineStyle());
+		newState.setLineCap(style.lineCap());
+		newState.setLineJoin(style.lineJoin());
+		newState.setFillTransparency(style.fillTransparency());
+		newState.setLineTransparency(style.lineTransparency());
+		newState.setFillBlendMode(style.fillBlendMode());
+		newState.setLineBlendMode(style.lineBlendMode());
+		newState.setCornerRadius(style.cornerRadius());
+		newState.setCustomLineStyle(style.customLineStyle());
+	}
+
+	if (oldState.name() == newState.name() && oldState.equiv(newState))
+		return false;
+
+	if (createUndo && !m_Doc->isLoading() && UndoManager::undoEnabled())
+	{
+		auto* state = new ScOldNewState<ObjectStyle>(tr("Apply Object Style"), styleName);
+		state->set("APPLY_OBJECT_STYLE");
+		state->setStates(oldState, newState);
+		undoManager->action(this, state);
+	}
+
+	applyObjectStyleState(newState);
+	if (!m_Doc->isLoading())
+	{
+		m_Doc->changed();
+		m_Doc->regionsChanged()->update(QRectF());
+		m_Doc->changedPagePreview();
+	}
+	return true;
+}
+
+bool PageItem::refreshObjectStyle()
+{
+	if (m_objectStyleName.isEmpty() || !m_Doc->objectStyles().contains(m_objectStyleName))
+		return false;
+	return setObjectStyle(m_objectStyleName, false);
+}
+
 void PageItem::setFillShade(double newShade)
 {
 	if (m_fillShade == newShade)
@@ -4961,6 +5072,8 @@ void PageItem::restore(UndoState *state, bool isUndo)
 	{
 		if (ss->contains("ANCHOR_POSITION"))
 			restoreAnchorPosition(ss, isUndo);
+		else if (ss->contains("APPLY_OBJECT_STYLE"))
+			restoreObjectStyle(ss, isUndo);
 		else if (ss->contains("ARC"))
 			restoreArc(ss, isUndo);
 		else if (ss->contains("MASKTYPE"))
@@ -7496,6 +7609,20 @@ void PageItem::restoreLineStyle(SimpleState *state, bool isUndo)
 	m_Doc->itemSelection_SetLineArt(ps, &tempSelection);
 }
 
+void PageItem::restoreObjectStyle(SimpleState* state, bool isUndo)
+{
+	const auto* objectStyleState = dynamic_cast<ScOldNewState<ObjectStyle>*>(state);
+	if (!objectStyleState)
+	{
+		qFatal("PageItem::restoreObjectStyle: dynamic cast failed");
+		return;
+	}
+	applyObjectStyleState(isUndo ? objectStyleState->getOldState() : objectStyleState->getNewState());
+	m_Doc->changed();
+	m_Doc->regionsChanged()->update(QRectF());
+	m_Doc->changedPagePreview();
+}
+
 void PageItem::restoreLineEnd(SimpleState *state, bool isUndo)
 {
 	Qt::PenCapStyle pcs = static_cast<Qt::PenCapStyle>(state->getInt("OLD_STYLE"));
@@ -8237,6 +8364,10 @@ QString PageItem::generateUniqueCopyName(const QString& originalName, bool prepe
 void PageItem::replaceNamedResources(ResourceCollection& newNames)
 {
 	QMap<QString, QString>::ConstIterator it;
+
+	it = newNames.objectStyles().find(m_objectStyleName);
+	if (!m_objectStyleName.isEmpty() && it != newNames.objectStyles().end())
+		setObjectStyle(*it);
 	
 	it = newNames.colors().find(softShadowColor());
 	if (it != newNames.colors().end())
@@ -9133,6 +9264,8 @@ void PageItem::setGradientStrokeEnd(double x, double y)
 
 void PageItem::getNamedResources(ResourceCollection& lists) const
 {
+	if (!m_objectStyleName.isEmpty())
+		lists.collectObjectStyle(m_objectStyleName);
 	if (hasSoftShadow())
 		lists.collectColor(softShadowColor());
 

@@ -7900,6 +7900,8 @@ PageItem* Scribus171Format::pasteItem(ScribusDoc *doc, const ScXmlStreamAttribut
 		currItem->setSoftShadowXOffset(attrs.valueAsDouble("SoftShadowXOffset", 5.0));
 		currItem->setSoftShadowYOffset(attrs.valueAsDouble("SoftShadowYOffset", 5.0));
 	}
+	if (attrs.hasAttribute("ObjectStyle"))
+		currItem->setObjectStyle(attrs.valueAsString("ObjectStyle"), false);
 	//currItem->setRedrawBounding();
 	//currItem->OwnPage = view->OnPage(currItem);
 	return currItem;

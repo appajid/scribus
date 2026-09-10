@@ -64,6 +64,7 @@ for which a new license (GPL+exception) is in place.
 class QFrame;
 class QGridLayout;
 class QRegion;
+class ObjectStyle;
 class ResourceCollection;
 class ScPainter;
 class ScribusDoc;
@@ -892,6 +893,16 @@ public: // Start public functions
 	void setPatternFlip(bool flipX, bool flipY);
 	void patternFlip(bool &flipX, bool &flipY) const;
 
+	/** @brief Get the named object style assigned to this item. */
+	QString objectStyleName() const { return m_objectStyleName; }
+	/**
+	 * Apply a document object style, or clear the assignment while preserving
+	 * the current appearance when @a styleName is empty.
+	 */
+	bool setObjectStyle(const QString& styleName, bool createUndo = true);
+	/** Re-resolve the assigned style after a style definition changes. */
+	bool refreshObjectStyle();
+
 	/** @brief Get the (name of the) fill color of the object */
 	QString fillColor() const { return m_fillColor; }
 	/**
@@ -1554,6 +1565,8 @@ protected: // Start protected functions
 
 	/** Split the restore methods */
 	bool checkGradientUndoRedo(SimpleState *state, bool isUndo);
+	ObjectStyle objectStyleState() const;
+	void applyObjectStyleState(const ObjectStyle& style);
 
 	/**
 	 * @name Restore helper methods
@@ -1564,6 +1577,7 @@ protected: // Start protected functions
 	void restoreAppMode(SimpleState *state, bool isUndo);
 	void restoreArc(SimpleState *state,bool isUndo);
 	void restoreAnchorPosition(SimpleState *state, bool isUndo);
+	void restoreObjectStyle(SimpleState *state, bool isUndo);
 	void restoreArrow(SimpleState *state, bool isUndo, bool isStart);
 	void restoreBottomTextFrameDist(SimpleState *state, bool isUndo);
 	void restoreCharStyle(SimpleState *state, bool isUndo);
@@ -1751,6 +1765,7 @@ protected: // Start protected variables
 	 * @sa PageItem::itemName(), PageItem::setItemName()
 	 */
 	QString m_itemName;
+	QString m_objectStyleName;
 
 	/**
 	 * Flag to tell if this item is a PDF annotation item

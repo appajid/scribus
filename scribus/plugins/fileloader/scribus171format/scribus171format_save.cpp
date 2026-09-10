@@ -2817,6 +2817,8 @@ void Scribus171Format::SetItemProps(ScXmlStreamWriter& docu, PageItem* item, con
 	docu.writeAttribute("ItemType", item->realItemType());
 	docu.writeAttribute("Width", item->width());
 	docu.writeAttribute("Height", item->height());
+	if (!item->objectStyleName().isEmpty())
+		docu.writeAttribute("ObjectStyle", item->objectStyleName());
 	if (item->cornerRadius() != 0)
 		docu.writeAttribute("CornerRadius", item->cornerRadius());
 	docu.writeAttribute("FrameType", item->FrameType);

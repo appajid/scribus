@@ -1692,6 +1692,10 @@ void ScribusDoc::redefineObjectStyles(const StyleSet<ObjectStyle>& newStyles, bo
 			replaceObjectStyles(deletion);
 	}
 	m_docObjectStyles.invalidate();
+	m_updateManager.setUpdatesDisabled();
+	for (PageItemIterator itemIt(this, PageItemIterator::IterateAll); *itemIt; ++itemIt)
+		itemIt->refreshObjectStyle();
+	m_updateManager.setUpdatesEnabled();
 }
 
 void ScribusDoc::redefineTableStyles(const StyleSet<TableStyle>& newStyles, bool removeUnused)
@@ -8405,6 +8409,37 @@ void ScribusDoc::itemSelection_SetNamedParagraphStyle(const QString& name, Selec
 	ParagraphStyle newStyle;
 	newStyle.setParent(name.isEmpty()? BaseStyle::INHERIT_PARENT : name);
 	itemSelection_ApplyParagraphStyle(newStyle, customSelection, false);
+}
+
+void ScribusDoc::itemSelection_SetNamedObjectStyle(const QString& name, Selection* customSelection)
+{
+	if (!name.isEmpty() && !m_docObjectStyles.contains(name))
+		return;
+
+	Selection* itemSelection = customSelection ? customSelection : m_Selection;
+	const int itemCount = itemSelection->count();
+	if (itemCount <= 0)
+		return;
+
+	UndoTransaction activeTransaction;
+	m_updateManager.setUpdatesDisabled();
+	if (UndoManager::undoEnabled() && itemCount > 1)
+		activeTransaction = m_undoManager->beginTransaction(Um::SelectionGroup, Um::IGroup,
+			tr("Apply Object Style"), name, Um::IFill);
+
+	bool changedAny = false;
+	for (int i = 0; i < itemCount; ++i)
+		changedAny = itemSelection->itemAt(i)->setObjectStyle(name) || changedAny;
+
+	if (activeTransaction)
+		activeTransaction.commit();
+	m_updateManager.setUpdatesEnabled();
+	if (changedAny)
+	{
+		changed();
+		regionsChanged()->update(QRectF());
+		changedPagePreview();
+	}
 }
 
 void ScribusDoc::itemSelection_SetNamedLineStyle(const QString &name, Selection* customSelection)
