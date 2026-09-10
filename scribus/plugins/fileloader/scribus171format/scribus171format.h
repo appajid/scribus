@@ -24,6 +24,7 @@ class QIODevice;
 
 class  ColorList;
 class  MultiLine;
+class  ObjectStyle;
 class  PageItem_NoteFrame;
 class  ScLayer;
 class  ScribusDoc;
@@ -151,6 +152,7 @@ class PLUGIN_API Scribus171Format : public LoadSavePlugin
 		bool readPageItemAttributes(PageItem* item, ScXmlStreamReader& reader) const;
 		bool readPageSets(ScribusDoc* doc, ScXmlStreamReader& reader) const;
 		void readParagraphStyle(ScribusDoc *doc, ScXmlStreamReader& reader, ParagraphStyle& newStyle) const;
+		void readObjectStyle(ScXmlStreamReader& reader, ObjectStyle& newStyle) const;
 		void readTableStyle(ScribusDoc *doc, ScXmlStreamReader& reader, TableStyle& newStyle) const;
 		void readConditionalCellStyle(ScribusDoc *doc, ScXmlStreamReader& reader, const ScXmlStreamAttributes& attrs, CellStyle& newStyle) const;
 		void readTableBorderLines(ScribusDoc *doc, ScXmlStreamReader& reader, TableBorder& border) const;
@@ -202,6 +204,7 @@ class PLUGIN_API Scribus171Format : public LoadSavePlugin
 		void writeHyphenatorLists(ScXmlStreamWriter& docu) const;
 		void writeParagraphStyles(ScXmlStreamWriter& docu) const;
 		void writeCharStyles(ScXmlStreamWriter& docu) const;
+		void writeObjectStyles(ScXmlStreamWriter& docu) const;
 		void writeTableStyles(ScXmlStreamWriter& docu) const;
 		void writeTableStyles(ScXmlStreamWriter& docu, const QStringList& styleNames) const;
 		void writeCellStyles(ScXmlStreamWriter& docu) const;
@@ -209,6 +212,7 @@ class PLUGIN_API Scribus171Format : public LoadSavePlugin
 		void putPStyle(ScXmlStreamWriter& docu, const ParagraphStyle & style, const QString &nodeName) const;
 		void putCStyle(ScXmlStreamWriter& docu, const CharStyle & style) const;
 		void putNamedCStyle(ScXmlStreamWriter& docu, const CharStyle & style) const;
+		void putObjectStyle(ScXmlStreamWriter& docu, const ObjectStyle& style) const;
 		void putTableStyle(ScXmlStreamWriter& docu, const TableStyle & style) const;
 		void putCellStyle(ScXmlStreamWriter& docu, const CellStyle & style) const;
 		void putCellStyleBody(ScXmlStreamWriter& docu, const CellStyle & style) const;

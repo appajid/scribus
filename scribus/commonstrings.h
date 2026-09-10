@@ -186,11 +186,13 @@ public:
 	static QString DefaultParagraphStyle;
 	static QString DefaultCharacterStyle;
 	static QString DefaultLineStyle;
+	static QString DefaultObjectStyle;
 	static QString DefaultTableStyle;
 	static QString DefaultCellStyle;
 	static QString trDefaultParagraphStyle;
 	static QString trDefaultCharacterStyle;
 	static QString trDefaultLineStyle;
+	static QString trDefaultObjectStyle;
 	static QString trDefaultTableStyle;
 	static QString trDefaultCellStyle;
 

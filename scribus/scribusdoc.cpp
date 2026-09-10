@@ -411,6 +411,28 @@ void ScribusDoc::init()
 
 	currentStyle = pstyle;
 
+	// Create a geometry-neutral default object style. Object styles deliberately
+	// do not own position or size, so applying this style cannot move an item.
+	ObjectStyle defaultObjectStyle;
+	defaultObjectStyle.setDefaultStyle(true);
+	defaultObjectStyle.setName(CommonStrings::DefaultObjectStyle);
+	defaultObjectStyle.setFillColor(CommonStrings::None);
+	defaultObjectStyle.setFillShade(100.0);
+	defaultObjectStyle.setLineColor(CommonStrings::None);
+	defaultObjectStyle.setLineShade(100.0);
+	defaultObjectStyle.setLineWidth(0.0);
+	defaultObjectStyle.setLineStyle(Qt::SolidLine);
+	defaultObjectStyle.setLineCap(Qt::FlatCap);
+	defaultObjectStyle.setLineJoin(Qt::MiterJoin);
+	defaultObjectStyle.setFillTransparency(0.0);
+	defaultObjectStyle.setLineTransparency(0.0);
+	defaultObjectStyle.setFillBlendMode(0);
+	defaultObjectStyle.setLineBlendMode(0);
+	defaultObjectStyle.setCornerRadius(0.0);
+	defaultObjectStyle.setCustomLineStyle(QString());
+	m_docObjectStyles.create(defaultObjectStyle);
+	m_docObjectStyles.makeDefault(&(m_docObjectStyles[0]));
+
 	// Create default table style.
 	// TODO: We should have preferences for the default values.
 	TableStyle defaultTableStyle;
@@ -1196,6 +1218,8 @@ void ScribusDoc::getNamedResources(ResourceCollection& lists) const
 		m_docParagraphStyles[i].getNamedResources(lists);
 	for (int i = 0; i < m_docCharStyles.count(); ++i)
 		m_docCharStyles[i].getNamedResources(lists);
+	for (int i = 0; i < m_docObjectStyles.count(); ++i)
+		m_docObjectStyles[i].getNamedResources(lists);
 	for (int i = 0; i < m_docTableStyles.count(); ++i)
 		m_docTableStyles[i].getNamedResources(lists);
 	for (int i = 0; i < m_docCellStyles.count(); ++i)
@@ -1288,6 +1312,39 @@ QList<int> ScribusDoc::getSortedCharStyleList() const
 		{
 			if (!retList.contains(retList2[r]))
 				retList.append(retList2[r]);
+		}
+	}
+	return retList;
+}
+
+QList<int> ScribusDoc::getSortedObjectStyleList() const
+{
+	QList<int> retList;
+	for (int i = 0; i < m_docObjectStyles.count(); ++i)
+	{
+		if (m_docObjectStyles[i].parent().isEmpty())
+		{
+			if (!retList.contains(i))
+				retList.append(i);
+			continue;
+		}
+
+		QList<int> retList2;
+		QString name = m_docObjectStyles[i].name();
+		QString parent = m_docObjectStyles[i].parent();
+		retList2.prepend(i);
+		while (!parent.isEmpty() && parent != name)
+		{
+			int parentIndex = m_docObjectStyles.find(parent);
+			if (parentIndex < 0 || retList2.contains(parentIndex))
+				break;
+			retList2.prepend(parentIndex);
+			parent = m_docObjectStyles[parentIndex].parent();
+		}
+		for (int index : std::as_const(retList2))
+		{
+			if (!retList.contains(index))
+				retList.append(index);
 		}
 	}
 	return retList;
@@ -1422,6 +1479,13 @@ void ScribusDoc::replaceNamedResources(ResourceCollection& newNames)
 		else
 			m_docCharStyles[i].replaceNamedResources(newNames);
 	}
+	for (int i = m_docObjectStyles.count() - 1; i >= 0; --i)
+	{
+		if (newNames.objectStyles().contains(m_docObjectStyles[i].name()) && !m_docObjectStyles[i].isDefaultStyle())
+			m_docObjectStyles.remove(i);
+		else
+			m_docObjectStyles[i].replaceNamedResources(newNames);
+	}
 	for (int i = m_docTableStyles.count() - 1; i >= 0; --i)
 	{
 		if (newNames.tableStyles().contains(m_docTableStyles[i].name()))
@@ -1501,6 +1565,7 @@ void ScribusDoc::replaceNamedResources(ResourceCollection& newNames)
 	{
 		m_docCharStyles.invalidate();
 		m_docParagraphStyles.invalidate();
+		m_docObjectStyles.invalidate();
 		m_docTableStyles.invalidate();
 		m_docCellStyles.invalidate();
 	}
@@ -1510,6 +1575,8 @@ void ScribusDoc::replaceNamedResources(ResourceCollection& newNames)
 			m_docCharStyles.invalidate();
 		if (newNames.styles().count() > 0)
 			m_docParagraphStyles.invalidate();
+		if (newNames.objectStyles().count() > 0 || newNames.lineStyles().count() > 0)
+			m_docObjectStyles.invalidate();
 		if (newNames.tableStyles().count() > 0)
 			m_docTableStyles.invalidate();
 		if (newNames.cellStyles().count() > 0)
@@ -1517,7 +1584,8 @@ void ScribusDoc::replaceNamedResources(ResourceCollection& newNames)
 	}
 	if (!isLoading() && !(newNames.colors().isEmpty() && newNames.fonts().isEmpty() && newNames.patterns().isEmpty() 
 			&& newNames.styles().isEmpty() && newNames.charStyles().isEmpty() && newNames.lineStyles().isEmpty()
-			&& newNames.tableStyles().isEmpty() && newNames.cellStyles().isEmpty() && newNames.opticalMarginSets().isEmpty()))
+			&& newNames.objectStyles().isEmpty() && newNames.tableStyles().isEmpty()
+			&& newNames.cellStyles().isEmpty() && newNames.opticalMarginSets().isEmpty()))
 		changed();
 }
 
@@ -1526,6 +1594,13 @@ void ScribusDoc::replaceCharStyles(const QMap<QString,QString>& newNameForOld)
 {
 	ResourceCollection newNames;
 	newNames.mapCharStyles(newNameForOld);
+	replaceNamedResources(newNames);
+}
+
+void ScribusDoc::replaceObjectStyles(const QMap<QString, QString>& newNameForOld)
+{
+	ResourceCollection newNames;
+	newNames.mapObjectStyles(newNameForOld);
 	replaceNamedResources(newNames);
 }
 
@@ -1599,6 +1674,24 @@ void ScribusDoc::redefineCharStyles(const StyleSet<CharStyle>& newStyles, bool r
 			replaceCharStyles(deletion);
 	}
 	m_docCharStyles.invalidate();
+}
+
+void ScribusDoc::redefineObjectStyles(const StyleSet<ObjectStyle>& newStyles, bool removeUnused)
+{
+	m_docObjectStyles.redefine(newStyles, false);
+	if (removeUnused)
+	{
+		QMap<QString, QString> deletion;
+		for (int i = 0; i < m_docObjectStyles.count(); ++i)
+		{
+			const ObjectStyle& style = m_docObjectStyles[i];
+			if (!style.isDefaultStyle() && newStyles.find(style.name()) < 0)
+				deletion[style.name()] = QString();
+		}
+		if (!deletion.isEmpty())
+			replaceObjectStyles(deletion);
+	}
+	m_docObjectStyles.invalidate();
 }
 
 void ScribusDoc::redefineTableStyles(const StyleSet<TableStyle>& newStyles, bool removeUnused)

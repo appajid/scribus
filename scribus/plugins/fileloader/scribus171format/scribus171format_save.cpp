@@ -532,6 +532,7 @@ bool Scribus171Format::saveFile(const QString & fileName, const FileFormat & /* 
 	writeHyphenatorLists(docu);
 	writeCharStyles(docu);
 	writeParagraphStyles(docu);
+	writeObjectStyles(docu);
 	writeTableStyles(docu);
 	writeCellStyles(docu);
 	writeLineStyles(docu);
@@ -1008,6 +1009,57 @@ void Scribus171Format::putNamedCStyle(ScXmlStreamWriter& docu, const CharStyle &
 	if ( style.hasName() && style.isDefaultStyle())
 		docu.writeAttribute("DefaultStyle", style.isDefaultStyle());
 	putCStyle(docu, style);
+}
+
+void Scribus171Format::writeObjectStyles(ScXmlStreamWriter& docu) const
+{
+	const QList<int> styleList = m_Doc->getSortedObjectStyleList();
+	for (int index : styleList)
+	{
+		docu.writeStartElement("ObjectStyle");
+		putObjectStyle(docu, m_Doc->objectStyles()[index]);
+		docu.writeEndElement();
+	}
+}
+
+void Scribus171Format::putObjectStyle(ScXmlStreamWriter& docu, const ObjectStyle& style) const
+{
+	if (!style.name().isEmpty())
+		docu.writeAttribute("Name", style.name());
+	if (style.hasName() && style.isDefaultStyle())
+		docu.writeAttribute("DefaultStyle", style.isDefaultStyle());
+	if (!style.parent().isEmpty())
+		docu.writeAttribute("Parent", style.parent());
+	if (!style.shortcut().isEmpty())
+		docu.writeAttribute("Shortcut", style.shortcut());
+	if (!style.isInhFillColor())
+		docu.writeAttribute("FillColor", style.fillColor());
+	if (!style.isInhFillShade())
+		docu.writeAttribute("FillShade", style.fillShade());
+	if (!style.isInhLineColor())
+		docu.writeAttribute("LineColor", style.lineColor());
+	if (!style.isInhLineShade())
+		docu.writeAttribute("LineShade", style.lineShade());
+	if (!style.isInhLineWidth())
+		docu.writeAttribute("LineWidth", style.lineWidth());
+	if (!style.isInhLineStyle())
+		docu.writeAttribute("LineStyle", style.lineStyle());
+	if (!style.isInhLineCap())
+		docu.writeAttribute("LineCap", style.lineCap());
+	if (!style.isInhLineJoin())
+		docu.writeAttribute("LineJoin", style.lineJoin());
+	if (!style.isInhFillTransparency())
+		docu.writeAttribute("FillTransparency", style.fillTransparency());
+	if (!style.isInhLineTransparency())
+		docu.writeAttribute("LineTransparency", style.lineTransparency());
+	if (!style.isInhFillBlendMode())
+		docu.writeAttribute("FillBlendMode", style.fillBlendMode());
+	if (!style.isInhLineBlendMode())
+		docu.writeAttribute("LineBlendMode", style.lineBlendMode());
+	if (!style.isInhCornerRadius())
+		docu.writeAttribute("CornerRadius", style.cornerRadius());
+	if (!style.isInhCustomLineStyle())
+		docu.writeAttribute("CustomLineStyle", style.customLineStyle());
 }
 
 void Scribus171Format::writeTableStyles(ScXmlStreamWriter& docu) const

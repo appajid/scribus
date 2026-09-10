@@ -119,11 +119,13 @@ QString CommonStrings::trPenStyle_DashDotDotLine;
 QString CommonStrings::DefaultParagraphStyle;
 QString CommonStrings::DefaultCharacterStyle;
 QString CommonStrings::DefaultLineStyle;
+QString CommonStrings::DefaultObjectStyle;
 QString CommonStrings::DefaultTableStyle;
 QString CommonStrings::DefaultCellStyle;
 QString CommonStrings::trDefaultParagraphStyle;
 QString CommonStrings::trDefaultCharacterStyle;
 QString CommonStrings::trDefaultLineStyle;
+QString CommonStrings::trDefaultObjectStyle;
 QString CommonStrings::trDefaultTableStyle;
 QString CommonStrings::trDefaultCellStyle;
 
@@ -391,11 +393,13 @@ void CommonStrings::languageChange()
 	CommonStrings::DefaultParagraphStyle     = "Default Paragraph Style";
 	CommonStrings::DefaultCharacterStyle     = "Default Character Style";
 	CommonStrings::DefaultLineStyle          = "Default Line Style";
+	CommonStrings::DefaultObjectStyle        = "Default Object Style";
 	CommonStrings::DefaultTableStyle         = "Default Table Style";
 	CommonStrings::DefaultCellStyle          = "Default Cell Style";
 	CommonStrings::trDefaultParagraphStyle   = tr("Default Paragraph Style");
 	CommonStrings::trDefaultCharacterStyle   = tr("Default Character Style");
 	CommonStrings::trDefaultLineStyle        = tr("Default Line Style");
+	CommonStrings::trDefaultObjectStyle      = tr("Default Object Style");
 	CommonStrings::trDefaultTableStyle       = tr("Default Table Style");
 	CommonStrings::trDefaultCellStyle        = tr("Default Cell Style");
 
@@ -526,5 +530,4 @@ const QString & CommonStrings::translatePenStyleName( Qt::PenStyle ps )
 	//if (ps == Qt::SolidLine)
 	return trPenStyle_SolidLine;
 }
-
 

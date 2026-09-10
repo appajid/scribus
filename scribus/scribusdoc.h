@@ -65,6 +65,7 @@ for which a new license (GPL+exception) is in place.
 #include "scpage.h"
 #include "sclayer.h"
 #include "styles/styleset.h"
+#include "styles/objectstyle.h"
 #include "styles/tablestyle.h"
 #include "styles/cellstyle.h"
 #include "undoobject.h"
@@ -585,6 +586,28 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		const QHash<QString, MultiLine>& lineStyles() const { return docLineStyles; }
 
 		/**
+		 * Returns the object style named @a name.
+		 */
+		const ObjectStyle& objectStyle(const QString& name) const { return m_docObjectStyles.get(name); }
+		/**
+		 * Returns the set of object styles in the document.
+		 */
+		const StyleSet<ObjectStyle>& objectStyles() const { return m_docObjectStyles; }
+		void invalidateObjectStyles() { m_docObjectStyles.invalidate(); }
+		/**
+		 * Returns <code>true</code> if @a style is the default object style.
+		 */
+		bool isDefaultStyle(const ObjectStyle& style) const { return m_docObjectStyles.isDefault(style); }
+		/**
+		 * Redefines the set of object styles in the document using styles in @a newStyles.
+		 */
+		void redefineObjectStyles(const StyleSet<ObjectStyle>& newStyles, bool removeUnused = false);
+		/**
+		 * Removes references to old object styles and replaces them with new names.
+		 */
+		void replaceObjectStyles(const QMap<QString, QString>& newNameForOld);
+
+		/**
 		 * Returns the table style named @a name.
 		 */
 		const TableStyle& tableStyle(const QString& name) { return m_docTableStyles.get(name); }
@@ -687,6 +710,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 
 		QList<int> getSortedStyleList() const;
 		QList<int> getSortedCharStyleList() const;
+		QList<int> getSortedObjectStyleList() const;
 		QList<int> getSortedTableStyleList() const;
 		QList<int> getSortedCellStyleList() const;
 
@@ -1471,6 +1495,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 	private:
 		StyleSet<ParagraphStyle> m_docParagraphStyles;
 		StyleSet<CharStyle> m_docCharStyles;
+		StyleSet<ObjectStyle> m_docObjectStyles;
 		StyleSet<TableStyle> m_docTableStyles;
 		StyleSet<CellStyle> m_docCellStyles;
 

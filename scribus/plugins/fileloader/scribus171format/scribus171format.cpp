@@ -48,6 +48,7 @@ for which a new license (GPL+exception) is in place.
 #include "scribusdoc.h"
 #include "sctextstream.h"
 #include "scxmlstreamreader.h"
+#include "styles/objectstyle.h"
 #include "textnote.h"
 #include "undomanager.h"
 #include "ui/missing.h"
@@ -388,6 +389,16 @@ bool Scribus171Format::loadElements(const QString& data, const QString& fileDir,
 		{
 			CharStyle cstyle;
 			getStyle(cstyle, reader, nullptr, m_Doc, true);
+		}
+		else if (tagName == QLatin1String("ObjectStyle"))
+		{
+			ObjectStyle objectStyle;
+			readObjectStyle(reader, objectStyle);
+			if (m_Doc->objectStyles().contains(objectStyle.name()))
+				continue;
+			StyleSet<ObjectStyle> temp;
+			temp.create(objectStyle);
+			m_Doc->redefineObjectStyles(temp, false);
 		}
 		else if (tagName == QLatin1String("TableStyle"))
 		{
@@ -943,6 +954,16 @@ bool Scribus171Format::loadStory(const QByteArray& data, StoryText& story, PageI
 			StyleSet<CharStyle> temp;
 			temp.create(cstyle);
 			m_Doc->redefineCharStyles(temp, false);
+		}
+		if (tagName == QLatin1String("ObjectStyle"))
+		{
+			ObjectStyle objectStyle;
+			readObjectStyle(reader, objectStyle);
+			if (m_Doc->objectStyles().contains(objectStyle.name()))
+				continue;
+			StyleSet<ObjectStyle> temp;
+			temp.create(objectStyle);
+			m_Doc->redefineObjectStyles(temp, false);
 		}
 		if (tagName == QLatin1String("TableStyle"))
 		{
@@ -1803,6 +1824,14 @@ bool Scribus171Format::loadFile(const QString & fileName, const FileFormat & /* 
 			StyleSet<CharStyle> temp;
 			temp.create(cstyle);
 			m_Doc->redefineCharStyles(temp, false);
+		}
+		else if (tagName == QLatin1String("ObjectStyle"))
+		{
+			ObjectStyle objectStyle;
+			readObjectStyle(reader, objectStyle);
+			StyleSet<ObjectStyle> temp;
+			temp.create(objectStyle);
+			m_Doc->redefineObjectStyles(temp, false);
 		}
 		else if (tagName == QLatin1String("TableStyle"))
 		{
@@ -3804,6 +3833,54 @@ void Scribus171Format::readParagraphStyle(ScribusDoc *doc, ScXmlStreamReader& re
 		newStyle.setTabValues(tbs);
 	
 	fixLegacyParStyle(newStyle);
+}
+
+void Scribus171Format::readObjectStyle(ScXmlStreamReader& reader, ObjectStyle& newStyle) const
+{
+	const ScXmlStreamAttributes attrs = reader.scAttributes();
+	newStyle.erase();
+	newStyle.setName(attrs.valueAsString("Name"));
+	if (attrs.hasAttribute("DefaultStyle"))
+		newStyle.setDefaultStyle(attrs.valueAsBool("DefaultStyle"));
+	else
+		newStyle.setDefaultStyle(newStyle.name() == CommonStrings::DefaultObjectStyle
+			|| newStyle.name() == CommonStrings::trDefaultObjectStyle);
+
+	const QString parent = attrs.valueAsString("Parent");
+	if (!parent.isEmpty() && parent != newStyle.name())
+		newStyle.setParent(parent);
+	if (attrs.hasAttribute("Shortcut"))
+		newStyle.setShortcut(attrs.valueAsString("Shortcut"));
+	if (attrs.hasAttribute("FillColor"))
+		newStyle.setFillColor(attrs.valueAsString("FillColor"));
+	if (attrs.hasAttribute("FillShade"))
+		newStyle.setFillShade(attrs.valueAsDouble("FillShade"));
+	if (attrs.hasAttribute("LineColor"))
+		newStyle.setLineColor(attrs.valueAsString("LineColor"));
+	if (attrs.hasAttribute("LineShade"))
+		newStyle.setLineShade(attrs.valueAsDouble("LineShade"));
+	if (attrs.hasAttribute("LineWidth"))
+		newStyle.setLineWidth(attrs.valueAsDouble("LineWidth"));
+	if (attrs.hasAttribute("LineStyle"))
+		newStyle.setLineStyle(static_cast<Qt::PenStyle>(attrs.valueAsInt("LineStyle")));
+	if (attrs.hasAttribute("LineCap"))
+		newStyle.setLineCap(static_cast<Qt::PenCapStyle>(attrs.valueAsInt("LineCap")));
+	if (attrs.hasAttribute("LineJoin"))
+		newStyle.setLineJoin(static_cast<Qt::PenJoinStyle>(attrs.valueAsInt("LineJoin")));
+	if (attrs.hasAttribute("FillTransparency"))
+		newStyle.setFillTransparency(attrs.valueAsDouble("FillTransparency"));
+	if (attrs.hasAttribute("LineTransparency"))
+		newStyle.setLineTransparency(attrs.valueAsDouble("LineTransparency"));
+	if (attrs.hasAttribute("FillBlendMode"))
+		newStyle.setFillBlendMode(attrs.valueAsInt("FillBlendMode"));
+	if (attrs.hasAttribute("LineBlendMode"))
+		newStyle.setLineBlendMode(attrs.valueAsInt("LineBlendMode"));
+	if (attrs.hasAttribute("CornerRadius"))
+		newStyle.setCornerRadius(attrs.valueAsDouble("CornerRadius"));
+	if (attrs.hasAttribute("CustomLineStyle"))
+		newStyle.setCustomLineStyle(attrs.valueAsString("CustomLineStyle"));
+
+	reader.skipCurrentElement();
 }
 
 void Scribus171Format::readTableStyle(ScribusDoc *doc, ScXmlStreamReader& reader, TableStyle& newStyle) const
@@ -8356,6 +8433,16 @@ bool Scribus171Format::loadPage(const QString & fileName, int pageNumber, bool M
 		{
 			CharStyle cstyle;
 			getStyle(cstyle, reader, nullptr, m_Doc, true);
+		}
+		if (tagName == QLatin1String("ObjectStyle"))
+		{
+			ObjectStyle objectStyle;
+			readObjectStyle(reader, objectStyle);
+			if (m_Doc->objectStyles().contains(objectStyle.name()))
+				continue;
+			StyleSet<ObjectStyle> temp;
+			temp.create(objectStyle);
+			m_Doc->redefineObjectStyles(temp, false);
 		}
 		if (tagName == QLatin1String("TableStyle"))
 		{
