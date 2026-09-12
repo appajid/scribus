@@ -69,7 +69,8 @@ int mainApp(int argc, char **argv)
 
 // Fallback if the Linux OS doesn't support wayland
 #if !defined(Q_OS_MACOS)
-	qputenv("QT_QPA_PLATFORM", "wayland;xcb");
+	if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM"))
+		qputenv("QT_QPA_PLATFORM", "wayland;xcb");
 #endif
 
 	QImageReader::setAllocationLimit(1024);

@@ -58,7 +58,11 @@ void ScSplashScreen::setStatus( const QString &message )
 void ScSplashScreen::drawContents(QPainter* painter)
 {
 	painter->setRenderHint(QPainter::Antialiasing, true);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 	const bool isDark = QApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+#else
+	const bool isDark = QApplication::palette().window().color().lightness() < 128;
+#endif
 	const QColor textColor = isDark ? QColor(245, 245, 247) : QColor(32, 34, 38);
 	const QColor secondaryColor = isDark ? QColor(190, 194, 201) : QColor(84, 88, 96);
 	const QColor accentColor(10, 132, 255);

@@ -406,9 +406,14 @@ bool PageItem_TextFrame::updateAnchoredObjectRects()
 				const QRectF verticalReference = anchorVerticalReferenceRect(anchor, paragraphRectForPosition(child->firstChar()));
 				const bool leftPage = OwnPage >= 0 && OwnPage < m_Doc->Pages->count()
 					&& m_Doc->locationOfPage(OwnPage) == LeftPage;
-				resolvedRects.insert(child->firstChar(),
-					anchor.resolvedRect(horizontalReference, verticalReference, anchorPoint,
-						object->getVisualBoundingRect().size(), leftPage));
+				QRectF resolvedRect = anchor.resolvedRect(horizontalReference, verticalReference, anchorPoint,
+					object->getVisualBoundingRect().size(), leftPage);
+				// Keep anchored objects on the geometry from the unwrapped pass.
+				// Re-resolving them from text displaced by an anchor makes the layout oscillate.
+				const auto previousRect = m_anchoredObjectRects.constFind(child->firstChar());
+				if (previousRect != m_anchoredObjectRects.constEnd())
+					resolvedRect = previousRect.value();
+				resolvedRects.insert(child->firstChar(), resolvedRect);
 			}
 		}
 	}
