@@ -1829,7 +1829,8 @@ void ScribusDoc::loadStylesFromFile(const QString& fileName, StyleSet<ParagraphS
 									StyleSet<CharStyle> *tempCharStyles,
 									QHash<QString, MultiLine> *tempLineStyles,
 									StyleSet<TableStyle> *tempTableStyles,
-									StyleSet<CellStyle> *tempCellStyles)
+									StyleSet<CellStyle> *tempCellStyles,
+									StyleSet<ObjectStyle> *tempObjectStyles)
 {
 	StyleSet<ParagraphStyle> *wrkStyles     = tempStyles;
 	StyleSet<CharStyle> *wrkCharStyles      = tempCharStyles;
@@ -1864,6 +1865,11 @@ void ScribusDoc::loadStylesFromFile(const QString& fileName, StyleSet<ParagraphS
 	}
 
 	if (tempCellStyles && !fl.readCellStyles(this, *tempCellStyles))
+	{
+		//TODO put in nice user warning
+	}
+
+	if (tempObjectStyles && !fl.readObjectStyles(this, *tempObjectStyles))
 	{
 		//TODO put in nice user warning
 	}
@@ -1944,6 +1950,25 @@ void ScribusDoc::loadStylesFromFile(const QString& fileName, StyleSet<ParagraphS
 						namesMap[(*tempCellStyles)[i].name()] = (*tempCellStyles)[i].name();
 				}
 				tempCellStyles->rename(namesMap);
+			}
+		}
+	}
+	if (tempObjectStyles)
+	{
+		for (int j(0) ; j < tempObjectStyles->count() ; ++j)
+		{
+			if ((*tempObjectStyles)[j].isDefaultStyle())
+			{
+				ObjectStyle& objectDefault((*tempObjectStyles)[j]);
+				objectDefault.setDefaultStyle(false);
+				QMap<QString, QString> namesMap;
+				namesMap[objectDefault.name()] = importPrefix + objectDefault.name() + importSuffix;
+				for (int i(0) ; i < tempObjectStyles->count() ; ++i)
+				{
+					if ((*tempObjectStyles)[i] != objectDefault)
+						namesMap[(*tempObjectStyles)[i].name()] = (*tempObjectStyles)[i].name();
+				}
+				tempObjectStyles->rename(namesMap);
 			}
 		}
 	}

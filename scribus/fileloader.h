@@ -20,6 +20,7 @@ for which a new license (GPL+exception) is in place.
 #include "styles/charstyle.h"
 #include "styles/tablestyle.h"
 #include "styles/cellstyle.h"
+#include "styles/objectstyle.h"
 
 class QDomElement;
 class QProgressBar;
@@ -50,6 +51,7 @@ public:
 	bool readLineStyles(QHash<QString, MultiLine> *Sty);
 	bool readTableStyles(ScribusDoc* doc, StyleSet<TableStyle> &docTableStyles);
 	bool readCellStyles(ScribusDoc* doc, StyleSet<CellStyle> &docCellStyles);
+	bool readObjectStyles(ScribusDoc* doc, StyleSet<ObjectStyle> &docObjectStyles);
 	QImage readThumbnail();
 	bool postLoad(ScribusDoc* currDoc);
  	void informReplacementFonts();

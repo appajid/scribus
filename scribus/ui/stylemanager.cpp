@@ -691,8 +691,9 @@ void StyleManager::slotImport()
 	QHash<QString, MultiLine> tmpLineStyles;
 	StyleSet<TableStyle> tmpTableStyles;
 	StyleSet<CellStyle> tmpCellStyles;
+	StyleSet<ObjectStyle> tmpObjectStyles;
 
-	m_doc->loadStylesFromFile(selectedFile, &tmpParaStyles, &tmpCharStyles, &tmpLineStyles, &tmpTableStyles, &tmpCellStyles);
+	m_doc->loadStylesFromFile(selectedFile, &tmpParaStyles, &tmpCharStyles, &tmpLineStyles, &tmpTableStyles, &tmpCellStyles, &tmpObjectStyles);
 
 // FIXME Once all styles are derived from Style remove this and make a proper
 //       implementation
@@ -722,6 +723,7 @@ void StyleManager::slotImport()
 
 	SMTableStyle *tstyle = nullptr;
 	SMCellStyle  *cellstyle = nullptr;
+	SMObjectStyle *objectstyle = nullptr;
 	for (int i = 0; i < m_items.count(); ++i)
 	{
 		tstyle = qobject_cast<SMTableStyle*>(m_items.at(i));
@@ -734,10 +736,16 @@ void StyleManager::slotImport()
 		if (cellstyle)
 			break;
 	}
+	for (int i = 0; i < m_items.count(); ++i)
+	{
+		objectstyle = qobject_cast<SMObjectStyle*>(m_items.at(i));
+		if (objectstyle)
+			break;
+	}
 
-	Q_ASSERT(pstyle && cstyle && lstyle && tstyle && cellstyle);
+	Q_ASSERT(pstyle && cstyle && lstyle && tstyle && cellstyle && objectstyle);
 
-	SMStyleImport *dia2 = new SMStyleImport(this, &tmpParaStyles, &tmpCharStyles, &tmpLineStyles, &tmpTableStyles, &tmpCellStyles);
+	SMStyleImport *dia2 = new SMStyleImport(this, &tmpParaStyles, &tmpCharStyles, &tmpLineStyles, &tmpTableStyles, &tmpCellStyles, &tmpObjectStyles);
 // end hack
 
 //#7315 		QList<QPair<QString, QString> > selected;
@@ -750,6 +758,8 @@ void StyleManager::slotImport()
 
 		QStringList neededOpticalMarginSets;
 		neededOpticalMarginSets.clear();
+
+		const ObjectStyleImportPlan objectStylePlan = buildObjectStyleImportPlan(tmpObjectStyles, dia2->objectStyles());
 
 		foreach (const QString& aStyle, dia2->paragraphStyles())
 		{
@@ -798,8 +808,21 @@ void StyleManager::slotImport()
 				neededColors.append(sty.fillColor());
 		}
 
-		foreach (const QString& aStyle, dia2->lineStyles())
+		QStringList lineStylesToImport(dia2->lineStyles());
+		for (const QString& lineStyleName : objectStylePlan.lineStyleNames)
 		{
+			if (!lineStylesToImport.contains(lineStyleName))
+				lineStylesToImport.append(lineStyleName);
+		}
+		QMap<QString, QString> importedLineStyleNames;
+		foreach (const QString& aStyle, lineStylesToImport)
+		{
+			if (!tmpLineStyles.contains(aStyle))
+			{
+				if (!lstyle->m_tmpLines.contains(aStyle))
+					importedLineStyleNames.insert(aStyle, QString());
+				continue;
+			}
 			MultiLine &sty = tmpLineStyles[/*it.data()*/aStyle];
 			QString styName = aStyle;
 
@@ -807,6 +830,7 @@ void StyleManager::slotImport()
 				styName = lstyle->getUniqueName(aStyle);
 
 			lstyle->m_tmpLines[styName] = sty;
+			importedLineStyleNames.insert(aStyle, styName);
 //#7315 				selected << QPair<QString, QString>(lstyle->typeName(), styName);
 
 			for (int i = 0; i < sty.count(); ++i)
@@ -814,6 +838,15 @@ void StyleManager::slotImport()
 				if ((!m_doc->PageColors.contains(sty[i].Color)) && (!neededColors.contains(sty[i].Color)))
 					neededColors.append(sty[i].Color);
 			}
+		}
+
+		importObjectStyles(tmpObjectStyles, objectStylePlan.styleNames, *objectstyle->tmpStyles(),
+				dia2->clashRename(), importedLineStyleNames);
+		for (const QString& colorName : objectStylePlan.colorNames)
+		{
+			if (!colorName.isEmpty() && colorName != CommonStrings::None
+				&& !m_doc->PageColors.contains(colorName) && !neededColors.contains(colorName))
+				neededColors.append(colorName);
 		}
 
 		foreach (const QString& aStyle, dia2->tableStyles())
@@ -904,6 +937,7 @@ void StyleManager::slotImport()
 	cstyle->setCurrentDoc(m_doc);
 	tstyle->setCurrentDoc(m_doc);
 	cellstyle->setCurrentDoc(m_doc);
+	objectstyle->setCurrentDoc(m_doc);
 // end hack part 2
 	reloadStyleView(false);
 //#7315 		setSelection(selected);

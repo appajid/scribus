@@ -346,6 +346,17 @@ bool FileLoader::readCellStyles(ScribusDoc* doc, StyleSet<CellStyle> &docCellSty
 	return false;
 }
 
+bool FileLoader::readObjectStyles(ScribusDoc* doc, StyleSet<ObjectStyle> &docObjectStyles)
+{
+	QList<FileFormat>::const_iterator it;
+	if (findFormat(m_fileType, it))
+	{
+		it->plug->setupTargets(doc, nullptr, doc->scMW(), doc->scMW()->mainWindowProgressBar, &(m_prefsManager.appPrefs.fontPrefs.AvailFonts));
+		return it->readObjectStyles(m_fileName, doc, docObjectStyles);
+	}
+	return false;
+}
+
 void FileLoader::readParagraphStyle(ParagraphStyle& vg, const QDomElement& pg, SCFonts &avail, ScribusDoc *currDoc)
 {
 	vg.setName(pg.attribute("NAME"));

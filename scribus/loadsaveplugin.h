@@ -125,6 +125,7 @@ class SCRIBUS_API LoadSavePlugin : public ScPlugin
 		virtual bool readLineStyles(const QString& fileName, QHash<QString, MultiLine> *Sty);
 		virtual bool readTableStyles(const QString& fileName, ScribusDoc* doc, StyleSet<TableStyle> &docTableStyles);
 		virtual bool readCellStyles(const QString& fileName, ScribusDoc* doc, StyleSet<CellStyle> &docCellStyles);
+		virtual bool readObjectStyles(const QString& fileName, ScribusDoc* doc, StyleSet<ObjectStyle> &docObjectStyles);
 		virtual bool readColors(const QString& fileName, ColorList & colors);
 		virtual bool readPageCount(const QString& fileName, int *num1, int *num2, QStringList & masterPageNames);
 		virtual QImage readThumbnail(const QString& fileName);
@@ -234,6 +235,7 @@ class SCRIBUS_API FileFormat
 		bool readLineStyles(const QString& fileName, QHash<QString, MultiLine> *Sty) const;
 		bool readTableStyles(const QString &fileName, ScribusDoc *doc, StyleSet<TableStyle> &s) const;
 		bool readCellStyles(const QString &fileName, ScribusDoc *doc, StyleSet<CellStyle> &s) const;
+		bool readObjectStyles(const QString &fileName, ScribusDoc *doc, StyleSet<ObjectStyle> &s) const;
 		bool readColors(const QString& fileName, ColorList & colors) const;
 		bool readPageCount(const QString& fileName, int *num1, int *num2, QStringList & masterPageNames) const;
 		QImage readThumbnail(const QString& fileName) const;

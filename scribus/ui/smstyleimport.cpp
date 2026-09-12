@@ -15,7 +15,8 @@ SMStyleImport::SMStyleImport(QWidget* parent,
 							 StyleSet<CharStyle> *cstyleList,
 							 QHash<QString, MultiLine> *lstyleList,
 							 StyleSet<TableStyle> *tstyleList,
-							 StyleSet<CellStyle> *cellstyleList)
+							 StyleSet<CellStyle> *cellstyleList,
+							 StyleSet<ObjectStyle> *objectstyleList)
 	: QDialog(parent, Qt::WindowFlags())
 {
 	setupUi(this);
@@ -55,6 +56,20 @@ SMStyleImport::SMStyleImport(QWidget* parent,
 		styleWidget->setItemWidget(item, 0, box);
 	}
 	styleWidget->expandItem(lstyleItem);
+
+	objectstyleItem = new QTreeWidgetItem(styleWidget);
+	objectstyleItem->setText(0, tr("Object Styles"));
+	for (int x = 0; x < objectstyleList->count(); ++x)
+	{
+		ObjectStyle& style((*objectstyleList)[x]);
+		if (!style.hasName())
+			continue;
+		QCheckBox *box = new QCheckBox(style.name());
+		box->setChecked(true);
+		QTreeWidgetItem *item = new QTreeWidgetItem(objectstyleItem, objectType);
+		styleWidget->setItemWidget(item, 0, box);
+	}
+	styleWidget->expandItem(objectstyleItem);
 
 	tstyleItem = new QTreeWidgetItem(styleWidget);
 	tstyleItem->setText(0, tr("Table Styles"));
@@ -117,6 +132,11 @@ QStringList SMStyleImport::cellStyles()
 	return commonStyles(cellstyleItem, cellType);
 }
 
+QStringList SMStyleImport::objectStyles()
+{
+	return commonStyles(objectstyleItem, objectType);
+}
+
 QStringList SMStyleImport::commonStyles(QTreeWidgetItem * rootItem, int type)
 {
 	QStringList ret;
@@ -147,4 +167,3 @@ void SMStyleImport::checkAll(bool allChecked)
 		++it;
 	}
 }
-

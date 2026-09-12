@@ -17,11 +17,14 @@
 #define OBJECTSTYLE_H
 
 #include <QString>
+#include <QStringList>
 #include <Qt>
 
 #include "resourcecollection.h"
 #include "style.h"
 #include "styles/stylecontextproxy.h"
+
+template<class STYLE> class StyleSet;
 
 /**
  * Inheritable appearance properties shared by page-item object styles.
@@ -94,6 +97,21 @@ private:
 #include "objectstyle.attrdefs.cxx"
 #undef ATTRDEF
 };
+
+struct SCRIBUS_API ObjectStyleImportPlan
+{
+	QStringList styleNames;
+	QStringList colorNames;
+	QStringList lineStyleNames;
+};
+
+ObjectStyleImportPlan SCRIBUS_API buildObjectStyleImportPlan(const StyleSet<ObjectStyle>& sourceStyles,
+														 const QStringList& selectedStyleNames);
+QMap<QString, QString> SCRIBUS_API importObjectStyles(const StyleSet<ObjectStyle>& sourceStyles,
+													 const QStringList& styleNames,
+													 StyleSet<ObjectStyle>& destinationStyles,
+													 bool renameOnClash,
+													 const QMap<QString, QString>& lineStyleNames = {});
 
 inline ObjectStyle& ObjectStyle::operator=(const ObjectStyle& other)
 {

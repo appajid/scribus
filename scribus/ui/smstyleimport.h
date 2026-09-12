@@ -14,6 +14,7 @@ for which a new license (GPL+exception) is in place.
 #include "styles/cellstyle.h"
 #include "styles/charstyle.h"
 #include "styles/linestyle.h"
+#include "styles/objectstyle.h"
 #include "styles/paragraphstyle.h"
 #include "styles/styleset.h"
 #include "styles/tablestyle.h"
@@ -33,7 +34,8 @@ class SCRIBUS_API SMStyleImport : public QDialog, public Ui::SMStyleImport
 					StyleSet<CharStyle> *cstyleList,
 					QHash<QString, MultiLine> *lstyleList,
 					StyleSet<TableStyle> *tstyleList,
-					StyleSet<CellStyle> *cellstyleList);
+					StyleSet<CellStyle> *cellstyleList,
+					StyleSet<ObjectStyle> *objectstyleList);
 		~SMStyleImport() {};
 
 		//! \brief True if the rename feature is ON.
@@ -43,6 +45,7 @@ class SCRIBUS_API SMStyleImport : public QDialog, public Ui::SMStyleImport
 		QStringList lineStyles();
 		QStringList tableStyles();
 		QStringList cellStyles();
+		QStringList objectStyles();
 
 	protected:
 		//! \brief Root items in the styleWidget
@@ -51,6 +54,7 @@ class SCRIBUS_API SMStyleImport : public QDialog, public Ui::SMStyleImport
 		QTreeWidgetItem * lstyleItem;
 		QTreeWidgetItem * tstyleItem;
 		QTreeWidgetItem * cellstyleItem;
+		QTreeWidgetItem * objectstyleItem;
 
 		/*! \brief Following constants are used as flags for searching.
 		Something like: give me all character style related items from
@@ -61,6 +65,7 @@ class SCRIBUS_API SMStyleImport : public QDialog, public Ui::SMStyleImport
 		static const int lType = QTreeWidgetItem::UserType + 2;
 		static const int tType = QTreeWidgetItem::UserType + 3;
 		static const int cellType = QTreeWidgetItem::UserType + 4;
+		static const int objectType = QTreeWidgetItem::UserType + 5;
 
 		QStringList commonStyles(QTreeWidgetItem * rootItem, int type);
 

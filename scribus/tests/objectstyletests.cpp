@@ -20,6 +20,9 @@ private slots:
 	void comparesAndErasesOverrides();
 	void collectsAndReplacesNamedResources();
 	void preservesUnicodeNamesAndShortcuts();
+	void buildsDependencyCompleteImportPlan();
+	void importsParentsAndRemapsConflicts();
+	void dropsUnavailableDependencies();
 };
 
 void ObjectStyleTests::defaultsAreInheritedAndGeometryNeutral()
@@ -105,6 +108,79 @@ void ObjectStyleTests::preservesUnicodeNamesAndShortcuts()
 	style.setShortcut(QStringLiteral("Ctrl+Alt+7"));
 	QCOMPARE(style.name(), QStringLiteral("చిత్ర చట్రం"));
 	QCOMPARE(style.shortcut(), QStringLiteral("Ctrl+Alt+7"));
+}
+
+void ObjectStyleTests::buildsDependencyCompleteImportPlan()
+{
+	StyleSet<ObjectStyle> source;
+	ObjectStyle base;
+	base.setName(QStringLiteral("Base"));
+	base.setFillColor(QStringLiteral("Brand Blue"));
+	base.setCustomLineStyle(QStringLiteral("Brand Rule"));
+	source.create(base);
+
+	ObjectStyle child;
+	child.setName(QStringLiteral("Child"));
+	child.setParent(QStringLiteral("Base"));
+	child.setLineColor(QStringLiteral("Brand Red"));
+	source.create(child);
+
+	const ObjectStyleImportPlan plan = buildObjectStyleImportPlan(source, { QStringLiteral("Child") });
+	QCOMPARE(plan.styleNames, QStringList({ QStringLiteral("Base"), QStringLiteral("Child") }));
+	QVERIFY(plan.colorNames.contains(QStringLiteral("Brand Blue")));
+	QVERIFY(plan.colorNames.contains(QStringLiteral("Brand Red")));
+	QVERIFY(plan.lineStyleNames.contains(QStringLiteral("Brand Rule")));
+}
+
+void ObjectStyleTests::importsParentsAndRemapsConflicts()
+{
+	StyleSet<ObjectStyle> source;
+	ObjectStyle base;
+	base.setName(QStringLiteral("Base"));
+	base.setFillColor(QStringLiteral("Source Blue"));
+	base.setCustomLineStyle(QStringLiteral("Rule"));
+	source.create(base);
+
+	ObjectStyle child;
+	child.setName(QStringLiteral("Child"));
+	child.setParent(QStringLiteral("Base"));
+	source.create(child);
+
+	StyleSet<ObjectStyle> destination;
+	ObjectStyle existingBase;
+	existingBase.setName(QStringLiteral("Base"));
+	existingBase.setFillColor(QStringLiteral("Existing Red"));
+	destination.create(existingBase);
+
+	const ObjectStyleImportPlan plan = buildObjectStyleImportPlan(source, { QStringLiteral("Child") });
+	const QMap<QString, QString> imported = importObjectStyles(source, plan.styleNames, destination, true,
+		{ { QStringLiteral("Rule"), QStringLiteral("Rule (2)") } });
+
+	QCOMPARE(imported.value(QStringLiteral("Base")), QStringLiteral("Base (2)"));
+	QCOMPARE(imported.value(QStringLiteral("Child")), QStringLiteral("Child"));
+	QCOMPARE(destination.get(QStringLiteral("Base")).fillColor(), QStringLiteral("Existing Red"));
+	QCOMPARE(destination.get(QStringLiteral("Base (2)")).fillColor(), QStringLiteral("Source Blue"));
+	QCOMPARE(destination.get(QStringLiteral("Base (2)")).customLineStyle(), QStringLiteral("Rule (2)"));
+	QCOMPARE(destination.get(QStringLiteral("Child")).parent(), QStringLiteral("Base (2)"));
+	QCOMPARE(destination.get(QStringLiteral("Child")).fillColor(), QStringLiteral("Source Blue"));
+}
+
+void ObjectStyleTests::dropsUnavailableDependencies()
+{
+	StyleSet<ObjectStyle> source;
+	ObjectStyle orphan;
+	orphan.setName(QStringLiteral("Orphan"));
+	orphan.setParent(QStringLiteral("Missing Parent"));
+	orphan.setCustomLineStyle(QStringLiteral("Missing Rule"));
+	source.create(orphan);
+
+	StyleSet<ObjectStyle> destination;
+	const ObjectStyleImportPlan plan = buildObjectStyleImportPlan(source, { QStringLiteral("Orphan") });
+	importObjectStyles(source, plan.styleNames, destination, true,
+		{ { QStringLiteral("Missing Rule"), QString() } });
+
+	QCOMPARE(destination.get(QStringLiteral("Orphan")).parent(), QString());
+	QCOMPARE(destination.get(QStringLiteral("Orphan")).customLineStyle(), QString());
 }
 
 QTEST_APPLESS_MAIN(ObjectStyleTests)

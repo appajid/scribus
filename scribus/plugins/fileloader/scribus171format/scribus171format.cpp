@@ -9316,6 +9316,37 @@ bool Scribus171Format::readCellStyles(const QString& fileName, ScribusDoc* doc, 
 	return true;
 }
 
+bool Scribus171Format::readObjectStyles(const QString& fileName, ScribusDoc* doc, StyleSet<ObjectStyle> &docObjectStyles)
+{
+	Q_UNUSED(doc)
+	QScopedPointer<QIODevice> ioDevice(slaReader(fileName));
+	if (ioDevice.isNull())
+		return false;
+
+	bool firstElement = true;
+	ScXmlStreamReader reader(ioDevice.data());
+	while (!reader.atEnd() && !reader.hasError())
+	{
+		if (reader.readNext() != QXmlStreamReader::StartElement)
+			continue;
+		QString tagName(reader.nameAsString());
+		if (firstElement)
+		{
+			if (tagName != QLatin1String("SCRIBUSUTF8NEW"))
+				return false;
+			firstElement = false;
+			continue;
+		}
+		if (tagName == QLatin1String("ObjectStyle"))
+		{
+			ObjectStyle objectStyle;
+			readObjectStyle(reader, objectStyle);
+			docObjectStyles.create(objectStyle);
+		}
+	}
+	return !reader.hasError();
+}
+
 bool Scribus171Format::readColors(const QString& fileName, ColorList & colors)
 {
 	QScopedPointer<QIODevice> ioDevice(slaReader(fileName));

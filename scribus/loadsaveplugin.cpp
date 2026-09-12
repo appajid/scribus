@@ -421,6 +421,11 @@ bool LoadSavePlugin::readCellStyles(const QString& /*fileName*/, ScribusDoc* /*d
 	return false;
 }
 
+bool LoadSavePlugin::readObjectStyles(const QString& /*fileName*/, ScribusDoc* /*doc*/, StyleSet<ObjectStyle>& /*docObjectStyles*/)
+{
+	return false;
+}
+
 bool LoadSavePlugin::readColors(const QString& /*fileName*/, ColorList & /*colors*/)
 {
 	return false;
@@ -560,6 +565,11 @@ bool FileFormat::readTableStyles(const QString &fileName, ScribusDoc *doc, Style
 bool FileFormat::readCellStyles(const QString &fileName, ScribusDoc *doc, StyleSet<CellStyle> &s) const
 {
 	return (plug && load) ? plug->readCellStyles(fileName, doc, s) : false;
+}
+
+bool FileFormat::readObjectStyles(const QString &fileName, ScribusDoc *doc, StyleSet<ObjectStyle> &s) const
+{
+	return (plug && load) ? plug->readObjectStyles(fileName, doc, s) : false;
 }
 
 bool FileFormat::readColors(const QString& fileName, ColorList & colors) const
