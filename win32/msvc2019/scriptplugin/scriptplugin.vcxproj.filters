@@ -55,6 +55,9 @@
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobj.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -145,6 +148,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobj.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.h">

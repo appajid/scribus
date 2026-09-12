@@ -23,6 +23,7 @@ set(SCRIPTER_PLUGIN_SOURCES
 	cmdmani.cpp
 	cmdmisc.cpp
 	cmdobj.cpp
+	cmdobjectstyleimport.cpp
 	cmdpage.cpp
 	cmdsetprop.cpp
 	cmdstyle.cpp

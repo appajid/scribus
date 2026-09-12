@@ -45,6 +45,7 @@ for which a new license (GPL+exception) is in place.
 #include "cmdmani.h"
 #include "cmdmisc.h"
 #include "cmdobj.h"
+#include "cmdobjectstyleimport.h"
 #include "cmdpage.h"
 #include "cmdsetprop.h"
 #include "cmdstyle.h"
@@ -471,6 +472,7 @@ PyMethodDef scribus_methods[] = {
 	{ "groupObjects", (PyCFunction) scribus_groupobjects, METH_VARARGS, tr(scribus_groupobjects__doc__)},
 	{ "haveDoc", (PyCFunction) scribus_havedoc, METH_NOARGS, tr(scribus_havedoc__doc__)},
 	{ "hyphenateText", scribus_hyphenatetext, METH_VARARGS, tr(scribus_hyphenatetext__doc__)},
+	{ "importObjectStyles", (PyCFunction) scribus_importobjectstyles, METH_VARARGS|METH_KEYWORDS, tr(scribus_importobjectstyles__doc__)},
 	{ "importPage", scribus_importpage, METH_VARARGS, tr(scribus_importpage__doc__)},
 	{ "insertCrossReference", scribus_insertcrossreference, METH_VARARGS, tr(scribus_insertcrossreference__doc__)},
 	{ "insertAnchoredObject", scribus_insertanchoredobject, METH_VARARGS, tr(scribus_insertanchoredobject__doc__)},
