@@ -242,6 +242,24 @@ static bool equivalentObjectStyleSets(const StyleSet<ObjectStyle>& first, const 
 	return true;
 }
 
+struct ObjectStyleImportSnapshot
+{
+	QList<ObjectStyle> objectStyles;
+	ColorList colors;
+	QHash<QString, MultiLine> lineStyles;
+};
+
+static ObjectStyleImportSnapshot objectStyleImportSnapshot(const StyleSet<ObjectStyle>& styles,
+															 const ColorList& colors,
+															 const QHash<QString, MultiLine>& lineStyles)
+{
+	ObjectStyleImportSnapshot snapshot;
+	snapshot.objectStyles = objectStyleSnapshot(styles);
+	snapshot.colors = colors;
+	snapshot.lineStyles = lineStyles;
+	return snapshot;
+}
+
 
 
 
@@ -1806,6 +1824,41 @@ bool ScribusDoc::applyObjectStyleChanges(const StyleSet<ObjectStyle>& newStyles,
 	return true;
 }
 
+bool ScribusDoc::applyObjectStyleImport(const StyleSet<ObjectStyle>& newStyles,
+										const ColorList& newColors,
+										const QHash<QString, MultiLine>& newLineStyles,
+										bool createUndo)
+{
+	const bool stylesChanged = !equivalentObjectStyleSets(m_docObjectStyles, newStyles);
+	const bool colorsChanged = PageColors != newColors;
+	const bool lineStylesChanged = docLineStyles != newLineStyles;
+	if (!stylesChanged && !colorsChanged && !lineStylesChanged)
+		return false;
+
+	if (createUndo && !isLoading() && UndoManager::undoEnabled())
+	{
+		auto* state = new ScOldNewState<ObjectStyleImportSnapshot>(tr("Import Object Styles"));
+		state->set("OBJECT_STYLE_IMPORT");
+		state->setStates(objectStyleImportSnapshot(m_docObjectStyles, PageColors, docLineStyles),
+			objectStyleImportSnapshot(newStyles, newColors, newLineStyles));
+		m_undoManager->action(this, state);
+	}
+
+	PageColors = newColors;
+	docLineStyles = newLineStyles;
+	redefineObjectStyles(newStyles, true);
+	changed();
+	regionsChanged()->update(QRectF());
+	changedPagePreview();
+	if (scMW())
+	{
+		scMW()->requestUpdate(reqColorsUpdate | reqLineStylesUpdate | reqObjectStylesUpdate);
+		if (scMW()->styleMgr())
+			scMW()->styleMgr()->setDoc(this);
+	}
+	return true;
+}
+
 void ScribusDoc::restoreObjectStyleChanges(SimpleState* state, bool isUndo)
 {
 	const auto* objectStyleState = dynamic_cast<ScOldNewState<QList<ObjectStyle>>*>(state);
@@ -1817,6 +1870,32 @@ void ScribusDoc::restoreObjectStyleChanges(SimpleState* state, bool isUndo)
 
 	StyleSet<ObjectStyle> restoredStyles;
 	restoreObjectStyleSnapshot(isUndo ? objectStyleState->getOldState() : objectStyleState->getNewState(), restoredStyles);
+	redefineObjectStyles(restoredStyles, true);
+	changed();
+	regionsChanged()->update(QRectF());
+	changedPagePreview();
+	if (scMW())
+	{
+		scMW()->requestUpdate(reqColorsUpdate | reqLineStylesUpdate | reqObjectStylesUpdate);
+		if (scMW()->styleMgr())
+			scMW()->styleMgr()->setDoc(this);
+	}
+}
+
+void ScribusDoc::restoreObjectStyleImport(SimpleState* state, bool isUndo)
+{
+	const auto* importState = dynamic_cast<ScOldNewState<ObjectStyleImportSnapshot>*>(state);
+	if (!importState)
+	{
+		qFatal("ScribusDoc::restoreObjectStyleImport: dynamic cast failed");
+		return;
+	}
+
+	const ObjectStyleImportSnapshot& snapshot = isUndo ? importState->getOldState() : importState->getNewState();
+	PageColors = snapshot.colors;
+	docLineStyles = snapshot.lineStyles;
+	StyleSet<ObjectStyle> restoredStyles;
+	restoreObjectStyleSnapshot(snapshot.objectStyles, restoredStyles);
 	redefineObjectStyles(restoredStyles, true);
 	changed();
 	regionsChanged()->update(QRectF());
@@ -2269,6 +2348,8 @@ void ScribusDoc::restore(UndoState* state, bool isUndo)
 		restoreDynamicVariable(ss, isUndo);
 	else if (ss->contains("OBJECT_STYLE_CHANGES"))
 		restoreObjectStyleChanges(ss, isUndo);
+	else if (ss->contains("OBJECT_STYLE_IMPORT"))
+		restoreObjectStyleImport(ss, isUndo);
 
 	if (layersUndo)
 	{

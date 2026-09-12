@@ -151,22 +151,25 @@ PyObject *scribus_importobjectstyles(PyObject* /* self */, PyObject* args, PyObj
 	}
 
 	const ObjectStyleImportPlan plan = buildObjectStyleImportPlan(sourceObjectStyles, requestedStyles);
+	QHash<QString, MultiLine> destinationLineStyles = doc->docLineStyles;
+	ColorList destinationColors;
+	destinationColors = doc->PageColors;
 	QMap<QString, QString> importedLineStyleNames;
 	QSet<QString> neededColors;
 	for (const QString& lineStyleName : plan.lineStyleNames)
 	{
 		if (!sourceLineStyles.contains(lineStyleName))
 		{
-			if (!doc->docLineStyles.contains(lineStyleName))
+			if (!destinationLineStyles.contains(lineStyleName))
 				importedLineStyleNames.insert(lineStyleName, QString());
 			continue;
 		}
 
 		QString destinationName = lineStyleName;
-		if (renameOnClash && doc->docLineStyles.contains(destinationName))
-			destinationName = uniqueImportedLineStyleName(destinationName, doc->docLineStyles);
+		if (renameOnClash && destinationLineStyles.contains(destinationName))
+			destinationName = uniqueImportedLineStyleName(destinationName, destinationLineStyles);
 		const MultiLine importedLineStyle = sourceLineStyles.value(lineStyleName);
-		doc->docLineStyles.insert(destinationName, importedLineStyle);
+		destinationLineStyles.insert(destinationName, importedLineStyle);
 		importedLineStyleNames.insert(lineStyleName, destinationName);
 		for (const SingleLine& line : importedLineStyle)
 		{
@@ -187,8 +190,8 @@ PyObject *scribus_importobjectstyles(PyObject* /* self */, PyObject* args, PyObj
 		{
 			for (const QString& colorName : std::as_const(neededColors))
 			{
-				if (!doc->PageColors.contains(colorName) && sourceColors.contains(colorName))
-					doc->PageColors.insert(colorName, sourceColors[colorName]);
+				if (!destinationColors.contains(colorName) && sourceColors.contains(colorName))
+					destinationColors.insert(colorName, sourceColors[colorName]);
 			}
 		}
 	}
@@ -199,8 +202,7 @@ PyObject *scribus_importobjectstyles(PyObject* /* self */, PyObject* args, PyObj
 		destinationStyles, renameOnClash != 0, importedLineStyleNames);
 	if (!importedNames.isEmpty())
 	{
-		doc->applyObjectStyleChanges(destinationStyles);
-		mainWindow->styleMgr()->setDoc(doc);
+		doc->applyObjectStyleImport(destinationStyles, destinationColors, destinationLineStyles);
 	}
 
 	PyObject* result = PyDict_New();

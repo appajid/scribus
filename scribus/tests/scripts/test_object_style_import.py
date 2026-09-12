@@ -41,13 +41,14 @@ document_args = (
 )
 
 check(scribus.newDocument(*document_args), "could not create source document")
+scribus.defineColorRGB("Brand Orange", 237, 110, 35)
 scribus.createCustomLineStyle(
     "Frame Rule",
-    [{"Color": "Black", "Width": 3.0, "Dash": 1, "LineEnd": 0, "LineJoin": 0, "Shade": 100}],
+    [{"Color": "Brand Orange", "Width": 3.0, "Dash": 1, "LineEnd": 0, "LineJoin": 0, "Shade": 100}],
 )
 scribus.createObjectStyle(
     name="Frame Base",
-    fillcolor="Black",
+    fillcolor="Brand Orange",
     linewidth=2.5,
     customlinestyle="Frame Rule",
 )
@@ -73,17 +74,23 @@ check(renamed.get("Frame Base") == "Frame Base (2)", "parent name clash was not 
 check(renamed.get("Imported Child") == "Imported Child", "unexpected child rename")
 check("Not Selected" not in scribus.getObjectStyles(), "selective import included an unselected style")
 check("Frame Rule (2)" in scribus.getLineStyles(), "dependent line style was not imported")
+check("Brand Orange" in scribus.getColorNames(), "dependent color was not imported")
 
 scribus.undo()
 check("Frame Base (2)" not in scribus.getObjectStyles(), "undo did not remove imported parent style")
 check("Imported Child" not in scribus.getObjectStyles(), "undo did not remove imported child style")
+check("Frame Rule (2)" not in scribus.getLineStyles(), "undo did not remove the imported line style")
+check("Frame Rule" in scribus.getLineStyles(), "undo removed the pre-existing line style")
+check("Brand Orange" not in scribus.getColorNames(), "undo did not remove the imported color")
 scribus.redo()
 check("Frame Base (2)" in scribus.getObjectStyles(), "redo did not restore imported parent style")
 check("Imported Child" in scribus.getObjectStyles(), "redo did not restore imported child style")
+check("Frame Rule (2)" in scribus.getLineStyles(), "redo did not restore the imported line style")
+check("Brand Orange" in scribus.getColorNames(), "redo did not restore the imported color")
 
 frame = scribus.createRect(50, 60, 120, 80, "Imported Style Frame")
 scribus.setObjectStyle("Imported Child", frame)
-check(scribus.getFillColor(frame) == "Black", "imported parent appearance was not inherited")
+check(scribus.getFillColor(frame) == "Brand Orange", "imported parent appearance was not inherited")
 check(abs(scribus.getLineWidth(frame) - 2.5) < 0.001, "imported line width was not applied")
 check(scribus.getCornerRadius(frame) == 9, "imported child override was not applied")
 
