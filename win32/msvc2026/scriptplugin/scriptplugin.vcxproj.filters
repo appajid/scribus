@@ -46,6 +46,9 @@
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdgetsetprop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdhistory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdmani.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -56,6 +59,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstylemanagement.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.cpp">
@@ -141,6 +147,9 @@
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdgetsetprop.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdhistory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdmani.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -151,6 +160,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstylemanagement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.h">

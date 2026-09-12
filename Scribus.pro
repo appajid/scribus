@@ -727,10 +727,12 @@ HEADERS += scribus/actionmanager.h \
            scribus/plugins/scriptplugin/cmddoc.h \
            scribus/plugins/scriptplugin/cmdgetprop.h \
            scribus/plugins/scriptplugin/cmdgetsetprop.h \
+           scribus/plugins/scriptplugin/cmdhistory.h \
            scribus/plugins/scriptplugin/cmdmani.h \
            scribus/plugins/scriptplugin/cmdmisc.h \
            scribus/plugins/scriptplugin/cmdobj.h \
            scribus/plugins/scriptplugin/cmdobjectstyleimport.h \
+           scribus/plugins/scriptplugin/cmdobjectstylemanagement.h \
            scribus/plugins/scriptplugin/cmdpage.h \
            scribus/plugins/scriptplugin/cmdsetprop.h \
            scribus/plugins/scriptplugin/cmdstyle.h \
@@ -1960,10 +1962,12 @@ SOURCES += scribus/actionmanager.cpp \
            scribus/plugins/scriptplugin/cmddoc.cpp \
            scribus/plugins/scriptplugin/cmdgetprop.cpp \
            scribus/plugins/scriptplugin/cmdgetsetprop.cpp \
+           scribus/plugins/scriptplugin/cmdhistory.cpp \
            scribus/plugins/scriptplugin/cmdmani.cpp \
            scribus/plugins/scriptplugin/cmdmisc.cpp \
            scribus/plugins/scriptplugin/cmdobj.cpp \
            scribus/plugins/scriptplugin/cmdobjectstyleimport.cpp \
+           scribus/plugins/scriptplugin/cmdobjectstylemanagement.cpp \
            scribus/plugins/scriptplugin/cmdpage.cpp \
            scribus/plugins/scriptplugin/cmdsetprop.cpp \
            scribus/plugins/scriptplugin/cmdstyle.cpp \

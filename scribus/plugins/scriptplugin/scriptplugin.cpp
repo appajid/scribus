@@ -42,10 +42,12 @@ for which a new license (GPL+exception) is in place.
 #include "cmddoc.h"
 #include "cmdgetprop.h"
 #include "cmdgetsetprop.h"
+#include "cmdhistory.h"
 #include "cmdmani.h"
 #include "cmdmisc.h"
 #include "cmdobj.h"
 #include "cmdobjectstyleimport.h"
+#include "cmdobjectstylemanagement.h"
 #include "cmdpage.h"
 #include "cmdsetprop.h"
 #include "cmdstyle.h"
@@ -331,6 +333,7 @@ PyMethodDef scribus_methods[] = {
 	{ "deleteLayer", scribus_deletelayer, METH_VARARGS, tr(scribus_deletelayer__doc__)},
 	{ "deleteMasterPage", scribus_deletemasterpage, METH_VARARGS, tr(scribus_deletemasterpage__doc__)},
 	{ "deleteObject", scribus_deleteobject, METH_VARARGS, tr(scribus_deleteobject__doc__)},
+	{ "deleteObjectStyle", scribus_deleteobjectstyle, METH_VARARGS, tr(scribus_deleteobjectstyle__doc__)},
 	{ "deletePage", scribus_deletepage, METH_VARARGS, tr(scribus_deletepage__doc__)},
 	{ "deleteText", scribus_deletetext, METH_VARARGS, tr(scribus_deletetext__doc__)},
 	{ "deleteVariable", scribus_deletevariable, METH_VARARGS, tr(scribus_deletevariable__doc__)},
@@ -530,6 +533,7 @@ PyMethodDef scribus_methods[] = {
 	{ "progressTotal", scribus_progresssettotalsteps, METH_VARARGS, tr(scribus_progresssettotalsteps__doc__)},
 	{ "raiseActiveLayer", (PyCFunction) scribus_raiseactivelayer, METH_NOARGS, tr(scribus_raiseactivelayer__doc__)},
 	{ "readPDFOptions", (PyCFunction) scribus_readpdfoptions, METH_VARARGS, tr(scribus_readpdfoptions__doc__)},
+	{ "redo", (PyCFunction) scribus_redo, METH_NOARGS, tr(scribus_redo__doc__)},
 	{ "redrawAll", (PyCFunction) scribus_redraw, METH_NOARGS, tr(scribus_redraw__doc__)},
 	{ "removeTableColumns", scribus_removetablecolumns, METH_VARARGS, tr(scribus_removetablecolumns__doc__)},
 	{ "removeTableRows", scribus_removetablerows, METH_VARARGS, tr(scribus_removetablerows__doc__)},
@@ -540,6 +544,7 @@ PyMethodDef scribus_methods[] = {
 	{ "resizeTableRow", scribus_resizetablerow, METH_VARARGS, tr(scribus_resizetablerow__doc__)},
 	{ "revertDoc", (PyCFunction) scribus_revertdoc, METH_NOARGS, tr(scribus_revertdoc__doc__)},
 	{ "renameCrossReferenceTarget", scribus_renamecrossreferencetarget, METH_VARARGS, tr(scribus_renamecrossreferencetarget__doc__)},
+	{ "renameObjectStyle", scribus_renameobjectstyle, METH_VARARGS, tr(scribus_renameobjectstyle__doc__)},
 	{ "renameVariable", scribus_renamevariable, METH_VARARGS, tr(scribus_renamevariable__doc__)},
 	{ "rotateObject", scribus_rotateobjectrel, METH_VARARGS, tr(scribus_rotateobjectrel__doc__)},
 	{ "rotateObjectAbs", (PyCFunction) scribus_setrotation, METH_VARARGS|METH_KEYWORDS, tr(scribus_setrotation__doc__)}, // Deprecated, alias to setRotation
@@ -668,6 +673,7 @@ PyMethodDef scribus_methods[] = {
 	{ "unGroupObject", scribus_ungroupobjects, METH_VARARGS, tr(scribus_ungroupobjects__doc__)}, // Deprecated, now alias for unGroupObjects()
 	{ "unGroupObjects", scribus_ungroupobjects, METH_VARARGS, tr(scribus_ungroupobjects__doc__)},
 	{ "unlinkTextFrames", scribus_unlinktextframes, METH_VARARGS, tr(scribus_unlinktextframes__doc__)},
+	{ "undo", (PyCFunction) scribus_undo, METH_NOARGS, tr(scribus_undo__doc__)},
 	{ "valueDialog", scribus_valuedialog, METH_VARARGS, tr(scribus_valuedialog__doc__)},
 	{ "zoomDocument", scribus_zoomdocument, METH_VARARGS, tr(scribus_zoomdocument__doc__)},
 	// Property magic

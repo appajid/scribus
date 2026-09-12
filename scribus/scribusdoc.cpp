@@ -87,6 +87,7 @@ for which a new license (GPL+exception) is in place.
 #include "sccolorengine.h"
 #include "scpage.h"
 #include "scraction.h"
+#include "scribus.h"
 #include "scribusXml.h"
 #include "scribuscore.h"
 #include "scribusdoc.h"
@@ -104,6 +105,7 @@ for which a new license (GPL+exception) is in place.
 #include "ui/outlinepalette.h"
 #include "ui/pagepalette.h"
 #include "ui/storyeditor.h"
+#include "ui/stylemanager.h"
 #include "ui/tablecolumnwidthsdialog.h"
 #include "ui/tablerowheightsdialog.h"
 #include "undomanager.h"
@@ -195,6 +197,50 @@ private:
 	int  m_updateEnabled { 0 };
 	bool m_docChangeNeeded { false };
 };
+
+static QList<ObjectStyle> objectStyleSnapshot(const StyleSet<ObjectStyle>& styles)
+{
+	QList<ObjectStyle> snapshot;
+	snapshot.reserve(styles.count());
+	for (int i = 0; i < styles.count(); ++i)
+	{
+		ObjectStyle style(styles[i]);
+		style.setContext(nullptr);
+		snapshot.append(style);
+	}
+	return snapshot;
+}
+
+static void restoreObjectStyleSnapshot(const QList<ObjectStyle>& snapshot, StyleSet<ObjectStyle>& styles)
+{
+	StyleSet<ObjectStyle> restoredStyles;
+	for (const ObjectStyle& savedStyle : snapshot)
+	{
+		ObjectStyle* restoredStyle = restoredStyles.create(savedStyle);
+		if (savedStyle.isDefaultStyle())
+			restoredStyles.makeDefault(restoredStyle);
+	}
+	styles.redefine(restoredStyles, true);
+}
+
+static bool equivalentObjectStyleSets(const StyleSet<ObjectStyle>& first, const StyleSet<ObjectStyle>& second)
+{
+	if (first.count() != second.count())
+		return false;
+	for (int i = 0; i < first.count(); ++i)
+	{
+		const ObjectStyle& firstStyle = first[i];
+		const int secondIndex = second.find(firstStyle.name());
+		if (secondIndex < 0)
+			return false;
+		const ObjectStyle& secondStyle = second[secondIndex];
+		if (firstStyle.isDefaultStyle() != secondStyle.isDefaultStyle()
+			|| firstStyle.shortcut() != secondStyle.shortcut()
+			|| !firstStyle.equiv(secondStyle))
+			return false;
+	}
+	return true;
+}
 
 
 
@@ -1724,6 +1770,65 @@ void ScribusDoc::redefineObjectStyles(const StyleSet<ObjectStyle>& newStyles, bo
 	m_updateManager.setUpdatesEnabled();
 }
 
+bool ScribusDoc::applyObjectStyleChanges(const StyleSet<ObjectStyle>& newStyles,
+										 const QMap<QString, QString>& replacements, bool createUndo)
+{
+	if (equivalentObjectStyleSets(m_docObjectStyles, newStyles) && replacements.isEmpty())
+		return false;
+
+	UndoTransaction transaction;
+	if (createUndo && !isLoading() && UndoManager::undoEnabled())
+	{
+		transaction = m_undoManager->beginTransaction(documentFileName(), Um::IDocument,
+			tr("Edit Object Styles"), QString(), Um::IFill);
+		auto* state = new ScOldNewState<QList<ObjectStyle>>(tr("Edit Object Styles"));
+		state->set("OBJECT_STYLE_CHANGES");
+		state->setStates(objectStyleSnapshot(m_docObjectStyles), objectStyleSnapshot(newStyles));
+		m_undoManager->action(this, state);
+	}
+
+	if (!replacements.isEmpty())
+	{
+		// Make replacement definitions available before updating item references.
+		m_docObjectStyles.redefine(newStyles, false);
+		m_docObjectStyles.invalidate();
+		replaceObjectStyles(replacements);
+	}
+	redefineObjectStyles(newStyles, true);
+
+	changed();
+	regionsChanged()->update(QRectF());
+	changedPagePreview();
+	if (scMW())
+		scMW()->requestUpdate(reqColorsUpdate | reqLineStylesUpdate | reqObjectStylesUpdate);
+	if (transaction)
+		transaction.commit();
+	return true;
+}
+
+void ScribusDoc::restoreObjectStyleChanges(SimpleState* state, bool isUndo)
+{
+	const auto* objectStyleState = dynamic_cast<ScOldNewState<QList<ObjectStyle>>*>(state);
+	if (!objectStyleState)
+	{
+		qFatal("ScribusDoc::restoreObjectStyleChanges: dynamic cast failed");
+		return;
+	}
+
+	StyleSet<ObjectStyle> restoredStyles;
+	restoreObjectStyleSnapshot(isUndo ? objectStyleState->getOldState() : objectStyleState->getNewState(), restoredStyles);
+	redefineObjectStyles(restoredStyles, true);
+	changed();
+	regionsChanged()->update(QRectF());
+	changedPagePreview();
+	if (scMW())
+	{
+		scMW()->requestUpdate(reqColorsUpdate | reqLineStylesUpdate | reqObjectStylesUpdate);
+		if (scMW()->styleMgr())
+			scMW()->styleMgr()->setDoc(this);
+	}
+}
+
 void ScribusDoc::redefineTableStyles(const StyleSet<TableStyle>& newStyles, bool removeUnused)
 {
 	m_docTableStyles.redefine(newStyles, false);
@@ -2162,6 +2267,8 @@ void ScribusDoc::restore(UndoState* state, bool isUndo)
 		restoreMarks(state, isUndo);
 	else if (ss->contains("DYNAMIC_VARIABLE"))
 		restoreDynamicVariable(ss, isUndo);
+	else if (ss->contains("OBJECT_STYLE_CHANGES"))
+		restoreObjectStyleChanges(ss, isUndo);
 
 	if (layersUndo)
 	{

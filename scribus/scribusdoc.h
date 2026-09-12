@@ -603,6 +603,14 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		 */
 		void redefineObjectStyles(const StyleSet<ObjectStyle>& newStyles, bool removeUnused = false);
 		/**
+		 * Applies an Object Style edit as one undoable document operation.
+		 *
+		 * Replacement entries rename or remove styles and update every item and
+		 * dependent Object Style that refers to them.
+		 */
+		bool applyObjectStyleChanges(const StyleSet<ObjectStyle>& newStyles,
+								 const QMap<QString, QString>& replacements = {}, bool createUndo = true);
+		/**
 		 * Removes references to old object styles and replaces them with new names.
 		 */
 		void replaceObjectStyles(const QMap<QString, QString>& newNameForOld);
@@ -1975,6 +1983,7 @@ class SCRIBUS_API ScribusDoc : public QObject, public UndoObject, public Observa
 		QDateTime dynamicVariableCreationDate() const { return m_dynamicVariableCreationDate; }
 		void setDynamicVariableCreationDate(const QDateTime& dateTime) { m_dynamicVariableCreationDate = dateTime; }
 		void restoreDynamicVariable(SimpleState* state, bool isUndo);
+		void restoreObjectStyleChanges(SimpleState* state, bool isUndo);
 		TextNote* newNote(NotesStyle* NS);
 
 		bool isMarkUsed(const Mark* mrk, bool visible = false) const;

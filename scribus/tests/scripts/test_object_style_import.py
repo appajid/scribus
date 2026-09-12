@@ -74,6 +74,13 @@ check(renamed.get("Imported Child") == "Imported Child", "unexpected child renam
 check("Not Selected" not in scribus.getObjectStyles(), "selective import included an unselected style")
 check("Frame Rule (2)" in scribus.getLineStyles(), "dependent line style was not imported")
 
+scribus.undo()
+check("Frame Base (2)" not in scribus.getObjectStyles(), "undo did not remove imported parent style")
+check("Imported Child" not in scribus.getObjectStyles(), "undo did not remove imported child style")
+scribus.redo()
+check("Frame Base (2)" in scribus.getObjectStyles(), "redo did not restore imported parent style")
+check("Imported Child" in scribus.getObjectStyles(), "redo did not restore imported child style")
+
 frame = scribus.createRect(50, 60, 120, 80, "Imported Style Frame")
 scribus.setObjectStyle("Imported Child", frame)
 check(scribus.getFillColor(frame) == "Black", "imported parent appearance was not inherited")

@@ -20,10 +20,12 @@ set(SCRIPTER_PLUGIN_SOURCES
 	cmddoc.cpp
 	cmdgetprop.cpp
 	cmdgetsetprop.cpp
+	cmdhistory.cpp
 	cmdmani.cpp
 	cmdmisc.cpp
 	cmdobj.cpp
 	cmdobjectstyleimport.cpp
+	cmdobjectstylemanagement.cpp
 	cmdpage.cpp
 	cmdsetprop.cpp
 	cmdstyle.cpp

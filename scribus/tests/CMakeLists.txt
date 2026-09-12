@@ -166,6 +166,24 @@ set_tests_properties(object_style_import_scripter PROPERTIES
 	RUN_SERIAL TRUE
 	TIMEOUT 180)
 
+set(object_style_management_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-object_style_management")
+set(object_style_management_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-object_style_management")
+file(MAKE_DIRECTORY "${object_style_management_prefs_dir}")
+file(MAKE_DIRECTORY "${object_style_management_output_dir}")
+add_test(NAME object_style_management_scripter
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${object_style_management_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_object_style_management.py")
+set_tests_properties(object_style_management_scripter PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${object_style_management_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;object-styles;phase-3;scripter;undo-redo"
+	PASS_REGULAR_EXPRESSION "OBJECT_STYLE_MANAGEMENT_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 180)
+
 function(add_running_header_test test_name script_name pass_marker timeout_seconds)
 	set(test_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-${test_name}")
 	set(test_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-${test_name}")

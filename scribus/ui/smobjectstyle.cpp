@@ -165,12 +165,8 @@ void SMObjectStyle::apply()
 		if (removed.first != removed.second)
 			replacement.insert(removed.first, internalName(removed.second));
 	}
-	m_doc->redefineObjectStyles(m_tmpStyles, false);
-	m_doc->replaceObjectStyles(replacement);
+	m_doc->applyObjectStyleChanges(m_tmpStyles, replacement);
 	m_deleted.clear();
-	m_doc->changed();
-	m_doc->changedPagePreview();
-	m_doc->scMW()->requestUpdate(reqObjectStylesUpdate);
 	m_selectionIsDirty = false;
 }
 

@@ -241,10 +241,12 @@
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmddoc.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdgetprop.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdgetsetprop.cpp" />
+    <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdhistory.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdmani.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdmisc.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobj.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.cpp" />
+    <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstylemanagement.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdsetprop.cpp" />
     <ClCompile Include="..\..\..\scribus\plugins\scriptplugin\cmdstyle.cpp" />
@@ -283,10 +285,12 @@
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmddoc.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdgetprop.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdgetsetprop.h" />
+    <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdhistory.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdmani.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdmisc.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobj.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstyleimport.h" />
+    <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdobjectstylemanagement.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdpage.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdsetprop.h" />
     <ClInclude Include="..\..\..\scribus\plugins\scriptplugin\cmdstyle.h" />

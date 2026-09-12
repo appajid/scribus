@@ -199,11 +199,8 @@ PyObject *scribus_importobjectstyles(PyObject* /* self */, PyObject* args, PyObj
 		destinationStyles, renameOnClash != 0, importedLineStyleNames);
 	if (!importedNames.isEmpty())
 	{
-		doc->redefineObjectStyles(destinationStyles, true);
-		doc->changed();
-		doc->changedPagePreview();
+		doc->applyObjectStyleChanges(destinationStyles);
 		mainWindow->styleMgr()->setDoc(doc);
-		mainWindow->requestUpdate(reqColorsUpdate | reqLineStylesUpdate | reqObjectStylesUpdate);
 	}
 
 	PyObject* result = PyDict_New();
