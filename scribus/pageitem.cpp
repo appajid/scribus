@@ -49,6 +49,7 @@ for which a new license (GPL+exception) is in place.
 #include "cmsettings.h"
 #include "colorblind.h"
 #include "desaxe/saxXML.h"
+#include "filewatcher.h"
 #include "iconmanager.h"
 #include "marks.h"
 #include "pageitem_arc.h"
@@ -5271,6 +5272,8 @@ void PageItem::restore(UndoState *state, bool isUndo)
 			restoreLayer(ss, isUndo);
 		else if (ss->contains("GET_IMAGE"))
 			restoreGetImage(ss, isUndo);
+		else if (ss->contains("RELINK_IMAGE"))
+			restoreRelinkImage(ss, isUndo);
 		else if (ss->contains("EDIT_SHAPE_OR_CONTOUR"))
 			restoreShapeContour(ss, isUndo);
 		else if (ss->contains("APPLY_IMAGE_EFFECTS"))
@@ -8214,6 +8217,55 @@ void PageItem::restoreGetImage(UndoState *state, bool isUndo)
 	}
 }
 
+void PageItem::restoreRelinkImage(UndoState *state, bool isUndo)
+{
+	const auto *imageState = dynamic_cast<ScItemState<ScImageEffectList>*>(state);
+	if (!imageState)
+	{
+		qFatal("PageItem::restoreRelinkImage: dynamic cast failed");
+		return;
+	}
+
+	if (!Pfile.isEmpty())
+	{
+		if (imageIsAvailable)
+			ScCore->fileWatcher->removeFile(Pfile);
+		else
+			ScCore->fileWatcher->removeDir(QFileInfo(Pfile).absolutePath());
+	}
+
+	const QString filename = imageState->get(isUndo ? "OLD_IMAGE_PATH" : "NEW_IMAGE_PATH");
+	Pfile = filename;
+	const bool loaded = loadImage(filename, true, -1, false);
+
+	effectsInUse = imageState->getItem();
+	setImageFlippedH(imageState->getBool("FLIPPH"));
+	setImageFlippedV(imageState->getBool("FLIPPV"));
+	setImageScalingMode(imageState->getBool("SCALING"), imageState->getBool("ASPECT"));
+	setImageXOffset(imageState->getDouble("XOFF"));
+	setImageXScale(imageState->getDouble("XSCALE"));
+	setImageYOffset(imageState->getDouble("YOFF"));
+	setImageYScale(imageState->getDouble("YSCALE"));
+	setFillTransparency(imageState->getDouble("FILLT"));
+	setLineTransparency(imageState->getDouble("LINET"));
+	setUseEmbeddedImageProfile(imageState->getBool("USE_EMBEDDED_PROFILE"));
+	setEmbeddedImageProfile(imageState->get("EMBEDDED_PROFILE"));
+	setCmsProfile(imageState->get("IMAGE_PROFILE"));
+	setCmsRenderingIntent(static_cast<eRenderIntent>(imageState->getInt("IMAGE_INTENT")));
+
+	if (!Pfile.isEmpty())
+	{
+		if (loaded)
+			ScCore->fileWatcher->addFile(Pfile);
+		else
+			ScCore->fileWatcher->addDir(QFileInfo(Pfile).absolutePath());
+	}
+
+	update();
+	m_Doc->changed();
+	m_Doc->changedPagePreview();
+}
+
 void PageItem::restoreShapeContour(UndoState *state, bool isUndo)
 {
 	const auto *istate = dynamic_cast<ScOldNewState<FPointArray>*>(state);
@@ -10398,6 +10450,118 @@ bool PageItem::loadImage(const QString& filename, const bool reload, const int g
 			}
 		}
 	}
+	return true;
+}
+
+bool PageItem::relinkImage(const QString& filename, bool showMsg)
+{
+	if (!isImageFrame() || isLatexFrame() || isInlineImage || filename.isEmpty())
+		return false;
+
+	const QString newFilePath = QFileInfo(filename).absoluteFilePath();
+	const QString oldFilePath = Pfile;
+	if (newFilePath == oldFilePath && imageIsAvailable)
+		return true;
+
+	const bool oldImageAvailable = imageIsAvailable;
+	const bool flippedH = imageFlippedH();
+	const bool flippedV = imageFlippedV();
+	const bool scaling = ScaleType;
+	const bool keepAspect = AspectRatio;
+	const double xOffset = imageXOffset();
+	const double xScale = imageXScale();
+	const double yOffset = imageYOffset();
+	const double yScale = imageYScale();
+	const double fillTrans = fillTransparency();
+	const double lineTrans = lineTransparency();
+	const ScImageEffectList imageEffects = effectsInUse;
+	const bool useEmbeddedProfile = useEmbeddedImageProfile();
+	const QString embeddedProfile = embeddedImageProfile();
+	const QString imageProfile = cmsProfile();
+	const eRenderIntent imageIntent = static_cast<eRenderIntent>(cmsRenderingIntent());
+
+	auto restoreFrameSettings = [&]()
+	{
+		effectsInUse = imageEffects;
+		setImageFlippedH(flippedH);
+		setImageFlippedV(flippedV);
+		setImageScalingMode(scaling, keepAspect);
+		setImageXOffset(xOffset);
+		setImageXScale(xScale);
+		setImageYOffset(yOffset);
+		setImageYScale(yScale);
+		setFillTransparency(fillTrans);
+		setLineTransparency(lineTrans);
+		setUseEmbeddedImageProfile(useEmbeddedProfile);
+		setEmbeddedImageProfile(embeddedProfile);
+		setCmsProfile(imageProfile);
+		setCmsRenderingIntent(imageIntent);
+	};
+
+	if (!oldFilePath.isEmpty())
+	{
+		if (oldImageAvailable)
+			ScCore->fileWatcher->removeFile(oldFilePath);
+		else
+			ScCore->fileWatcher->removeDir(QFileInfo(oldFilePath).absolutePath());
+	}
+
+	// Setting Pfile first tells loadImage() this is a relink rather than a new
+	// placement, so crop and scale are retained.
+	Pfile = newFilePath;
+	const bool loaded = loadImage(newFilePath, true, -1, showMsg);
+	restoreFrameSettings();
+
+	if (!loaded)
+	{
+		Pfile = oldFilePath;
+		if (oldImageAvailable && !oldFilePath.isEmpty())
+		{
+			loadImage(oldFilePath, true, -1, false);
+			restoreFrameSettings();
+		}
+		else
+			imageIsAvailable = false;
+
+		if (!oldFilePath.isEmpty())
+		{
+			if (imageIsAvailable)
+				ScCore->fileWatcher->addFile(oldFilePath);
+			else
+				ScCore->fileWatcher->addDir(QFileInfo(oldFilePath).absolutePath());
+		}
+		update();
+		return false;
+	}
+
+	ScCore->fileWatcher->addFile(Pfile);
+	if (UndoManager::undoEnabled())
+	{
+		auto *imageState = new ScItemState<ScImageEffectList>(tr("Relink image"), newFilePath, Um::IGetImage);
+		imageState->set("RELINK_IMAGE");
+		imageState->set("OLD_IMAGE_PATH", oldFilePath);
+		imageState->set("NEW_IMAGE_PATH", newFilePath);
+		imageState->set("FLIPPH", flippedH);
+		imageState->set("FLIPPV", flippedV);
+		imageState->set("SCALING", scaling);
+		imageState->set("ASPECT", keepAspect);
+		imageState->set("XOFF", xOffset);
+		imageState->set("XSCALE", xScale);
+		imageState->set("YOFF", yOffset);
+		imageState->set("YSCALE", yScale);
+		imageState->set("FILLT", fillTrans);
+		imageState->set("LINET", lineTrans);
+		imageState->set("USE_EMBEDDED_PROFILE", useEmbeddedProfile);
+		imageState->set("EMBEDDED_PROFILE", embeddedProfile);
+		imageState->set("IMAGE_PROFILE", imageProfile);
+		imageState->set("IMAGE_INTENT", static_cast<int>(imageIntent));
+		imageState->setItem(imageEffects);
+		undoManager->action(this, imageState);
+	}
+
+	update();
+	m_Doc->changed();
+	m_Doc->changedPagePreview();
 	return true;
 }
 

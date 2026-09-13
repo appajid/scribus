@@ -45,6 +45,8 @@ for which a new license (GPL+exception) is in place.
 #include "picsearchoptions.h"
 #include "scribuscore.h"
 #include "scribusdoc.h"
+#include "undomanager.h"
+#include "undotransaction.h"
 #include "units.h"
 #include "util_color.h"
 #include "util_formats.h"
@@ -441,16 +443,14 @@ void PicStatus::SelectPic()
 
 bool PicStatus::loadPict(PageItem* item, const QString & newFilePath)
 {
-	// Hack to fool the LoadPict function
-	item->Pfile = newFilePath;
 	bool masterPageMode = !item->OnMasterPage.isEmpty();
 	bool oldMasterPageMode = m_Doc->masterPageMode();
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(masterPageMode);
-	m_Doc->loadPict(newFilePath, item, true);
+	const bool loaded = item->relinkImage(newFilePath, true);
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(oldMasterPageMode);
-	return item->imageIsAvailable;
+	return loaded;
 }
 
 void PicStatus::SearchPic()
@@ -484,8 +484,21 @@ void PicStatus::SearchPic()
 		return;
 
 	QFileInfo source(currItem->Pfile);
+	UndoTransaction transaction;
+	if (dia2->isApplyToMatchingImages() && UndoManager::undoEnabled())
+		transaction = UndoManager::instance()->beginTransaction(Um::SelectionGroup, Um::IGroup,
+			tr("Relink images"), QString(), Um::IGetImage);
 
-	loadPict(currItem, dia2->getSelectedImage());
+	if (!loadPict(currItem, dia2->getSelectedImage()))
+	{
+		if (transaction)
+			transaction.cancel();
+		ScMessageBox::warning(this, tr("Scribus - Image Search"),
+			tr("The selected replacement image could not be loaded. The original link was kept."),
+			QMessageBox::Ok | QMessageBox::Default | QMessageBox::Escape,
+			QMessageBox::NoButton);
+		return;
+	}
 	QFileInfo target(currItem->Pfile);
 	item->setText(target.fileName());
 	item->setIcon(createImgIcon(currItem));
@@ -493,6 +506,8 @@ void PicStatus::SearchPic()
 
 	if (dia2->isApplyToMatchingImages())
 		relinkMatchingImages(source, target, brokenLink);
+	if (transaction)
+		transaction.commit();
 }
 
 void PicStatus::FileManager()

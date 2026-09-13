@@ -1264,6 +1264,15 @@ public: // Start public functions
 	virtual bool loadImage(const QString& filename, bool reload, int gsResolution=-1, bool showMsg = false);
 
 	/**
+	 * @brief Replace an external image link without changing frame-level image settings.
+	 *
+	 * The operation is failure-safe and undoable. Embedded images are deliberately
+	 * excluded because relinking them would also change their storage mode.
+	 * @return True if the replacement image was loaded successfully.
+	 */
+	bool relinkImage(const QString& filename, bool showMsg = false);
+
+	/**
 	 * @brief Connect the item's signals to the GUI, primarily the Properties palette, also some to ScMW
 	 * @return
 	 */
@@ -1605,6 +1614,7 @@ protected: // Start protected functions
 	void restoreFillRule(SimpleState* state, bool isUndo);
 	void restoreFirstLineOffset(SimpleState *state, bool isUndo);
 	void restoreGetImage(UndoState *state, bool isUndo);
+	void restoreRelinkImage(UndoState *state, bool isUndo);
 	void restoreGradPos(SimpleState *state,bool isUndo);
 	void restoreGradientCol1(SimpleState *state, bool isUndo);
 	void restoreGradientCol2(SimpleState *state, bool isUndo);

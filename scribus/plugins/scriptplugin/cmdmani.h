@@ -195,6 +195,21 @@ May raise WrongFrameTypeError if the target frame is not an image frame\n\
 PyObject *scribus_loadimage(PyObject * /*self*/, PyObject* args);
 
 /*! docstring */
+PyDoc_STRVAR(scribus_relinkimage__doc__,
+QT_TR_NOOP("relinkImage(\"filename\" [, \"name\"]) -> bool\n\
+\n\
+Replaces the external image used by image frame \"name\" while preserving the\n\
+frame's crop, scale, effects, transparency and colour-management settings.\n\
+The operation is undoable. If the replacement cannot be loaded, the original\n\
+link and image are kept and False is returned. Embedded images cannot be\n\
+relinked.\n\
+\n\
+May raise WrongFrameTypeError if the target frame is not an image frame.\n\
+"));
+/*! Relink an external image without changing frame-level image settings. */
+PyObject *scribus_relinkimage(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
 PyDoc_STRVAR(scribus_scaleimage__doc__,
 QT_TR_NOOP("scaleImage(x, y [, \"name\"])\n\
 \n\

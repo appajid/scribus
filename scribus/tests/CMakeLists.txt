@@ -249,6 +249,24 @@ set_tests_properties(anchored_objects PROPERTIES
 	RUN_SERIAL TRUE
 	TIMEOUT 120)
 
+set(image_relink_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-image-relink")
+set(image_relink_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-image-relink")
+file(MAKE_DIRECTORY "${image_relink_prefs_dir}")
+file(MAKE_DIRECTORY "${image_relink_output_dir}")
+add_test(NAME image_relinking
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${image_relink_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_image_relinking.py")
+set_tests_properties(image_relinking PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${image_relink_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;image-relinking;phase-4;scripter;undo-redo"
+	PASS_REGULAR_EXPRESSION "IMAGE_RELINK_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
 find_program(PDFTOTEXT_EXECUTABLE pdftotext)
 if(NOT PDFTOTEXT_EXECUTABLE)
 	set_tests_properties(runningheader_masters PROPERTIES DISABLED TRUE)

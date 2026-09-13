@@ -37,6 +37,31 @@ PyObject *scribus_loadimage(PyObject* /* self */, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyObject *scribus_relinkimage(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString image;
+	if (!PyArg_ParseTuple(args, "es|es", "utf-8", image.ptr(), "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem *item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (item == nullptr)
+		return nullptr;
+	if (!item->isImageFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Target is not an image frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (item->isImageInline())
+	{
+		PyErr_SetString(ScribusException, QObject::tr("Embedded images cannot be relinked.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+
+	return PyBool_FromLong(item->relinkImage(QString::fromUtf8(image.c_str()), false));
+}
+
 PyObject *scribus_scaleimage(PyObject* /* self */, PyObject* args)
 {
 	PyESString name;
