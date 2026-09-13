@@ -2,7 +2,13 @@
 
 Date: 2026-09-13
 
-Validated source revision: `9b5293c3139829223e84f68558f53cfd9e0eaed7`
+Validated committed baseline: `9b5293c3139829223e84f68558f53cfd9e0eaed7`
+
+The validation worktree also contained preserved, pre-existing uncommitted
+changes in `scribus/scribus.cpp` and `scribus/prefsmanager.cpp`. The audit did
+not alter or commit those changes. Consequently, the Mac and Linux test
+binaries represent that exact working tree, not the pristine baseline commit
+alone.
 
 Phase 3 implementation is complete in the repository. Automated macOS ARM64
 and Debian sid x86_64 validation passes. Release certification remains open
