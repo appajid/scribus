@@ -79,6 +79,19 @@
      </spacer>
     </item>
     <item>
+     <widget class="QPushButton" name="mapFolderButton">
+      <property name="toolTip">
+       <string>Relink a moved image folder while preserving its subfolder structure</string>
+      </property>
+      <property name="text">
+       <string>Map Moved Folder...</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="relinkFolderButton">
       <property name="toolTip">
        <string>Search this folder and its subfolders for all missing linked images</string>

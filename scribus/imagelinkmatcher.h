@@ -39,6 +39,11 @@ struct SCRIBUS_API ImageLinkMatch
 SCRIBUS_API QVector<ImageLinkMatch> findImageLinkMatches(const QStringList& linkPaths,
 	const QString& searchDirectory, bool recursive = true);
 
+/** Return the path below sourceDirectory, or an empty string for links outside
+ * it. Source paths may use Unix, Windows drive or UNC syntax on any host; the
+ * old directory does not need to exist. Parent traversal cannot escape it. */
+SCRIBUS_API QString imageLinkRelativePath(const QString& linkPath, const QString& sourceDirectory);
+
 /**
  * Incrementally find replacement candidates without blocking the user interface.
  *
@@ -50,7 +55,7 @@ class SCRIBUS_API ImageLinkSearchTask : public DeferredTask
 {
 public:
 	ImageLinkSearchTask(QObject* parent, const QStringList& linkPaths,
-		const QString& searchDirectory, bool recursive = true);
+		const QString& searchDirectory, bool recursive = true, const QString& sourceDirectory = QString());
 	~ImageLinkSearchTask() override;
 
 	void start() override;
@@ -65,6 +70,9 @@ private:
 
 	QStringList m_linkPaths;
 	QString m_searchDirectory;
+	// A nonempty source directory enables mapping by the full relative path.
+	QString m_sourceDirectory;
+	QStringList m_requestedPaths;
 	bool m_recursive {true};
 	std::unique_ptr<QDirIterator> m_iterator;
 	QSet<QString> m_requestedExactNames;

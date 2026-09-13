@@ -25,9 +25,12 @@ for which a new license (GPL+exception) is in place.
 #include <QAction>
 #include <QCheckBox>
 #include <QDesktopServices>
+#include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHash>
+#include <QHeaderView>
+#include <QInputDialog>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -40,6 +43,7 @@ for which a new license (GPL+exception) is in place.
 #include <QScopedPointer>
 #include <QTimer>
 #include <QToolButton>
+#include <QTreeWidget>
 
 #include "effectsdialog.h"
 #include "extimageprops.h"
@@ -82,6 +86,7 @@ PicStatus::PicStatus(QWidget* parent, ScribusDoc *docu) : QDialog( parent )
 	connect(selectButton, SIGNAL(clicked()), this, SLOT(SelectPic()));
 	connect(searchButton, SIGNAL(clicked()), this, SLOT(SearchPic()));
 	connect(relinkFolderButton, SIGNAL(clicked()), this, SLOT(relinkMissingImages()));
+	connect(mapFolderButton, &QPushButton::clicked, this, &PicStatus::mapMissingImageFolder);
 	connect(fileManagerButton, SIGNAL(clicked()), this, SLOT(FileManager()));
 	connect(effectsButton, SIGNAL(clicked()), this, SLOT(doImageEffects()));
 	connect(buttonLayers, SIGNAL(clicked()), this, SLOT(doImageExtProp()));
@@ -212,6 +217,7 @@ void PicStatus::fillTable()
 		}
 	}
 	relinkFolderButton->setEnabled(hasMissingImages);
+	mapFolderButton->setEnabled(hasMissingImages);
 	sortByName();
 }
 
@@ -473,15 +479,16 @@ bool PicStatus::loadPict(PageItem* item, const QString & newFilePath, bool showM
 
 void PicStatus::relinkMissingImages()
 {
-	static QString lastRelinkDirectory;
-	if (lastRelinkDirectory.isEmpty())
-		lastRelinkDirectory = m_Doc->hasName ? QFileInfo(m_Doc->documentFileName()).absolutePath() : QDir::homePath();
-	const QString directory = QFileDialog::getExistingDirectory(this,
-		tr("Find Missing Images in Folder"), lastRelinkDirectory);
-	if (directory.isEmpty())
-		return;
-	lastRelinkDirectory = directory;
+	relinkMissingImagesFromFolder(false);
+}
 
+void PicStatus::mapMissingImageFolder()
+{
+	relinkMissingImagesFromFolder(true);
+}
+
+void PicStatus::relinkMissingImagesFromFolder(bool mapFolder)
+{
 	QStringList missingPaths;
 	for (int i = 0; i < imageViewArea->count(); ++i)
 	{
@@ -491,8 +498,60 @@ void PicStatus::relinkMissingImages()
 			missingPaths.append(pageItem->Pfile);
 	}
 	missingPaths.removeDuplicates();
+	if (missingPaths.isEmpty())
+		return;
 
-	ImageLinkSearchTask search(this, missingPaths, directory, true);
+	QString sourceDirectory;
+	if (mapFolder)
+	{
+		QStringList sourceFolders;
+		// Include ancestors so an entire collection can be mapped at once.
+		for (const QString& path : missingPaths)
+		{
+			QDir folder(QFileInfo(path).absolutePath());
+			while (true)
+			{
+				const QString folderPath = folder.path();
+				if (sourceFolders.contains(folderPath))
+					break;
+				sourceFolders.append(folderPath);
+				// cdUp() requires an existing directory on some platforms.
+				const QString parentPath = QDir::cleanPath(folderPath + QStringLiteral("/.."));
+				if (parentPath == folderPath)
+					break;
+				folder.setPath(parentPath);
+			}
+		}
+		bool accepted = false;
+		sourceDirectory = QInputDialog::getItem(this, tr("Map Moved Image Folder"),
+			tr("Original image folder (it does not need to exist):\n"
+			   "Choose or enter the old root folder. Subfolder paths will be preserved."),
+			sourceFolders, 0, true, &accepted);
+		if (!accepted || sourceDirectory.isEmpty())
+			return;
+		for (qsizetype i = missingPaths.size(); i > 0; --i)
+		{
+			if (imageLinkRelativePath(missingPaths.at(i - 1), sourceDirectory).isEmpty())
+				missingPaths.removeAt(i - 1);
+		}
+		if (missingPaths.isEmpty())
+		{
+			ScMessageBox::information(this, tr("Map Moved Image Folder"),
+				tr("No missing image links belong to this folder. Choose an original folder listed in the document."));
+			return;
+		}
+	}
+
+	static QString lastRelinkDirectory;
+	if (lastRelinkDirectory.isEmpty())
+		lastRelinkDirectory = m_Doc->hasName ? QFileInfo(m_Doc->documentFileName()).absolutePath() : QDir::homePath();
+	const QString directory = QFileDialog::getExistingDirectory(this,
+		mapFolder ? tr("Choose New Location of Image Folder") : tr("Find Missing Images in Folder"), lastRelinkDirectory);
+	if (directory.isEmpty())
+		return;
+	lastRelinkDirectory = directory;
+
+	ImageLinkSearchTask search(this, missingPaths, directory, true, sourceDirectory);
 	QProgressDialog progress(tr("Scanning folders for missing images..."), tr("Cancel"), 0, 0, this);
 	progress.setWindowTitle(tr("Relink Missing Images"));
 	progress.setWindowModality(Qt::WindowModal);
@@ -536,6 +595,48 @@ void PicStatus::relinkMissingImages()
 		}
 		else if (match.candidatePaths.isEmpty())
 			++notFound;
+	}
+
+	if (mapFolder)
+	{
+		QDialog review(this);
+		review.setObjectName(QStringLiteral("imageFolderMappingReview"));
+		review.setWindowTitle(tr("Review Image Folder Mapping"));
+		review.resize(850, 420);
+		auto* layout = new QVBoxLayout(&review);
+		auto* description = new QLabel(tr("From: %1\nTo: %2\n\n"
+			"Only missing images with a matching subfolder path will be relinked. "
+			"The changes can be undone together.")
+			.arg(QDir::toNativeSeparators(sourceDirectory), QDir::toNativeSeparators(directory)), &review);
+		description->setTextFormat(Qt::PlainText);
+		description->setWordWrap(true);
+		layout->addWidget(description);
+		auto* paths = new QTreeWidget(&review);
+		paths->setHeaderLabels({ tr("Original Link"), tr("Replacement"), tr("Status") });
+		paths->setRootIsDecorated(false);
+		paths->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+		int ready = 0;
+		for (const ImageLinkMatch& match : matches)
+		{
+			const QStringList candidates = candidatesByPath.value(match.linkPath);
+			const bool selected = candidates.size() == 1;
+			if (selected)
+				++ready;
+			auto* row = new QTreeWidgetItem(paths, { QDir::toNativeSeparators(match.linkPath),
+				selected ? QDir::toNativeSeparators(candidates.first()) : QString(),
+				selected ? tr("Ready") : candidates.isEmpty() ? tr("Not found") : tr("Skipped") });
+			row->setToolTip(0, row->text(0));
+			row->setToolTip(1, row->text(1));
+		}
+		layout->addWidget(paths);
+		auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &review);
+		buttons->button(QDialogButtonBox::Ok)->setText(tr("Relink %n Image Link(s)", nullptr, ready));
+		buttons->button(QDialogButtonBox::Ok)->setEnabled(ready > 0);
+		connect(buttons, &QDialogButtonBox::accepted, &review, &QDialog::accept);
+		connect(buttons, &QDialogButtonBox::rejected, &review, &QDialog::reject);
+		layout->addWidget(buttons);
+		if (review.exec() != QDialog::Accepted)
+			return;
 	}
 
 	UndoTransaction transaction;

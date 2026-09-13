@@ -82,6 +82,7 @@ private slots:
 	*/
 	void SearchPic();
 	void relinkMissingImages();
+	void mapMissingImageFolder();
 	void FileManager();
 	void doImageEffects();
 	void doImageExtProp();
@@ -106,6 +107,8 @@ protected:
 	bool loadPict(PageItem* item, const QString & newFilePath, bool showMsg = true);
 
 private:
+	void relinkMissingImagesFromFolder(bool mapFolder);
+
 	ScribusDoc *m_Doc {nullptr};
 	PageItem *currItem {nullptr};
 	int sortOrder {0};

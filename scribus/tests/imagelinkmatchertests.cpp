@@ -24,6 +24,10 @@ private slots:
 	void respectsRecursiveOption();
 	void incrementalSearchCompletes();
 	void incrementalSearchCanBeCancelled();
+	void relativeMappingPath_data();
+	void relativeMappingPath();
+	void mapsSubfoldersWithoutFilenameFallback();
+	void mappedSearchSupportsCaseFallback();
 };
 
 static void createFile(const QString& path)
@@ -123,6 +127,70 @@ void ImageLinkMatcherTests::incrementalSearchCanBeCancelled()
 	QCOMPARE(abortedSpy.count(), 1);
 	QCOMPARE(abortedSpy.first().first().toBool(), true);
 	QVERIFY(!search.isFinished());
+}
+
+void ImageLinkMatcherTests::relativeMappingPath_data()
+{
+	QTest::addColumn<QString>("link");
+	QTest::addColumn<QString>("source");
+	QTest::addColumn<QString>("relative");
+	QTest::newRow("unix") << "/old/assets/print/logo.png" << "/old/assets/" << "print/logo.png";
+	QTest::newRow("sibling-prefix") << "/old/assets-other/logo.png" << "/old/assets" << "";
+	QTest::newRow("outside") << "/elsewhere/logo.png" << "/old/assets" << "";
+	QTest::newRow("escape") << "/old/assets/../logo.png" << "/old/assets" << "";
+	QTest::newRow("normalize") << "/old/assets/print/../logo.png" << "/old/assets" << "logo.png";
+	QTest::newRow("unix-case") << "/Old/assets/logo.png" << "/old/assets" << "";
+	QTest::newRow("windows") << "C:\\Old\\Assets\\print\\logo.png" << "c:/old/assets" << "print/logo.png";
+	QTest::newRow("other-drive") << "D:/Old/Assets/logo.png" << "C:/Old/Assets" << "";
+	QTest::newRow("drive-root") << "C:/Assets/logo.png" << "C:/" << "Assets/logo.png";
+	QTest::newRow("network") << "\\\\server\\share\\Assets\\print\\logo.png" << "//SERVER/share/Assets" << "print/logo.png";
+	QTest::newRow("other-share") << "//server/share2/Assets/logo.png" << "//server/share" << "";
+	QTest::newRow("empty") << "" << "/old/assets" << "";
+	QTest::newRow("relative-source") << "/old/assets/logo.png" << "old/assets" << "";
+	QTest::newRow("relative-link") << "old/assets/logo.png" << "/old/assets" << "";
+}
+
+void ImageLinkMatcherTests::relativeMappingPath()
+{
+	QFETCH(QString, link);
+	QFETCH(QString, source);
+	QFETCH(QString, relative);
+	QCOMPARE(imageLinkRelativePath(link, source), relative);
+}
+
+void ImageLinkMatcherTests::mapsSubfoldersWithoutFilenameFallback()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+	for (const QString& folder : { QStringLiteral("print"), QStringLiteral("web") })
+	{
+		QVERIFY(QDir().mkpath(directory.filePath(folder)));
+		createFile(directory.filePath(folder + QStringLiteral("/logo.png")));
+	}
+	ImageLinkSearchTask search(nullptr, { "/old/assets/print/logo.png", "/old/assets/web/logo.png",
+		"/old/assets/missing/logo.png", "/old/assets-other/print/logo.png" }, directory.path(), true, "/old/assets");
+	search.start();
+	search.runUntilFinished();
+	const auto matches = search.matches();
+	QCOMPARE(matches.size(), 4);
+	QCOMPARE(matches.at(0).candidatePaths, QStringList { directory.filePath("print/logo.png") });
+	QCOMPARE(matches.at(1).candidatePaths, QStringList { directory.filePath("web/logo.png") });
+	QVERIFY(matches.at(2).candidatePaths.isEmpty());
+	QVERIFY(matches.at(3).candidatePaths.isEmpty());
+}
+
+void ImageLinkMatcherTests::mappedSearchSupportsCaseFallback()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+	QVERIFY(QDir().mkpath(directory.filePath("Print")));
+	createFile(directory.filePath("Print/Logo.PNG"));
+	ImageLinkSearchTask search(nullptr, { "C:\\old\\assets\\print\\logo.png" },
+		directory.path(), true, "C:/old/assets");
+	QSignalSpy finishedSpy(&search, &DeferredTask::finished);
+	search.start();
+	QTRY_COMPARE(finishedSpy.count(), 1);
+	QCOMPARE(search.matches().first().candidatePaths, QStringList { directory.filePath("Print/Logo.PNG") });
 }
 
 QTEST_GUILESS_MAIN(ImageLinkMatcherTests)
