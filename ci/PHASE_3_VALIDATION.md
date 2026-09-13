@@ -53,6 +53,10 @@ Manual release gate:
   dependencies.
 - Installed-package smoke tests passed for dynamic variables, atomic Object
   Style import/undo, and anchored image/table reflow and persistence.
+- An Xvfb/XCB production UI smoke passed: the compact palette was visible,
+  text and Bezier tool selection updated correctly, the line flyout retained
+  its shared Bezier action, and a one-page document canvas rendered at
+  766 x 794 pixels for visual inspection.
 
 Package:
 
@@ -60,6 +64,7 @@ Package:
 - Size: 160,512,192 bytes.
 - SHA-256: `e47fb5cac01ff3e69419f07ff5e9b98d4505e5451085c19100e7261691d82a29`
 - Target: Debian forky/sid, x86_64 only. It is not an Ubuntu package.
+- UI smoke image: `/Users/appajiambarishadarbha/Documents/Codex/scribus-linux-debian-sid-amd64/linux-canvas-dump.png`.
 
 The package metadata is generated from Debian sid's own shared-library
 database. This replaces the obsolete Ubuntu-specific dependencies from the
