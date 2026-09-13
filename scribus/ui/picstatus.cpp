@@ -25,7 +25,9 @@ for which a new license (GPL+exception) is in place.
 #include <QAction>
 #include <QCheckBox>
 #include <QDesktopServices>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QHash>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -40,6 +42,7 @@ for which a new license (GPL+exception) is in place.
 #include "effectsdialog.h"
 #include "extimageprops.h"
 #include "iconmanager.h"
+#include "imagelinkmatcher.h"
 #include "pageitem.h"
 #include "picsearch.h"
 #include "picsearchoptions.h"
@@ -76,6 +79,7 @@ PicStatus::PicStatus(QWidget* parent, ScribusDoc *docu) : QDialog( parent )
 	connect(goPageButton, SIGNAL(clicked()), this, SLOT(GotoPic()));
 	connect(selectButton, SIGNAL(clicked()), this, SLOT(SelectPic()));
 	connect(searchButton, SIGNAL(clicked()), this, SLOT(SearchPic()));
+	connect(relinkFolderButton, SIGNAL(clicked()), this, SLOT(relinkMissingImages()));
 	connect(fileManagerButton, SIGNAL(clicked()), this, SLOT(FileManager()));
 	connect(effectsButton, SIGNAL(clicked()), this, SLOT(doImageEffects()));
 	connect(buttonLayers, SIGNAL(clicked()), this, SLOT(doImageExtProp()));
@@ -194,6 +198,18 @@ void PicStatus::fillTable()
 	// but who knows if it can be configured for shortcut or macro...
 	imageViewArea->setEnabled(imageViewArea->count() > 0);
 	workTab->setEnabled(imageViewArea->count() > 0);
+	bool hasMissingImages = false;
+	for (int i = 0; i < imageViewArea->count(); ++i)
+	{
+		const auto *imageItem = static_cast<PicItem*>(imageViewArea->item(i));
+		const PageItem *pageItem = imageItem->PageItemObject;
+		if (!pageItem->imageIsAvailable && !pageItem->isImageInline() && !pageItem->Pfile.isEmpty())
+		{
+			hasMissingImages = true;
+			break;
+		}
+	}
+	relinkFolderButton->setEnabled(hasMissingImages);
 	sortByName();
 }
 
@@ -441,16 +457,91 @@ void PicStatus::SelectPic()
 	emit selectElementByItem(currItem, true, 1);
 }
 
-bool PicStatus::loadPict(PageItem* item, const QString & newFilePath)
+bool PicStatus::loadPict(PageItem* item, const QString & newFilePath, bool showMsg)
 {
 	bool masterPageMode = !item->OnMasterPage.isEmpty();
 	bool oldMasterPageMode = m_Doc->masterPageMode();
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(masterPageMode);
-	const bool loaded = item->relinkImage(newFilePath, true);
+	const bool loaded = item->relinkImage(newFilePath, showMsg);
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(oldMasterPageMode);
 	return loaded;
+}
+
+void PicStatus::relinkMissingImages()
+{
+	static QString lastRelinkDirectory;
+	if (lastRelinkDirectory.isEmpty())
+		lastRelinkDirectory = m_Doc->hasName ? QFileInfo(m_Doc->documentFileName()).absolutePath() : QDir::homePath();
+	const QString directory = QFileDialog::getExistingDirectory(this,
+		tr("Find Missing Images in Folder"), lastRelinkDirectory);
+	if (directory.isEmpty())
+		return;
+	lastRelinkDirectory = directory;
+
+	QStringList missingPaths;
+	for (int i = 0; i < imageViewArea->count(); ++i)
+	{
+		const auto *imageItem = static_cast<PicItem*>(imageViewArea->item(i));
+		const PageItem *pageItem = imageItem->PageItemObject;
+		if (!pageItem->imageIsAvailable && !pageItem->isImageInline() && !pageItem->Pfile.isEmpty())
+			missingPaths.append(pageItem->Pfile);
+	}
+	missingPaths.removeDuplicates();
+
+	const auto matches = findImageLinkMatches(missingPaths, directory, true);
+	QHash<QString, QStringList> candidatesByPath;
+	int ambiguous = 0;
+	int notFound = 0;
+	for (const ImageLinkMatch& match : matches)
+	{
+		candidatesByPath.insert(match.linkPath, match.candidatePaths);
+		if (match.isAmbiguous())
+			++ambiguous;
+		else if (match.candidatePaths.isEmpty())
+			++notFound;
+	}
+
+	UndoTransaction transaction;
+	if (UndoManager::undoEnabled())
+		transaction = UndoManager::instance()->beginTransaction(Um::SelectionGroup, Um::IGroup,
+			tr("Relink missing images"), QString(), Um::IGetImage);
+	int relinked = 0;
+	int failed = 0;
+	for (int i = 0; i < imageViewArea->count(); ++i)
+	{
+		auto *imageItem = static_cast<PicItem*>(imageViewArea->item(i));
+		PageItem *pageItem = imageItem->PageItemObject;
+		if (pageItem->imageIsAvailable || pageItem->isImageInline() || pageItem->Pfile.isEmpty())
+			continue;
+		const QString linkPath = QDir::cleanPath(QFileInfo(pageItem->Pfile).absoluteFilePath());
+		const QStringList candidates = candidatesByPath.value(linkPath);
+		if (candidates.size() != 1)
+			continue;
+		if (loadPict(pageItem, candidates.first(), false))
+		{
+			++relinked;
+			imageItem->setText(QFileInfo(pageItem->Pfile).fileName());
+			imageItem->setIcon(createImgIcon(pageItem));
+		}
+		else
+			++failed;
+	}
+	if (transaction)
+	{
+		if (relinked > 0)
+			transaction.commit();
+		else
+			transaction.cancel();
+	}
+
+	fillTable();
+	ScMessageBox::information(this, tr("Relink Missing Images"),
+		tr("Relinked: %1\nAmbiguous matches skipped: %2\nNot found: %3\nCould not load: %4")
+			.arg(relinked).arg(ambiguous).arg(notFound).arg(failed),
+		QMessageBox::Ok | QMessageBox::Default | QMessageBox::Escape,
+		QMessageBox::NoButton);
 }
 
 void PicStatus::SearchPic()

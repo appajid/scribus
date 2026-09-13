@@ -94,6 +94,7 @@ set(SCRIBUS_SOURCES
 	fileloader.cpp
 	filesearch.cpp
 	filewatcher.cpp
+	imagelinkmatcher.cpp
 	fontlistmodel.cpp
 	fpoint.cpp
 	fpointarray.cpp

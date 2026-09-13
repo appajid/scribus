@@ -77,6 +77,14 @@ target_compile_definitions(objectstyletests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
 add_test(NAME objectstyletests COMMAND objectstyletests)
 set_tests_properties(objectstyletests PROPERTIES LABELS "object-styles;phase-3")
 
+# Unit tests for cross-platform missing-image filename discovery
+set(IMAGELINKMATCHERTESTS_SOURCES imagelinkmatchertests.cpp ../imagelinkmatcher.cpp)
+add_executable(imagelinkmatchertests ${IMAGELINKMATCHERTESTS_SOURCES})
+target_link_libraries(imagelinkmatchertests Qt6::Test Qt6::Core)
+target_compile_definitions(imagelinkmatchertests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME imagelinkmatchertests COMMAND imagelinkmatchertests)
+set_tests_properties(imagelinkmatchertests PROPERTIES LABELS "image-relinking;phase-4")
+
 # End-to-end running-header tests use the installed application because the
 # Scripter and file-format plugins are loaded from the installation layout.
 if(APPLEBUNDLE)

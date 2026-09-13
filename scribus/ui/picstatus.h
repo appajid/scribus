@@ -81,6 +81,7 @@ private slots:
 	\brief Searches for the given Picture. Displays a Dialog when more than one Picture is found.
 	*/
 	void SearchPic();
+	void relinkMissingImages();
 	void FileManager();
 	void doImageEffects();
 	void doImageExtProp();
@@ -102,7 +103,7 @@ protected:
 
 	/*! \brief Load the image specified into the PageItem
 	\param newFilePath a file path */
-	bool loadPict(PageItem* item, const QString & newFilePath);
+	bool loadPict(PageItem* item, const QString & newFilePath, bool showMsg = true);
 
 private:
 	ScribusDoc *m_Doc {nullptr};
