@@ -36,3 +36,6 @@ ctest --test-dir build/portable -C Release --output-on-failure
 A feature is not considered certified for a platform merely because its
 portable tests pass. Release certification requires the full build and relevant
 integration and GUI checks on that platform.
+
+The current Phase 3 results and remaining certification gates are recorded in
+[`PHASE_3_VALIDATION.md`](PHASE_3_VALIDATION.md).
