@@ -20,7 +20,8 @@ for which a new license (GPL+exception) is in place.
 
 
 
-PicSearch::PicSearch(QWidget* parent, const QString & fileName, const QStringList & avalableFiles, bool brokenLinksOnly) :
+PicSearch::PicSearch(QWidget* parent, const QString& fileName, const QStringList& availableFiles,
+	bool brokenLinksOnly, bool resolveAmbiguousLink) :
 	QDialog(parent), brokenLinksOnly{brokenLinksOnly}
 {
 	setupUi(this);
@@ -29,7 +30,7 @@ PicSearch::PicSearch(QWidget* parent, const QString & fileName, const QStringLis
 	previewLabel->hide();
 	fileNameLabel->setText(fileName);
 
-	for (const auto& file: avalableFiles)
+	for (const auto& file: availableFiles)
 		foundFilesBox->addItem(QDir::toNativeSeparators(file));
 
 	foundFilesBox->setCurrentRow(0);
@@ -42,6 +43,23 @@ PicSearch::PicSearch(QWidget* parent, const QString & fileName, const QStringLis
 	connect(previewCheckBox, SIGNAL( clicked() ), this, SLOT( previewCheckBox_clicked() ) );
 	connect(matchCheckBox, SIGNAL( clicked() ), this, SLOT( matchCheckBox_clicked() ) );
 	connect(foundFilesBox, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(foundFilesBox_clicked(QListWidgetItem*)));
+	connect(foundFilesBox, &QListWidget::currentItemChanged, this,
+		[this](QListWidgetItem* current) { foundFilesBox_clicked(current); });
+
+	if (resolveAmbiguousLink)
+	{
+		setWindowTitle(tr("Choose Replacement Image"));
+		textLabel1->setText(tr("Missing image:"));
+		matchCheckBox->hide();
+		matchWarningLabel->hide();
+		useButton->setText(tr("Use Selected"));
+		cancelButton->setText(tr("Skip"));
+		previewCheckBox->setChecked(true);
+		previewLabel->show();
+		createPreview();
+		connect(foundFilesBox, &QListWidget::itemDoubleClicked, this,
+			[this](QListWidgetItem*) { accept(); });
+	}
 }
 
 void PicSearch::previewCheckBox_clicked()
@@ -72,6 +90,7 @@ void PicSearch::createPreview()
 {
 	const auto currentImage = foundFilesBox->currentItem()->text();
 	QPixmap pm(200, 200);
+	pm.fill(palette().window().color());
 	QFileInfo fi(currentImage);
 	int w = 200;
 	int h = 200;

@@ -36,7 +36,9 @@ for which a new license (GPL+exception) is in place.
 #include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
+#include <QProgressDialog>
 #include <QScopedPointer>
+#include <QTimer>
 #include <QToolButton>
 
 #include "effectsdialog.h"
@@ -490,15 +492,48 @@ void PicStatus::relinkMissingImages()
 	}
 	missingPaths.removeDuplicates();
 
-	const auto matches = findImageLinkMatches(missingPaths, directory, true);
+	ImageLinkSearchTask search(this, missingPaths, directory, true);
+	QProgressDialog progress(tr("Scanning folders for missing images..."), tr("Cancel"), 0, 0, this);
+	progress.setWindowTitle(tr("Relink Missing Images"));
+	progress.setWindowModality(Qt::WindowModal);
+	progress.setMinimumDuration(0);
+	progress.setAutoClose(false);
+	progress.setAutoReset(false);
+	connect(&progress, &QProgressDialog::canceled, &search, &DeferredTask::cancel);
+	connect(&search, &DeferredTask::finished, &progress, &QProgressDialog::accept);
+	connect(&search, &DeferredTask::aborted, &progress,
+		[&progress](bool) { progress.reject(); });
+	QTimer progressUpdate;
+	connect(&progressUpdate, &QTimer::timeout, &progress, [&search, &progress]() {
+		progress.setLabelText(PicStatus::tr("Scanning folders for missing images...\n%1 files checked")
+			.arg(search.scannedFileCount()));
+	});
+	progressUpdate.start(100);
+	search.start();
+	progress.exec();
+	progressUpdate.stop();
+	if (!search.isFinished())
+		return;
+
+	const auto matches = search.matches();
 	QHash<QString, QStringList> candidatesByPath;
 	int ambiguous = 0;
+	int ambiguousResolved = 0;
 	int notFound = 0;
 	for (const ImageLinkMatch& match : matches)
 	{
 		candidatesByPath.insert(match.linkPath, match.candidatePaths);
 		if (match.isAmbiguous())
+		{
 			++ambiguous;
+			PicSearch resolver(this, QDir::toNativeSeparators(match.linkPath),
+				match.candidatePaths, true, true);
+			if (resolver.exec() == QDialog::Accepted)
+			{
+				candidatesByPath.insert(match.linkPath, { resolver.getSelectedImage() });
+				++ambiguousResolved;
+			}
+		}
 		else if (match.candidatePaths.isEmpty())
 			++notFound;
 	}
@@ -538,8 +573,8 @@ void PicStatus::relinkMissingImages()
 
 	fillTable();
 	ScMessageBox::information(this, tr("Relink Missing Images"),
-		tr("Relinked: %1\nAmbiguous matches skipped: %2\nNot found: %3\nCould not load: %4")
-			.arg(relinked).arg(ambiguous).arg(notFound).arg(failed),
+		tr("Relinked: %1\nAmbiguous matches resolved: %2\nAmbiguous matches skipped: %3\nNot found: %4\nCould not load: %5")
+			.arg(relinked).arg(ambiguousResolved).arg(ambiguous - ambiguousResolved).arg(notFound).arg(failed),
 		QMessageBox::Ok | QMessageBox::Default | QMessageBox::Escape,
 		QMessageBox::NoButton);
 }

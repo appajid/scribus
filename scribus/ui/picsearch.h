@@ -33,9 +33,12 @@ public:
 	\brief Constructor for PicSearch.[dox?]. Used in Extras / Manage Pictures / Search function
 	\param parent QWidget pointer to parent window
 	\param fileName QString name of image
-	\param avalableFiles QStringList List of Paths where an Image with the given Name is present
+	\param availableFiles QStringList List of paths where an image with the given name is present
+	\param brokenLinksOnly Whether applying to matching images is restricted to broken links
+	\param resolveAmbiguousLink Configure the dialog to choose one replacement for a broken link
 	*/
-	PicSearch( QWidget* parent, const QString & fileName, const QStringList & avalableFiles, bool brokenLinksOnly);
+	PicSearch(QWidget* parent, const QString& fileName, const QStringList& availableFiles,
+		bool brokenLinksOnly, bool resolveAmbiguousLink = false);
 	~PicSearch() {};
 
 	//! \brief Selected image with its full path

@@ -22,6 +22,8 @@ private slots:
 	void reportsAmbiguousMatches();
 	void prefersExactCaseAndSupportsFallback();
 	void respectsRecursiveOption();
+	void incrementalSearchCompletes();
+	void incrementalSearchCanBeCancelled();
 };
 
 static void createFile(const QString& path)
@@ -94,6 +96,35 @@ void ImageLinkMatcherTests::respectsRecursiveOption()
 	QVERIFY(recursive.first().isUnique());
 }
 
-QTEST_APPLESS_MAIN(ImageLinkMatcherTests)
+void ImageLinkMatcherTests::incrementalSearchCompletes()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+	createFile(directory.filePath(QStringLiteral("cover.png")));
+
+	ImageLinkSearchTask search(nullptr, { QStringLiteral("/old/cover.png") }, directory.path());
+	QSignalSpy finishedSpy(&search, &DeferredTask::finished);
+	search.start();
+	QTRY_COMPARE(finishedSpy.count(), 1);
+	QVERIFY(search.isFinished());
+	QCOMPARE(search.scannedFileCount(), 1);
+	QVERIFY(search.matches().first().isUnique());
+}
+
+void ImageLinkMatcherTests::incrementalSearchCanBeCancelled()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+
+	ImageLinkSearchTask search(nullptr, { QStringLiteral("/old/cover.png") }, directory.path());
+	QSignalSpy abortedSpy(&search, &DeferredTask::aborted);
+	search.start();
+	search.cancel();
+	QCOMPARE(abortedSpy.count(), 1);
+	QCOMPARE(abortedSpy.first().first().toBool(), true);
+	QVERIFY(!search.isFinished());
+}
+
+QTEST_GUILESS_MAIN(ImageLinkMatcherTests)
 
 #include "imagelinkmatchertests.moc"

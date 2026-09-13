@@ -56,7 +56,8 @@ target_link_libraries(objectstyletests PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
 
 add_scribus_portable_test(imagelinkmatchertests
 	"${SCRIBUS_ROOT}/scribus/tests/imagelinkmatchertests.cpp"
-	"${SCRIBUS_ROOT}/scribus/imagelinkmatcher.cpp")
+	"${SCRIBUS_ROOT}/scribus/imagelinkmatcher.cpp"
+	"${SCRIBUS_ROOT}/scribus/deferredtask.cpp")
 target_link_libraries(imagelinkmatchertests PRIVATE Qt6::Core Qt6::Test)
 
 add_test(NAME windows_project_sources

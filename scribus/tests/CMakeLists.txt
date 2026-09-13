@@ -78,7 +78,7 @@ add_test(NAME objectstyletests COMMAND objectstyletests)
 set_tests_properties(objectstyletests PROPERTIES LABELS "object-styles;phase-3")
 
 # Unit tests for cross-platform missing-image filename discovery
-set(IMAGELINKMATCHERTESTS_SOURCES imagelinkmatchertests.cpp ../imagelinkmatcher.cpp)
+set(IMAGELINKMATCHERTESTS_SOURCES imagelinkmatchertests.cpp ../imagelinkmatcher.cpp ../deferredtask.cpp)
 add_executable(imagelinkmatchertests ${IMAGELINKMATCHERTESTS_SOURCES})
 target_link_libraries(imagelinkmatchertests Qt6::Test Qt6::Core)
 target_compile_definitions(imagelinkmatchertests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
