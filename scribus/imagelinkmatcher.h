@@ -44,10 +44,14 @@ SCRIBUS_API QVector<ImageLinkMatch> findImageLinkMatches(const QStringList& link
  * old directory does not need to exist. Parent traversal cannot escape it. */
 SCRIBUS_API QString imageLinkRelativePath(const QString& linkPath, const QString& sourceDirectory);
 
+/** List unique parent folders of native document links, including ancestors.
+ * The folders need not exist. Traversal stops at the filesystem root. */
+SCRIBUS_API QStringList imageLinkSourceFolders(const QStringList& linkPaths);
+
 /**
  * Incrementally find replacement candidates without blocking the user interface.
  *
- * The task examines a bounded number of files on every event-loop iteration. It
+ * The task examines a bounded number of directory entries per event-loop iteration. It
  * can therefore be connected to DeferredTask::finished and DeferredTask::aborted,
  * and cancelled through DeferredTask::cancel.
  */

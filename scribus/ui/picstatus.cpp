@@ -504,24 +504,7 @@ void PicStatus::relinkMissingImagesFromFolder(bool mapFolder)
 	QString sourceDirectory;
 	if (mapFolder)
 	{
-		QStringList sourceFolders;
-		// Include ancestors so an entire collection can be mapped at once.
-		for (const QString& path : missingPaths)
-		{
-			QDir folder(QFileInfo(path).absolutePath());
-			while (true)
-			{
-				const QString folderPath = folder.path();
-				if (sourceFolders.contains(folderPath))
-					break;
-				sourceFolders.append(folderPath);
-				// cdUp() requires an existing directory on some platforms.
-				const QString parentPath = QDir::cleanPath(folderPath + QStringLiteral("/.."));
-				if (parentPath == folderPath)
-					break;
-				folder.setPath(parentPath);
-			}
-		}
+		const QStringList sourceFolders = imageLinkSourceFolders(missingPaths);
 		bool accepted = false;
 		sourceDirectory = QInputDialog::getItem(this, tr("Map Moved Image Folder"),
 			tr("Original image folder (it does not need to exist):\n"
@@ -614,7 +597,11 @@ void PicStatus::relinkMissingImagesFromFolder(bool mapFolder)
 		auto* paths = new QTreeWidget(&review);
 		paths->setHeaderLabels({ tr("Original Link"), tr("Replacement"), tr("Status") });
 		paths->setRootIsDecorated(false);
-		paths->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+		paths->setTextElideMode(Qt::ElideMiddle);
+		paths->header()->setStretchLastSection(false);
+		paths->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+		paths->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+		paths->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 		int ready = 0;
 		for (const ImageLinkMatch& match : matches)
 		{

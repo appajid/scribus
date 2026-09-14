@@ -48,6 +48,33 @@ QString imageLinkRelativePath(const QString& linkPath, const QString& sourceDire
 	return link.mid(source.size());
 }
 
+QStringList imageLinkSourceFolders(const QStringList& linkPaths)
+{
+	QStringList folders;
+	QSet<QString> seen;
+	for (const QString& path : linkPaths)
+	{
+		if (path.isEmpty())
+			continue;
+		QDir folder(QFileInfo(path).absolutePath());
+		while (!seen.contains(folder.path()))
+		{
+			const QString folderPath = folder.path();
+			seen.insert(folderPath);
+			folders.append(folderPath);
+			if (folder.isRoot())
+				break;
+			// filePath avoids creating "//.." at a root. Do not use cdUp(),
+			// which can fail for the missing directories we need to recover.
+			const QString parentPath = QDir::cleanPath(folder.filePath(QStringLiteral("..")));
+			if (parentPath.size() >= folderPath.size())
+				break;
+			folder.setPath(parentPath);
+		}
+	}
+	return folders;
+}
+
 QVector<ImageLinkMatch> findImageLinkMatches(const QStringList& linkPaths,
 	const QString& searchDirectory, bool recursive)
 {
@@ -84,18 +111,22 @@ void ImageLinkSearchTask::start()
 	const QDirIterator::IteratorFlags iteratorFlags = m_recursive
 		? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
 	m_iterator = std::make_unique<QDirIterator>(m_searchDirectory,
-		QDir::Files | QDir::Readable | QDir::NoDotAndDotDot, iteratorFlags);
+		QDir::Files | QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot, iteratorFlags);
 	DeferredTask::start();
 }
 
 void ImageLinkSearchTask::next()
 {
-	constexpr int filesPerStep = 64;
-	int filesProcessed = 0;
-	while (filesProcessed < filesPerStep && m_iterator->hasNext())
+	// Count directory entries as work too: a files-only iterator can traverse
+	// an entire tree of empty folders inside a single hasNext() call.
+	constexpr int entriesPerStep = 64;
+	int entriesProcessed = 0;
+	while (entriesProcessed < entriesPerStep && m_iterator->hasNext())
 	{
 		const QFileInfo candidate(m_iterator->next());
-		++filesProcessed;
+		++entriesProcessed;
+		if (!candidate.isFile())
+			continue;
 		++m_scannedFileCount;
 		const QString candidatePath = m_sourceDirectory.isEmpty() ? candidate.fileName()
 			: QDir(m_searchDirectory).relativeFilePath(candidate.absoluteFilePath());

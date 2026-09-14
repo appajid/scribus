@@ -24,6 +24,9 @@ private slots:
 	void respectsRecursiveOption();
 	void incrementalSearchCompletes();
 	void incrementalSearchCanBeCancelled();
+	void emptyDirectoriesYieldAndAllowCancellation();
+	void sourceFoldersStopAtRoot();
+	void sourceFoldersIncludeMissingAncestorsOnce();
 	void relativeMappingPath_data();
 	void relativeMappingPath();
 	void mapsSubfoldersWithoutFilenameFallback();
@@ -127,6 +130,56 @@ void ImageLinkMatcherTests::incrementalSearchCanBeCancelled()
 	QCOMPARE(abortedSpy.count(), 1);
 	QCOMPARE(abortedSpy.first().first().toBool(), true);
 	QVERIFY(!search.isFinished());
+}
+
+void ImageLinkMatcherTests::emptyDirectoriesYieldAndAllowCancellation()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+	for (int i = 0; i < 150; ++i)
+		QVERIFY(QDir().mkpath(directory.filePath(QString::number(i))));
+
+	class SteppedSearch : public ImageLinkSearchTask
+	{
+	public:
+		using ImageLinkSearchTask::ImageLinkSearchTask;
+		using ImageLinkSearchTask::next;
+	};
+	SteppedSearch search(nullptr, { "/old/cover.png" }, directory.path());
+	QSignalSpy finishedSpy(&search, &DeferredTask::finished);
+	QSignalSpy abortedSpy(&search, &DeferredTask::aborted);
+	search.start();
+	search.next();
+	// Even with no files, one step must yield before traversing the whole tree.
+	QVERIFY(!search.isFinished());
+	QCOMPARE(search.scannedFileCount(), 0);
+	search.cancel();
+	QCOMPARE(abortedSpy.count(), 1);
+	QCOMPARE(finishedSpy.count(), 0);
+	QVERIFY(search.matches().isEmpty());
+}
+
+void ImageLinkMatcherTests::sourceFoldersStopAtRoot()
+{
+	const QString root = QDir::rootPath();
+	QCOMPARE(imageLinkSourceFolders({ QDir(root).filePath("logo.png") }), QStringList { root });
+	QVERIFY(imageLinkSourceFolders({ QString() }).isEmpty());
+}
+
+void ImageLinkMatcherTests::sourceFoldersIncludeMissingAncestorsOnce()
+{
+	QTemporaryDir directory;
+	QVERIFY(directory.isValid());
+	const QString missing = directory.filePath("missing/assets");
+	QVERIFY(!QDir(missing).exists());
+	const auto folders = imageLinkSourceFolders({ missing + "/print/logo.png", missing + "/web/logo.png" });
+	QCOMPARE(folders.count(missing), 1);
+	QCOMPARE(folders.count(directory.path()), 1);
+	QVERIFY(folders.contains(missing + "/print"));
+	QVERIFY(folders.contains(missing + "/web"));
+	QCOMPARE(folders.count(QDir::rootPath()), 1);
+	for (const QString& folder : folders)
+		QVERIFY(!folder.split('/').contains(".."));
 }
 
 void ImageLinkMatcherTests::relativeMappingPath_data()
