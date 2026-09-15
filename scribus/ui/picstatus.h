@@ -50,6 +50,7 @@ public:
 	void fillTable();
 
 private slots:
+	void applyImageFilters();
 	void sortByName();
 	void sortByPage();
 	void slotRightClick();

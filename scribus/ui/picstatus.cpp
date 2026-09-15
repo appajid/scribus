@@ -41,6 +41,7 @@ for which a new license (GPL+exception) is in place.
 #include <QPushButton>
 #include <QProgressDialog>
 #include <QScopedPointer>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -80,6 +81,8 @@ PicStatus::PicStatus(QWidget* parent, ScribusDoc *docu) : QDialog( parent )
 	workTab->setCurrentIndex(0);
 	connect(closeButton, SIGNAL(clicked()), this, SLOT(accept()));
 	connect(imageViewArea, SIGNAL(itemSelectionChanged()), this, SLOT(newImageSelected()));
+	connect(linkStatusFilter, &QComboBox::currentIndexChanged, this, &PicStatus::applyImageFilters);
+	connect(imageFilterText, &QLineEdit::textChanged, this, &PicStatus::applyImageFilters);
 	connect(isPrinting, SIGNAL(clicked()), this, SLOT(PrintPic()));
 	connect(isVisibleCheck, SIGNAL(clicked()), this, SLOT(visiblePic()));
 	connect(goPageButton, SIGNAL(clicked()), this, SLOT(GotoPic()));
@@ -157,14 +160,17 @@ void PicStatus::fillTable()
 		for (int ii = 0; ii < allItems.count(); ii++)
 		{
 			item = allItems.at(ii);
+			if ((item->itemType() != PageItem::ImageFrame) || item->isLatexFrame())
+				continue;
 			QFileInfo fi(item->Pfile);
 			QString Iname;
 			if (item->isInlineImage)
 				Iname = tr("Embedded Image");
+			else if (item->Pfile.isEmpty())
+				Iname = tr("Empty Image Frame");
 			else
 				Iname = fi.fileName();
-			if ((item->itemType() == PageItem::ImageFrame) && (!item->isLatexFrame()))
-				tempItem = new PicItem(imageViewArea, Iname, createImgIcon(item), item);
+			tempItem = new PicItem(imageViewArea, Iname, createImgIcon(item), item);
 			if (firstItem == nullptr)
 				firstItem = tempItem;
 		}
@@ -181,14 +187,17 @@ void PicStatus::fillTable()
 		for (int ii = 0; ii < allItems.count(); ii++)
 		{
 			item = allItems.at(ii);
+			if ((item->itemType() != PageItem::ImageFrame) || item->isLatexFrame())
+				continue;
 			QFileInfo fi(item->Pfile);
 			QString Iname;
 			if (item->isInlineImage)
 				Iname = tr("Embedded Image");
+			else if (item->Pfile.isEmpty())
+				Iname = tr("Empty Image Frame");
 			else
 				Iname = fi.fileName();
-			if ((item->itemType() == PageItem::ImageFrame) && (!item->isLatexFrame()))
-				tempItem = new PicItem(imageViewArea, Iname, createImgIcon(item), item);
+			tempItem = new PicItem(imageViewArea, Iname, createImgIcon(item), item);
 			// if an image is selected in a doc, Manage Pictures should
 			// display the selected image and its values
 			if (firstItem == nullptr || item->isSelected())
@@ -218,7 +227,61 @@ void PicStatus::fillTable()
 	}
 	relinkFolderButton->setEnabled(hasMissingImages);
 	mapFolderButton->setEnabled(hasMissingImages);
-	sortByName();
+	if (sortOrder == 0)
+		sortByName();
+	else
+		sortByPage();
+	if (imageViewArea->count() == 0)
+		applyImageFilters();
+}
+
+void PicStatus::applyImageFilters()
+{
+	const QString query = imageFilterText->text().trimmed();
+	const int filter = linkStatusFilter->currentIndex();
+	QListWidgetItem* selected = imageViewArea->currentItem();
+	QListWidgetItem* firstVisible = nullptr;
+	int visible = 0;
+	{
+		// Hiding a selected row must not leave actions targeting an invisible frame.
+		const QSignalBlocker blocker(imageViewArea);
+		for (int i = 0; i < imageViewArea->count(); ++i)
+		{
+			auto* row = static_cast<PicItem*>(imageViewArea->item(i));
+			const PageItem* item = row->PageItemObject;
+			const bool embedded = item->isImageInline();
+			const bool empty = !embedded && item->Pfile.isEmpty();
+			const bool missing = !embedded && !empty && !item->imageIsAvailable;
+			const bool available = !embedded && !empty && item->imageIsAvailable;
+			const bool statusMatches = filter == 0 || (filter == 1 && missing)
+				|| (filter == 2 && available) || (filter == 3 && embedded) || (filter == 4 && empty);
+			const bool textMatches = query.isEmpty() || row->text().contains(query, Qt::CaseInsensitive)
+				|| item->Pfile.contains(query, Qt::CaseInsensitive)
+				|| QDir::toNativeSeparators(item->Pfile).contains(query, Qt::CaseInsensitive)
+				|| item->itemName().contains(query, Qt::CaseInsensitive);
+			const bool show = statusMatches && textMatches;
+			row->setHidden(!show);
+			if (!show && selected == row)
+				selected = nullptr;
+			if (show)
+			{
+				++visible;
+				if (!firstVisible)
+					firstVisible = row;
+			}
+		}
+		if (!selected)
+			selected = firstVisible;
+		imageViewArea->clearSelection();
+		imageViewArea->setCurrentItem(selected);
+		if (selected)
+			selected->setSelected(true);
+	}
+	imageCountLabel->setText(visible == 0 ? tr("No images match these filters (%1 total).")
+		.arg(imageViewArea->count()) : tr("%1 of %2 images").arg(visible).arg(imageViewArea->count()));
+	imageViewArea->setEnabled(visible > 0);
+	workTab->setEnabled(selected != nullptr);
+	imageSelected(selected);
 }
 
 void PicStatus::sortByName()
@@ -250,6 +313,7 @@ void PicStatus::sortByName()
 	imageViewArea->setCurrentItem(firstItem);
 	imageSelected(firstItem);
 	sortOrder = 0;
+	applyImageFilters();
 }
 
 void PicStatus::sortByPage()
@@ -279,6 +343,7 @@ void PicStatus::sortByPage()
 	imageViewArea->setCurrentItem(firstItem);
 	imageSelected(firstItem);
 	sortOrder = 1;
+	applyImageFilters();
 }
 
 void PicStatus::slotRightClick()
@@ -311,6 +376,12 @@ void PicStatus::imageSelected(QListWidgetItem *ite)
 	{
 		currItem = nullptr;
 		enableWidgets(false);
+		isPrinting->setChecked(false);
+		isVisibleCheck->setChecked(false);
+		for (QLabel* label : { displayName, displayPath, displayFormat, displayColorspace,
+			displayDPI, displayEffDPI, displaySizePixel, displayScale, displayPrintSize,
+			displayPage, displayObjekt })
+			label->clear();
 		return;
 	}
 
@@ -417,6 +488,8 @@ void PicStatus::imageSelected(QListWidgetItem *ite)
 		displaySizePixel->setText(trNA);
 		displayScale->setText(trNA);
 		displayPrintSize->setText(trNA);
+		isPrinting->setChecked(currItem->printEnabled());
+		isVisibleCheck->setChecked(currItem->imageVisible());
 		buttonEdit->setEnabled(false);
 		effectsButton->setEnabled(false);
 		buttonLayers->setEnabled(false);
@@ -722,6 +795,7 @@ void PicStatus::SearchPic()
 		relinkMatchingImages(source, target, brokenLink);
 	if (transaction)
 		transaction.commit();
+	applyImageFilters();
 }
 
 void PicStatus::FileManager()

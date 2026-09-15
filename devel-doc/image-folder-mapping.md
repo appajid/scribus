@@ -57,10 +57,11 @@ was checked visually in the running app.
 
 An isolated test build successfully exercised source-folder selection, review
 cancellation with both zero and valid candidates, mapping application, one-step
-undo and one-step redo. Seven test frames included two frames sharing one link,
+undo and one-step redo. Eight test frames include two frames sharing one link,
 two different `logo.png` files in different subfolders, missing and corrupt
-replacements, an unrelated missing image, and an available image. The result was
-three frames relinked, one replacement not found and one rejected during loading.
+replacements, an unrelated missing image, an available image, and an empty image
+frame. The result was three frames relinked, one replacement not found and one
+rejected during loading; the empty frame remained untouched.
 
 After apply, undo and redo, the document was saved through the GUI and reopened
 in an independent Scripter process. All seven paths, stored scale values and
@@ -82,9 +83,10 @@ Open `mapping.sla` in the GUI, perform a check and save. Run
 `scribus/tests/scripts/verify_image_mapping_fixture.py` through Scripter with
 `SCRIBUS_MAPPING_FIXTURE` set to the printed directory and
 `SCRIBUS_MAPPING_STATE` set to `original` (cancel/undo) or `relinked` (apply/redo).
-Success prints `IMAGE_MAPPING_VERIFIED ... frames=7`. Verification compares raw
-SLA geometry because the Scripter scale getter includes image DPI, which is not
-available for a broken link.
+Success prints `IMAGE_MAPPING_VERIFIED ... frames=7` for the seven linked frames.
+The eighth, empty frame is intentionally excluded from path verification.
+Verification compares raw SLA geometry because the Scripter scale getter includes
+image DPI, which is not available for a broken link.
 
 ## Interactive smoke test
 

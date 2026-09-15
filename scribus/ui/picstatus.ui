@@ -30,6 +30,32 @@
     <number>9</number>
    </property>
    <item>
+    <layout class="QHBoxLayout" name="imageFilterLayout">
+     <item>
+      <widget class="QComboBox" name="linkStatusFilter">
+       <property name="accessibleName"><string>Image status filter</string></property>
+       <item><property name="text"><string>All Images</string></property></item>
+       <item><property name="text"><string>Missing Links</string></property></item>
+       <item><property name="text"><string>Available Links</string></property></item>
+       <item><property name="text"><string>Embedded Images</string></property></item>
+       <item><property name="text"><string>Empty Frames</string></property></item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="imageFilterText">
+       <property name="accessibleName"><string>Search images</string></property>
+       <property name="placeholderText"><string>Search filename, path or frame name</string></property>
+       <property name="clearButtonEnabled"><bool>true</bool></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QLabel" name="imageCountLabel">
+     <property name="text"><string/></property>
+    </widget>
+   </item>
+   <item>
     <widget class="QListWidget" name="imageViewArea">
      <property name="minimumSize">
       <size>
@@ -81,7 +107,7 @@
     <item>
      <widget class="QPushButton" name="mapFolderButton">
       <property name="toolTip">
-       <string>Relink a moved image folder while preserving its subfolder structure</string>
+       <string>Map missing links throughout the document, preserving subfolders. View filters do not limit this operation.</string>
       </property>
       <property name="text">
        <string>Map Moved Folder...</string>
@@ -94,10 +120,10 @@
     <item>
      <widget class="QPushButton" name="relinkFolderButton">
       <property name="toolTip">
-       <string>Search this folder and its subfolders for all missing linked images</string>
+       <string>Search a folder and its subfolders for all missing links in the document. View filters do not limit this operation.</string>
       </property>
       <property name="text">
-       <string>Relink Missing Images...</string>
+       <string>Relink All Missing Images...</string>
       </property>
       <property name="autoDefault">
        <bool>false</bool>

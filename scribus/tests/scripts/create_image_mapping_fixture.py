@@ -68,6 +68,10 @@ for index, (name, path, _) in enumerate(specs):
     expected[name] = dict(path=str(path), scale=scribus.getImageScale(frame),
                           offset=scribus.getImageOffset(frame))
 
+# Keep one intentionally empty frame so the Asset Manager's Empty Frames
+# filter can be exercised alongside available and missing linked images.
+empty_frame = scribus.createImage(392, 510, 135, 135, "Empty")
+
 document = root / "mapping.sla"
 scribus.saveDocAs(str(document))
 shutil.copyfile(document, root / "baseline.sla")
