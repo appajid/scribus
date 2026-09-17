@@ -205,7 +205,7 @@ void PrefsManager::initDefaults()
 	appPrefs.guidesPrefs.showControls = false;
 	appPrefs.guidesPrefs.linkShown = false;
 	appPrefs.guidesPrefs.rulersShown = true;
-	appPrefs.guidesPrefs.showBleed = true;
+	appPrefs.guidesPrefs.showBleed = false;
 	appPrefs.guidesPrefs.rulerMode = 1;
 	appPrefs.guidesPrefs.grabRadius = 4;
 	appPrefs.guidesPrefs.guideRad = 10;

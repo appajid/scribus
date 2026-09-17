@@ -25,6 +25,7 @@ for which a new license (GPL+exception) is in place.
 #include <QAction>
 #include <QApplication>
 #include <QTimer>
+#include <functional>
 
 #include <cstdlib>
 #include <QByteArray>
@@ -126,6 +127,9 @@ for which a new license (GPL+exception) is in place.
 #include "pageitem_latexframe.h"
 #include "pageitem_table.h"
 #include "pageitem_textframe.h"
+#include "text/textlayout.h"
+#include "text/boxes.h"
+#include "text/textshaper.h"
 #include "pdflib.h"
 #include "pdfoptions.h"
 #include "pluginmanager.h"
@@ -6956,12 +6960,278 @@ int ScribusMainWindow::ShowSubs()
 						dumpToolPalette("after-bezier");
 						// hard exit: Scribus' Qt shutdown can block in this headless
 						// batch context, so do not rely on a clean qApp->quit() here.
-						QTimer::singleShot(400, []() { std::exit(0); });
+						QTimer::singleShot(400, []() { ::_exit(0); });
 					});
 				});
 			});
 		});
 	}
+
+	if (qEnvironmentVariableIsSet("SCRIBUS_CANVASDUMP"))
+	{
+		QTimer::singleShot(1500, this, [this]() {
+			qInfo().noquote() << "[candump] creating default new document";
+			ScribusDoc* nd = doFileNew(595.28, 841.89, 40.0, 40.0, 40.0, 40.0, 0.0, 1,
+					false, 0, 0, 0, 0, 1, QSizeF(595.28, 841.89), true, 1, true, 0, 0);
+			qInfo().noquote() << "[candump] doFileNew returned" << (nd != nullptr) << "docpages=" << (doc->DocPages.count());
+			QTimer::singleShot(4000, this, [this]() {
+				QWidget* cw = view;
+				if (cw)
+				{
+					QPixmap pm = cw->grab();
+					pm.save("/tmp/scribus-test/canvas-dump.png");
+					qInfo().noquote() << "[candump] saved" << pm.size().width() << "x" << pm.size().height();
+				}
+				else
+					qInfo().noquote() << "[candump] no canvas";
+				::_exit(0);
+			});
+		});
+	}
+
+#if 0 // Local Indic diagnostics; keep out of production builds.
+	if (qEnvironmentVariableIsSet("SCRIBUS_INDIC_SELFTEST"))
+	{
+		QTimer::singleShot(1000, this, [this]() {
+			PageItem_TextFrame* frame = nullptr;
+			if (doc && doc->Items->count() > 0)
+			{
+				for (PageItem* itemPtr : *doc->Items)
+				{
+					if (itemPtr->isTextFrame())
+					{
+						frame = dynamic_cast<PageItem_TextFrame*>(itemPtr);
+						if (frame)
+							break;
+					}
+				}
+			}
+			if (!frame)
+			{
+				qInfo().noquote() << "[indic] no text frame found";
+				::_exit(0);
+				return;
+			}
+			struct IndicCase { const char* script; const char* font; const char* lang; QString text; };
+			const QList<IndicCase> indicCases = {
+				{ "devanagari", "Noto Sans Devanagari", "hi", QString::fromUtf8("हिन्दी क्षेत्रमापी") },
+				{ "bengali",    "Noto Sans Bengali",    "bn", QString::fromUtf8("বাংলা ক্ষমতা") },
+				{ "tamil",      "Noto Sans Tamil",      "ta", QString::fromUtf8("தமிழ் க்ஷ") },
+				{ "telugu",     "Noto Sans Telugu",     "te", QString::fromUtf8("తెలుగు క్షేత్రం") },
+				{ "kannada",    "Noto Sans Kannada",    "kn", QString::fromUtf8("ಕನ್ನಡ ಕ್ಷೇತ್ರ") },
+				{ "malayalam",  "Noto Sans Malayalam",  "ml", QString::fromUtf8("മലയാളം ക്ഷേത്രം") },
+				{ "gujarati",   "Noto Sans Gujarati",   "gu", QString::fromUtf8("ગુજરાતી ક્ષેત્ર") },
+				{ "gurmukhi",   "Noto Sans Gurmukhi",   "pa", QString::fromUtf8("ਪੰਜਾਬੀ ਕ੍ਰਿਪਾ") },
+				{ "oriya",      "Noto Sans Oriya",      "or", QString::fromUtf8("ଓଡ଼ିଆ କ୍ଷେତ୍ର") },
+				{ "sinhala",    "Noto Sans Sinhala",    "si", QString::fromUtf8("සිංහල ක්ෂේත්ර") },
+			};
+			for (const IndicCase& icase : indicCases)
+			{
+				ParagraphStyle ps;
+				ps.setDefaultStyle(true);
+				const ScFace& fc = doc->AllFonts->findFont(QString::fromUtf8(icase.font), "Regular", doc);
+				ps.charStyle().setFont(fc);
+				ps.charStyle().setFontSize(24.0);
+				ps.charStyle().setLanguage(QString::fromUtf8(icase.lang));
+				frame->itemText.clear();
+				frame->itemText.setDefaultStyle(ps);
+				frame->itemText.insertChars(icase.text, false);
+				frame->itemText.invalidateLayout();
+				frame->invalidateLayout(true);
+				frame->layout();
+
+				int clusterCount = 0;
+				int glyphCount = 0;
+				int missing = 0;
+				double totalWidth = 0.0;
+				QStringList boxDescs;
+				std::function<void(const Box*)> boxWalk = [&](const Box* b) {
+					if (!b)
+						return;
+					if (b->type() == Box::T_Glyph)
+					{
+						const GlyphCluster& run = static_cast<const GlyphBox*>(b)->glyphRun();
+						const QList<GlyphLayout>& glyphs = run.glyphs();
+						QStringList ids;
+						int inCluster = 0;
+						for (const GlyphLayout& gl : glyphs)
+						{
+							inCluster++;
+							if (gl.glyph == 0)
+								missing++;
+							ids << QString::number(gl.glyph);
+							totalWidth += gl.xadvance;
+						}
+						++clusterCount;
+						glyphCount += inCluster;
+						boxDescs << QString("t=") + run.getText()
+								 + QString(" |g=") + QString::number(inCluster)
+								 + QString(" {") + ids.join(",") + QString("}");
+					}
+					for (const Box* child : b->boxes())
+						boxWalk(child);
+				};
+				boxWalk(frame->textLayout.box());
+
+				const CharStyle& baseStyle = frame->itemText.charStyle(0);
+				qInfo().noquote() << "[indic]" << QString::fromUtf8(icase.script)
+					<< "| font=" << (baseStyle.font().isReplacement() ? QString("MISSING") + baseStyle.font().psName() : baseStyle.font().psName())
+					<< "| findFont=" << fc.psName() << "/" << fc.isReplacement()
+					<< "| storyLen=" << frame->itemText.length()
+					<< "| lang=" << QString::fromUtf8(icase.lang)
+					<< "| effLang=" << TextShaper::debugLastLanguage()
+					<< "| text=" << icase.text
+					<< "| chars=" << icase.text.length()
+					<< "| clusters=" << clusterCount
+					<< "| glyphs=" << glyphCount
+					<< "| missing=" << missing
+					<< "| width=" << QString::number(totalWidth, 'f', 1)
+					<< "| " << boxDescs.join("; ");
+			}
+
+			// Inference pass: style language left at a Latin default like a
+			// day-to-day document; the shaper must map each script to its
+			// own default language so OpenType 'locl'/-lang systems apply.
+			const QList<IndicCase> inferCases = {
+				{ "devanagari", "Noto Sans Devanagari", "en", QString::fromUtf8("हिन्दी") },
+				{ "bengali",    "Noto Sans Bengali",    "en", QString::fromUtf8("বাংলা") },
+				{ "tamil",      "Noto Sans Tamil",      "en", QString::fromUtf8("தமிழ்") },
+				{ "telugu",     "Noto Sans Telugu",     "en", QString::fromUtf8("తెలుగు") },
+				{ "kannada",    "Noto Sans Kannada",    "en", QString::fromUtf8("ಕನ್ನಡ") },
+				{ "malayalam",  "Noto Sans Malayalam",  "en", QString::fromUtf8("മലയാളം") },
+				{ "gujarati",   "Noto Sans Gujarati",   "en", QString::fromUtf8("ગુજરાતી") },
+				{ "gurmukhi",   "Noto Sans Gurmukhi",   "en", QString::fromUtf8("ਪੰਜਾਬੀ") },
+				{ "oriya",      "Noto Sans Oriya",      "en", QString::fromUtf8("ଓଡ଼ିଆ") },
+				{ "sinhala",    "Noto Sans Sinhala",    "en", QString::fromUtf8("සිංහල") },
+			};
+			for (const IndicCase& icase : inferCases)
+			{
+				ParagraphStyle ps;
+				ps.setDefaultStyle(true);
+				ps.charStyle().setFont(doc->AllFonts->findFont(QString::fromUtf8(icase.font), "Regular", doc));
+				ps.charStyle().setFontSize(24.0);
+				ps.charStyle().setLanguage(QString::fromUtf8(icase.lang));
+				frame->itemText.clear();
+				frame->itemText.setDefaultStyle(ps);
+				frame->itemText.insertChars(icase.text, false);
+				frame->itemText.invalidateLayout();
+				frame->invalidateLayout(true);
+				frame->layout();
+				qInfo().noquote() << "[indic-inf]" << QString::fromUtf8(icase.script)
+					<< "| styleLang=" << QString::fromUtf8(icase.lang)
+					<< "| effLang=" << TextShaper::debugLastLanguage();
+			}
+
+			// Danda wrap rule: in a narrow column no rendered line may start
+			// with a danda '।' or double-danda '॥'.
+			{
+				ParagraphStyle ps;
+				ps.setDefaultStyle(true);
+				ps.charStyle().setFont(doc->AllFonts->findFont(QString::fromUtf8("Noto Sans Devanagari"), "Regular", doc));
+				ps.charStyle().setFontSize(340.0);
+				ps.charStyle().setLanguage(QString::fromUtf8("hi"));
+				const QString dandaText = QString::fromUtf8("प्रथम अनुच्छेद यहाँ समाप्त होता है । द्वितीय अनुच्छेद यहाँ समाप्त होता है । तृतीय अनुच्छेद का समापन यहाँ होता है ॥");
+				frame->itemText.clear();
+				frame->itemText.setDefaultStyle(ps);
+				frame->itemText.insertChars(dandaText, false);
+				frame->setWidth(150.0);
+				frame->setHeight(8000.0);
+				frame->itemText.invalidateLayout();
+				frame->invalidateLayout(true);
+				frame->layout();
+				QStringList lineStarts;
+				for (uint li = 0; li < frame->textLayout.lines(); ++li)
+				{
+					const LineBox* lb = frame->textLayout.line(li);
+					QString firstText;
+					if (lb)
+					{
+						for (const Box* child : lb->boxes())
+						{
+							if (child->type() == Box::T_Glyph)
+							{
+								firstText = static_cast<const GlyphBox*>(child)->glyphRun().getText();
+								break;
+							}
+						}
+					}
+					lineStarts << QString("line") + QString::number(li) + QString("=\"") + firstText + QString("\"");
+				}
+				qInfo().noquote() << "[indic-danda]" << frame->itemText.length()
+					<< "| lines=" << frame->textLayout.lines()
+					<< "| itemW=" << frame->width()
+					<< "| itemH=" << frame->height()
+					<< "| lastChar=" << (frame->textLayout.lines() > 0 ? frame->textLayout.line(frame->textLayout.lines() - 1)->lastChar() : -1)
+					<< "| " << lineStarts.join("; ");
+			}
+
+			// PDF round-trip: export page 1 with Devanagari text through the
+			// regular PDF writer, then re-import the result with the importpdf
+			// plugin and verify the text comes back. Do not run for the dummy
+			// doc created by the second selftest variant (no pages).
+			if (!doc->DocPages.isEmpty() && doc->appMode == modeNormal)
+			{
+				const QString pdfFile(QString::fromUtf8("/tmp/scribus-test/rt2.pdf"));
+				const QString rtText = QString::fromUtf8("देवनागरी हिन्दी में। क्षेत्रमापी ॥");
+				PageItem_TextFrame* pdfFrame = nullptr;
+				for (int ii = 0; ii < doc->Items->count() && !pdfFrame; ++ii)
+				{
+					PageItem* ite = doc->Items->at(ii);
+					if (ite->isTextFrame() && ite->OwnPage >= 0)
+						pdfFrame = ite->asTextFrame();
+				}
+				qInfo().noquote() << "[pdf] frameOwnPage=" << (pdfFrame != nullptr ? pdfFrame->OwnPage : -2);
+				if (!pdfFrame)
+					pdfFrame = frame;
+				pdfFrame->itemText.clear();
+				ParagraphStyle pps;
+				pps.setDefaultStyle(true);
+				pps.charStyle().setFont(doc->AllFonts->findFont(QString::fromUtf8("Noto Sans Devanagari"), "Regular", doc));
+				pps.charStyle().setFontSize(160.0);
+				pps.charStyle().setLanguage(QString::fromUtf8("hi"));
+				pps.charStyle().setFillColor(QString::fromUtf8("Black"));
+				pps.charStyle().setStrokeColor(CommonStrings::None);
+				pdfFrame->itemText.setDefaultStyle(pps);
+				pdfFrame->itemText.insertChars(rtText, false);
+				pdfFrame->setWidth(500.0);
+				pdfFrame->setHeight(500.0);
+				pdfFrame->itemText.invalidateLayout();
+				pdfFrame->invalidateLayout(true);
+				pdfFrame->layout();
+				doc->reorganiseFonts();
+				doc->pdfOptions().FontEmbedding = PDFOptions::EmbedFonts;
+				doc->pdfOptions().SubsetList.append(QString::fromUtf8("Noto Sans Devanagari Regular"));
+				std::vector<int> pageNumbers;
+				pageNumbers.push_back(1);
+				QMap<int, QImage> thumbs;
+				QString error;
+				bool exported = getPDFDriver(pdfFile, pageNumbers, thumbs, error);
+				qInfo().noquote() << "[pdf] export=" << exported
+					<< "| file=" << pdfFile
+					<< "| size=" << (QFile::exists(pdfFile) ? QFileInfo(pdfFile).size() : 0)
+					<< "| err=" << error;
+				ScPlugin* pdfPl = PluginManager::instance().getPlugin(QString::fromUtf8("importpdf"), true);
+				bool imported = false;
+				if (pdfPl)
+				{
+					imported = QMetaObject::invokeMethod(pdfPl, "importFile",
+						Q_ARG(QString, pdfFile),
+						Q_ARG(int, int(LoadSavePlugin::lfScripted | LoadSavePlugin::lfUseCurrentPage)));
+				}
+				qInfo().noquote() << "[pdf] plugin=" << (pdfPl != nullptr) << "imported=" << imported;
+				QStringList rtTexts;
+				for (int ii = 0; ii < doc->Items->count(); ++ii)
+				{
+					PageItem* ite = doc->Items->at(ii);
+					if (ite->isTextFrame() && ite->itemText.length() > 0 && ite != frame && ite != pdfFrame)
+						rtTexts << ite->itemText.plainText();
+				}
+				qInfo().noquote() << "[pdf] texts=" << rtTexts;
+			}
+			::_exit(0);
+		});
+	}
+#endif
 
 	activateWindow();
 	if (!scriptIsRunning())
