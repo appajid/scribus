@@ -1,0 +1,1 @@
+This folder is populated by win32/deploy/assemble.ps1 on Windows.
