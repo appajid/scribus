@@ -21,6 +21,11 @@ one artifact containing:
 The dependency build is cached. The first run is therefore much slower than
 later runs. Artifacts are retained for 14 days.
 
+Qt is downloaded from Qt's official online repository by install-qt.ps1. The
+script pins the MSVC 2022 package revision and verifies each archive against
+its published SHA-1 sidecar before extraction. This avoids relying on changing
+third-party installer metadata. The extracted SDK is cached by GitHub Actions.
+
 Local Windows build
 -------------------
 Requirements:

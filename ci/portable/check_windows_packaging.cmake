@@ -8,6 +8,7 @@ if(NOT DEFINED SCRIBUS_ROOT)
 endif()
 
 set(WORKFLOW "${SCRIBUS_ROOT}/.github/workflows/windows-native-package.yml")
+set(QT_INSTALLER "${SCRIBUS_ROOT}/win32/ci/install-qt.ps1")
 set(BUILDER "${SCRIBUS_ROOT}/win32/ci/build-package.ps1")
 set(VALIDATOR "${SCRIBUS_ROOT}/win32/ci/validate-package.ps1")
 set(PORTABLE_ASSEMBLER "${SCRIBUS_ROOT}/win32/deploy/assemble.ps1")
@@ -15,6 +16,7 @@ set(INSTALLER_ASSEMBLER "${SCRIBUS_ROOT}/win32/installer/deploy.ps1")
 
 foreach(REQUIRED_FILE IN ITEMS
 		"${WORKFLOW}"
+		"${QT_INSTALLER}"
 		"${BUILDER}"
 		"${VALIDATOR}"
 		"${PORTABLE_ASSEMBLER}"
@@ -33,8 +35,14 @@ function(require_text FILE_PATH REQUIRED_TEXT DESCRIPTION)
 endfunction()
 
 require_text("${WORKFLOW}" "runs-on: windows-2022" "native Windows runner")
-require_text("${WORKFLOW}" "arch: win64_msvc2022_64" "MSVC 2022 Qt architecture")
+require_text("${WORKFLOW}" "install-qt.ps1" "verified Qt installer")
+require_text("${WORKFLOW}" "qt-6.11.2-msvc2022-x64-20260813-v1" "pinned Qt cache")
 require_text("${WORKFLOW}" "-TestInstaller" "installer smoke test")
+require_text("${QT_INSTALLER}"
+	"download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6112"
+	"official Qt 6.11.2 repository")
+require_text("${QT_INSTALLER}" "Get-FileHash -LiteralPath $archivePath -Algorithm SHA1" "Qt archive checksum validation")
+require_text("${QT_INSTALLER}" "Qt6Core5Compat.dll" "Qt 5 Core Compatibility validation")
 require_text("${BUILDER}"
 	"a6bd40450a22415d26cc9b0bf4aeaf9f295cfcff2f8bf64e9c62289aa69fdf3b"
 	"pinned dependency archive checksum")

@@ -30,13 +30,15 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install Qt 6.11.2
-        uses: jurplel/install-qt-action@v4
+      - name: Restore verified Qt 6.11.2 SDK
+        uses: actions/cache@v4
         with:
-          version: 6.11.2
-          arch: win64_msvc2022_64
-          modules: qt5compat
-          cache: true
+          path: C:\Qt\6.11.2\msvc2022_64
+          key: qt-6.11.2-msvc2022-x64-20260813-v1
+
+      - name: Install and verify Qt 6.11.2
+        shell: pwsh
+        run: .\win32\ci\install-qt.ps1 -InstallRoot 'C:\Qt\6.11.2\msvc2022_64'
 
       - name: Restore compiled Scribus dependencies
         uses: actions/cache@v4
