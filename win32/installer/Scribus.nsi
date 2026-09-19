@@ -160,7 +160,7 @@ FunctionEnd
 
 Section "Uninstall"
   SetShellVarContext all
-  !insertmacro MUI_STARTMENU_GET_FOLDER Application $StartMenuFolder
+  !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 
   Delete "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk"
   Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall ${PRODUCT_NAME}.lnk"

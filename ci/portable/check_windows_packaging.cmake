@@ -64,5 +64,6 @@ require_text("${INSTALLER_ASSEMBLER}" "'python'" "Python installer staging")
 require_text("${INSTALLER_ASSEMBLER}" "New-Item -ItemType Directory -Path $StageDir" "installer staging directory creation")
 require_text("${SCRIBUS_ROOT}/win32/installer/Scribus.nsi" "MUI_LANGUAGE \"SimpChinese\"" "NSIS Simplified Chinese language identifier")
 require_text("${SCRIBUS_ROOT}/win32/installer/Scribus.nsi" "MUI_LANGUAGE \"TradChinese\"" "NSIS Traditional Chinese language identifier")
+require_text("${SCRIBUS_ROOT}/win32/installer/Scribus.nsi" "MUI_STARTMENU_GETFOLDER Application $StartMenuFolder" "NSIS start menu uninstall macro")
 
 message(STATUS "Native Windows build and packaging contract is complete")
