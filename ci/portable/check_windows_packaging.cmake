@@ -62,5 +62,7 @@ require_text("${PORTABLE_ASSEMBLER}" "'python'" "Python portable staging")
 require_text("${PORTABLE_ASSEMBLER}" "New-Item -ItemType Directory -Path $AppDir" "portable output directory creation")
 require_text("${INSTALLER_ASSEMBLER}" "'python'" "Python installer staging")
 require_text("${INSTALLER_ASSEMBLER}" "New-Item -ItemType Directory -Path $StageDir" "installer staging directory creation")
+require_text("${SCRIBUS_ROOT}/win32/installer/Scribus.nsi" "MUI_LANGUAGE \"SimpChinese\"" "NSIS Simplified Chinese language identifier")
+require_text("${SCRIBUS_ROOT}/win32/installer/Scribus.nsi" "MUI_LANGUAGE \"TradChinese\"" "NSIS Traditional Chinese language identifier")
 
 message(STATUS "Native Windows build and packaging contract is complete")

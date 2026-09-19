@@ -78,8 +78,8 @@ Var StartMenuFolder
 !insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "Russian"
 !insertmacro MUI_LANGUAGE "Polish"
-!insertmacro MUI_LANGUAGE "Chinese Simplified"
-!insertmacro MUI_LANGUAGE "Chinese Traditional"
+!insertmacro MUI_LANGUAGE "SimpChinese"
+!insertmacro MUI_LANGUAGE "TradChinese"
 
 ;--------------------------------------------------------------------------
 ; Components
