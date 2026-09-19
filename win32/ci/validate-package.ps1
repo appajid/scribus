@@ -84,6 +84,35 @@ function Invoke-ProcessWithTimeout([string]$FileName, [string]$Arguments, [int]$
     }
 }
 
+function Invoke-GuiStartupSmokeTest([string]$FileName, [int]$StartupSeconds = 10) {
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $FileName
+    $startInfo.Arguments = '--no-splash'
+    $startInfo.WorkingDirectory = [System.IO.Path]::GetDirectoryName($FileName)
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) { throw "Could not start $FileName" }
+    try {
+        if ($process.WaitForExit($StartupSeconds * 1000)) {
+            throw "$FileName exited during the GUI startup smoke test with code $($process.ExitCode)."
+        }
+        Write-Host "  GUI process remained healthy for $StartupSeconds seconds."
+    }
+    finally {
+        if (-not $process.HasExited) {
+            try {
+                $process.Kill()
+                $process.WaitForExit()
+            }
+            catch {}
+        }
+        $process.Dispose()
+    }
+}
+
 if (-not (Test-Path -LiteralPath $AppDir -PathType Container)) {
     throw "Portable application directory not found: $AppDir"
 }
@@ -159,8 +188,8 @@ if ((Get-Item -LiteralPath $PortableZip).Length -lt 1MB) {
 }
 
 if (-not $SkipSmokeTest) {
-    Write-Host '  Running portable executable smoke test...'
-    Invoke-ProcessWithTimeout $scribusExe '--no-gui --version'
+    Write-Host '  Running portable GUI startup smoke test...'
+    Invoke-GuiStartupSmokeTest $scribusExe
 }
 
 if ($Installer) {
@@ -186,8 +215,8 @@ if ($TestInstaller) {
         Assert-File $installRoot 'Scribus.exe'
         Assert-File $installRoot 'python\python313.dll'
         if (-not $SkipSmokeTest) {
-            Write-Host '  Running installed executable smoke test...'
-            Invoke-ProcessWithTimeout $installedExe '--no-gui --version'
+            Write-Host '  Running installed GUI startup smoke test...'
+            Invoke-GuiStartupSmokeTest $installedExe
         }
         $uninstaller = Join-Path $installRoot 'uninst.exe'
         Assert-File $installRoot 'uninst.exe'

@@ -56,6 +56,8 @@ require_text("${BUILDER}" "/p:WindowsTargetPlatformVersion=10.0" "Windows 10 SDK
 require_text("${BUILDER}" "[System.IO.Directory]::GetParent($Sources).FullName" "sibling Visual Studio output directory")
 require_text("${VALIDATOR}" "Assert-X64PE" "x64 PE validation")
 require_text("${VALIDATOR}" "[System.IO.Path]::GetDirectoryName($FileName)" "smoke-test working directory")
+require_text("${VALIDATOR}" "Invoke-GuiStartupSmokeTest" "GUI startup smoke test")
+require_text("${VALIDATOR}" "GUI process remained healthy" "GUI startup health validation")
 require_text("${VALIDATOR}" "python\\python313.dll" "bundled Python validation")
 require_text("${VALIDATOR}" "qtplugins\\platforms\\qwindows.dll" "Qt Windows platform validation")
 require_text("${VALIDATOR}" "'share\\icons'" "Windows icon resource validation")

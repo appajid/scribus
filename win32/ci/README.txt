@@ -64,7 +64,7 @@ validate-package.ps1 rejects a package when it finds any of these problems:
   * document resources, icons, templates, or plugins are absent
   * Debug runtime DLLs are mixed into the Release package
   * the portable ZIP or installer is missing or implausibly small
-  * Scribus --no-gui --version fails to start
+  * Scribus exits or crashes during a bounded GUI startup smoke test
   * silent installation, installed-app startup, or uninstall fails
 
 The installer smoke test uses a temporary directory and removes it after the
