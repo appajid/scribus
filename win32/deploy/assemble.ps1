@@ -167,7 +167,7 @@ Write-Host "  Output         : $AppDir"
 if (-not $ZipOnly) {
     Write-Host "== Staging application tree ==" -ForegroundColor Cyan
     if (Test-Path -LiteralPath $AppDir) { Remove-Item -LiteralPath $AppDir -Recurse -Force }
-    New-Item -ItemType Directory -LiteralPath $AppDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $AppDir -Force | Out-Null
 
     Copy-Item -LiteralPath (Join-Path $BuildRoot 'Scribus.exe') -Destination $AppDir
 

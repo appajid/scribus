@@ -95,7 +95,7 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
 }
 
 if (-not $Sources) {
-    $Sources = Split-Path (Split-Path (Split-Path -LiteralPath $PSScriptRoot -Parent) -Parent) -Parent
+    $Sources = Split-Path (Split-Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -Parent
 }
 if (-not (Test-Path -LiteralPath $Sources -PathType Container)) {
     throw "Source directory not found: $Sources"

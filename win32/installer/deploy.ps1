@@ -192,7 +192,7 @@ Write-Host "  Version        : $Version"
 #----------------------------------------------------------------------------
 Write-Host "== Staging application tree -> $StageDir ==" -ForegroundColor Cyan
 if (Test-Path -LiteralPath $StageDir) { Remove-Item -LiteralPath $StageDir -Recurse -Force }
-New-Item -ItemType Directory -LiteralPath $StageDir -Force | Out-Null
+New-Item -ItemType Directory -Path $StageDir -Force | Out-Null
 
 # Application files produced by the MSVC build
 Copy-Item -LiteralPath (Join-Path $BuildRoot 'Scribus.exe') -Destination $StageDir
@@ -262,7 +262,7 @@ if (-not $SkipWindeploy -and $Script:WindeployAvailable) {
 #----------------------------------------------------------------------------
 if (-not $SkipNsis -and $Makensis) {
     Write-Host "== Building NSIS installer ==" -ForegroundColor Cyan
-    New-Item -ItemType Directory -LiteralPath $DistDir -Force | Out-Null
+    New-Item -ItemType Directory -Path $DistDir -Force | Out-Null
     Push-Location $ScriptDir
     try {
         & $Makensis "/DVERSION=$Version" 'Scribus.nsi'

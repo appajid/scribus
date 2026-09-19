@@ -62,7 +62,7 @@ function Invoke-ProcessWithTimeout([string]$FileName, [string]$Arguments, [int]$
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $FileName
     $startInfo.Arguments = $Arguments
-    $startInfo.WorkingDirectory = Split-Path -LiteralPath $FileName -Parent
+    $startInfo.WorkingDirectory = [System.IO.Path]::GetDirectoryName($FileName)
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true

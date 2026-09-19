@@ -55,9 +55,12 @@ require_text("${BUILDER}" "scribus-libs-msvc2022.sln" "Visual Studio 2022 depend
 require_text("${BUILDER}" "/p:WindowsTargetPlatformVersion=10.0" "Windows 10 SDK retargeting")
 require_text("${BUILDER}" "[System.IO.Directory]::GetParent($Sources).FullName" "sibling Visual Studio output directory")
 require_text("${VALIDATOR}" "Assert-X64PE" "x64 PE validation")
+require_text("${VALIDATOR}" "[System.IO.Path]::GetDirectoryName($FileName)" "smoke-test working directory")
 require_text("${VALIDATOR}" "python\\python313.dll" "bundled Python validation")
 require_text("${VALIDATOR}" "qtplugins\\platforms\\qwindows.dll" "Qt Windows platform validation")
 require_text("${PORTABLE_ASSEMBLER}" "'python'" "Python portable staging")
+require_text("${PORTABLE_ASSEMBLER}" "New-Item -ItemType Directory -Path $AppDir" "portable output directory creation")
 require_text("${INSTALLER_ASSEMBLER}" "'python'" "Python installer staging")
+require_text("${INSTALLER_ASSEMBLER}" "New-Item -ItemType Directory -Path $StageDir" "installer staging directory creation")
 
 message(STATUS "Native Windows build and packaging contract is complete")
