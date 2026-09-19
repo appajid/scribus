@@ -85,12 +85,17 @@ function Invoke-ProcessWithTimeout([string]$FileName, [string]$Arguments, [int]$
 }
 
 function Invoke-GuiStartupSmokeTest([string]$FileName, [int]$StartupSeconds = 10) {
+    $appRoot = [System.IO.Path]::GetDirectoryName($FileName)
+    $expectedPlatformPlugin = [System.IO.Path]::GetFullPath((Join-Path $appRoot 'qtplugins\platforms\qwindows.dll'))
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $FileName
     $startInfo.Arguments = '--no-splash'
-    $startInfo.WorkingDirectory = [System.IO.Path]::GetDirectoryName($FileName)
+    $startInfo.WorkingDirectory = $appRoot
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
+    $startInfo.EnvironmentVariables.Remove('QT_PLUGIN_PATH')
+    $startInfo.EnvironmentVariables.Remove('QT_QPA_PLATFORM_PLUGIN_PATH')
+    $startInfo.EnvironmentVariables['QT_QPA_PLATFORM'] = 'windows'
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
@@ -99,7 +104,19 @@ function Invoke-GuiStartupSmokeTest([string]$FileName, [int]$StartupSeconds = 10
         if ($process.WaitForExit($StartupSeconds * 1000)) {
             throw "$FileName exited during the GUI startup smoke test with code $($process.ExitCode)."
         }
-        Write-Host "  GUI process remained healthy for $StartupSeconds seconds."
+        $loadedPlatformPlugins = @($process.Modules | Where-Object { $_.ModuleName -ieq 'qwindows.dll' })
+        $packagedPluginLoaded = @($loadedPlatformPlugins | Where-Object {
+            [string]::Equals(
+                [System.IO.Path]::GetFullPath($_.FileName),
+                $expectedPlatformPlugin,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )
+        }).Count -gt 0
+        if (-not $packagedPluginLoaded) {
+            $loadedPaths = @($loadedPlatformPlugins | ForEach-Object { $_.FileName }) -join ', '
+            throw "Scribus did not load its packaged Qt platform plugin. Loaded qwindows.dll paths: $loadedPaths"
+        }
+        Write-Host "  GUI process remained healthy for $StartupSeconds seconds and loaded $expectedPlatformPlugin."
     }
     finally {
         if (-not $process.HasExited) {
@@ -128,6 +145,7 @@ $requiredFiles = @(
     'Qt6Svg.dll',
     'Qt6Widgets.dll',
     'Qt6Xml.dll',
+    'qt.conf',
     'qtplugins\platforms\qwindows.dll',
     'cairo2.dll',
     'freetype.dll',
@@ -149,6 +167,14 @@ $requiredFiles = @(
     'share\doc\COPYING'
 )
 foreach ($file in $requiredFiles) { Assert-File $AppDir $file }
+
+$qtConfig = Get-Content -LiteralPath (Join-Path $AppDir 'qt.conf') -Raw
+if ($qtConfig -notmatch '(?mi)^\s*Prefix\s*=\s*\.\s*$') {
+    throw 'qt.conf does not use the application directory as its Qt prefix.'
+}
+if ($qtConfig -notmatch '(?mi)^\s*Plugins\s*=\s*qtplugins\s*$') {
+    throw 'qt.conf does not direct Qt to the packaged qtplugins directory.'
+}
 
 foreach ($directory in @(
     'plugins',

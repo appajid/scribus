@@ -257,6 +257,10 @@ if (-not $SkipWindeploy -and $Script:WindeployAvailable) {
     Write-Host "  Skipped Qt deployment." -ForegroundColor Yellow
 }
 
+# Qt must know the private plugin directory before QApplication is created.
+# Without this configuration a clean PC cannot locate qwindows.dll.
+Copy-Item -LiteralPath (Join-Path $Sources 'win32\qt.conf') -Destination (Join-Path $StageDir 'qt.conf') -Force
+
 #----------------------------------------------------------------------------
 # Build the installer with NSIS
 #----------------------------------------------------------------------------

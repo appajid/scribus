@@ -234,6 +234,11 @@ if (-not $SkipWindeploy) {
     Write-Host "  Skipped Qt deployment." -ForegroundColor Yellow
 }
 
+# Qt reads qt.conf before Scribus can adjust QApplication's library paths.
+# Keep the platform plugins in our private qtplugins directory so a deployed
+# build does not depend on a Qt SDK being installed on the target machine.
+Copy-Item -LiteralPath (Join-Path $Sources 'win32\qt.conf') -Destination (Join-Path $AppDir 'qt.conf') -Force
+
 #----------------------------------------------------------------------------
 # Zip
 #----------------------------------------------------------------------------
