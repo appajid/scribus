@@ -27,6 +27,13 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Resolve native build paths
+        id: build-paths
+        shell: pwsh
+        run: |
+          $buildsRoot = [System.IO.Path]::GetFullPath((Join-Path $env:GITHUB_WORKSPACE '..\Scribus-builds'))
+          "builds-root=$buildsRoot" | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
@@ -82,7 +89,7 @@ jobs:
         id: application-cache
         uses: actions/cache/restore@v4
         with:
-          path: ${{ github.workspace }}\..\Scribus-builds\Scribus-Release-x64-v143
+          path: ${{ steps.build-paths.outputs.builds-root }}\Scribus-Release-x64-v143
           key: scribus-app-msvc2022-release-x64-${{ hashFiles('scribus/**', 'win32/msvc2022/**') }}-v1
 
       - name: Build Scribus application
@@ -102,7 +109,7 @@ jobs:
         if: steps.application-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: ${{ github.workspace }}\..\Scribus-builds\Scribus-Release-x64-v143
+          path: ${{ steps.build-paths.outputs.builds-root }}\Scribus-Release-x64-v143
           key: scribus-app-msvc2022-release-x64-${{ hashFiles('scribus/**', 'win32/msvc2022/**') }}-v1
 
       - name: Package and test Scribus
@@ -133,6 +140,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Scribus-${{ env.SCRIBUS_VERSION }}-Windows-x64-build-logs
-          path: ${{ github.workspace }}\..\Scribus-builds\logs\*.log
+          path: ${{ steps.build-paths.outputs.builds-root }}\logs\*.log
           if-no-files-found: warn
           retention-days: 14

@@ -134,7 +134,8 @@ $archive = Join-Path $DependencyRoot $DependencyArchiveName
 $kitRoot = Join-Path $DependencyRoot $DependencyKitName
 $dependencySolution = Join-Path $kitRoot 'scribus-libs-msvc2022.sln'
 $dependencyStamp = Join-Path $kitRoot ".release-x64-$Toolset-$DependencyArchiveSha256.complete"
-$buildsRoot = Join-Path (Split-Path -LiteralPath $Sources -Parent) 'Scribus-builds'
+$sourceParent = [System.IO.Directory]::GetParent($Sources).FullName
+$buildsRoot = Join-Path $sourceParent 'Scribus-builds'
 $buildRoot = Join-Path $buildsRoot "Scribus-$Configuration-$Platform-$Toolset"
 $logsRoot = Join-Path $buildsRoot 'logs'
 New-Item -ItemType Directory -Path $logsRoot -Force | Out-Null
