@@ -74,6 +74,7 @@ function Invoke-MSBuild(
         "/p:Configuration=$Configuration",
         "/p:Platform=$Platform",
         "/p:PlatformToolset=$Toolset",
+        '/p:WindowsTargetPlatformVersion=10.0',
         "/p:CL_MPCount=$MaximumCpuCount",
         "/m:$MaximumCpuCount",
         '/nologo',

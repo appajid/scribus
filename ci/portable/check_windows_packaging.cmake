@@ -47,6 +47,7 @@ require_text("${BUILDER}"
 	"a6bd40450a22415d26cc9b0bf4aeaf9f295cfcff2f8bf64e9c62289aa69fdf3b"
 	"pinned dependency archive checksum")
 require_text("${BUILDER}" "scribus-libs-msvc2022.sln" "Visual Studio 2022 dependency solution")
+require_text("${BUILDER}" "/p:WindowsTargetPlatformVersion=10.0" "Windows 10 SDK retargeting")
 require_text("${VALIDATOR}" "Assert-X64PE" "x64 PE validation")
 require_text("${VALIDATOR}" "python\\python313.dll" "bundled Python validation")
 require_text("${VALIDATOR}" "qtplugins\\platforms\\qwindows.dll" "Qt Windows platform validation")

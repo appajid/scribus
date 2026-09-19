@@ -48,7 +48,9 @@ From a PowerShell prompt with MSBuild on PATH:
 
 Keep the source and dependency paths short and free of unnecessary spaces.
 The script pins the dependency archive and verifies its SHA-256 checksum
-before extracting or compiling it.
+before extracting or compiling it. Its MSBuild invocation retargets legacy
+dependency projects to the installed Windows 10 SDK while retaining the
+Visual Studio 2022 v143 toolset.
 
 Validation performed
 --------------------
