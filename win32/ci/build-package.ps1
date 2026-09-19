@@ -29,6 +29,9 @@ param(
     [ValidateRange(1, 8)]
     [int]$MaximumCpuCount = 2,
     [switch]$SkipDependencyBuild,
+    [switch]$DependencyBuildOnly,
+    [switch]$SkipApplicationBuild,
+    [switch]$ApplicationBuildOnly,
     [switch]$SkipInstaller,
     [switch]$SkipSmokeTest,
     [switch]$TestInstaller
@@ -131,7 +134,7 @@ $archive = Join-Path $DependencyRoot $DependencyArchiveName
 $kitRoot = Join-Path $DependencyRoot $DependencyKitName
 $dependencySolution = Join-Path $kitRoot 'scribus-libs-msvc2022.sln'
 $dependencyStamp = Join-Path $kitRoot ".release-x64-$Toolset-$DependencyArchiveSha256.complete"
-$buildsRoot = Join-Path $Sources 'Scribus-builds'
+$buildsRoot = Join-Path (Split-Path -LiteralPath $Sources -Parent) 'Scribus-builds'
 $buildRoot = Join-Path $buildsRoot "Scribus-$Configuration-$Platform-$Toolset"
 $logsRoot = Join-Path $buildsRoot 'logs'
 New-Item -ItemType Directory -Path $logsRoot -Force | Out-Null
@@ -186,16 +189,30 @@ if (-not $SkipDependencyBuild -and -not (Test-Path -LiteralPath $dependencyStamp
     Write-Host '  Reusing the verified cached dependency build.' -ForegroundColor Green
 }
 
-$appSolution = Join-Path $Sources 'win32\msvc2022\Scribus.sln'
-Write-Host '== Building Scribus (Release|x64, v143) ==' -ForegroundColor Cyan
-Invoke-MSBuild $msbuild $appSolution (Join-Path $logsRoot 'scribus-release-x64.log') @(
-    "/p:SCRIBUS_LIB_ROOT=$kitRoot",
-    "/p:QT6_DIR=$QtDir"
-)
+if ($DependencyBuildOnly) {
+    Write-Host 'Dependency build is complete.' -ForegroundColor Green
+    exit 0
+}
 
+$appSolution = Join-Path $Sources 'win32\msvc2022\Scribus.sln'
 $scribusExe = Join-Path $buildRoot 'Scribus.exe'
+if (-not $SkipApplicationBuild) {
+    Write-Host '== Building Scribus (Release|x64, v143) ==' -ForegroundColor Cyan
+    Invoke-MSBuild $msbuild $appSolution (Join-Path $logsRoot 'scribus-release-x64.log') @(
+        "/p:SCRIBUS_LIB_ROOT=$kitRoot",
+        "/p:QT6_DIR=$QtDir"
+    )
+} else {
+    Write-Host '  Scribus application build skipped by request.' -ForegroundColor Yellow
+}
+
 if (-not (Test-Path -LiteralPath $scribusExe -PathType Leaf)) {
     throw "MSBuild completed but did not produce $scribusExe"
+}
+
+if ($ApplicationBuildOnly) {
+    Write-Host "Scribus application build is complete: $scribusExe" -ForegroundColor Green
+    exit 0
 }
 
 Write-Host '== Installing third-party runtimes into the build tree ==' -ForegroundColor Cyan

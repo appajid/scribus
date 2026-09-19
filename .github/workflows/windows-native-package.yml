@@ -31,7 +31,8 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Restore verified Qt 6.11.2 SDK
-        uses: actions/cache@v4
+        id: qt-cache
+        uses: actions/cache/restore@v4
         with:
           path: C:\Qt\6.11.2\msvc2022_64
           key: qt-6.11.2-msvc2022-x64-20260813-v1
@@ -40,8 +41,16 @@ jobs:
         shell: pwsh
         run: .\win32\ci\install-qt.ps1 -InstallRoot 'C:\Qt\6.11.2\msvc2022_64'
 
+      - name: Save verified Qt 6.11.2 SDK
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: C:\Qt\6.11.2\msvc2022_64
+          key: qt-6.11.2-msvc2022-x64-20260813-v1
+
       - name: Restore compiled Scribus dependencies
-        uses: actions/cache@v4
+        id: dependency-cache
+        uses: actions/cache/restore@v4
         with:
           path: C:\scribus-deps
           key: scribus-libs-msvc2022-release-x64-20260412-v1
@@ -50,7 +59,8 @@ jobs:
         shell: pwsh
         run: choco install nsis --yes --no-progress
 
-      - name: Build, package, and test Scribus
+      - name: Build Scribus dependencies
+        if: steps.dependency-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           .\win32\ci\build-package.ps1 `
@@ -59,6 +69,53 @@ jobs:
             -DependencyRoot $env:SCRIBUS_DEPENDENCY_ROOT `
             -Version $env:SCRIBUS_VERSION `
             -MaximumCpuCount 2 `
+            -DependencyBuildOnly
+
+      - name: Save compiled Scribus dependencies
+        if: steps.dependency-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: C:\scribus-deps
+          key: scribus-libs-msvc2022-release-x64-20260412-v1
+
+      - name: Restore compiled Scribus application
+        id: application-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}\..\Scribus-builds\Scribus-Release-x64-v143
+          key: scribus-app-msvc2022-release-x64-${{ hashFiles('scribus/**', 'win32/msvc2022/**') }}-v1
+
+      - name: Build Scribus application
+        if: steps.application-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          .\win32\ci\build-package.ps1 `
+            -Sources $env:GITHUB_WORKSPACE `
+            -QtDir $env:QT_ROOT_DIR `
+            -DependencyRoot $env:SCRIBUS_DEPENDENCY_ROOT `
+            -Version $env:SCRIBUS_VERSION `
+            -MaximumCpuCount 2 `
+            -SkipDependencyBuild `
+            -ApplicationBuildOnly
+
+      - name: Save compiled Scribus application
+        if: steps.application-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}\..\Scribus-builds\Scribus-Release-x64-v143
+          key: scribus-app-msvc2022-release-x64-${{ hashFiles('scribus/**', 'win32/msvc2022/**') }}-v1
+
+      - name: Package and test Scribus
+        shell: pwsh
+        run: |
+          .\win32\ci\build-package.ps1 `
+            -Sources $env:GITHUB_WORKSPACE `
+            -QtDir $env:QT_ROOT_DIR `
+            -DependencyRoot $env:SCRIBUS_DEPENDENCY_ROOT `
+            -Version $env:SCRIBUS_VERSION `
+            -MaximumCpuCount 2 `
+            -SkipDependencyBuild `
+            -SkipApplicationBuild `
             -TestInstaller
 
       - name: Upload Windows test applications
@@ -76,6 +133,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Scribus-${{ env.SCRIBUS_VERSION }}-Windows-x64-build-logs
-          path: Scribus-builds/logs/*.log
+          path: ${{ github.workspace }}\..\Scribus-builds\logs\*.log
           if-no-files-found: warn
           retention-days: 14

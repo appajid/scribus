@@ -18,8 +18,10 @@ one artifact containing:
   Scribus-2.0.0-win64.zip
   Scribus-2.0.0-Setup.exe
 
-The dependency build is cached. The first run is therefore much slower than
-later runs. Artifacts are retained for 14 days.
+The verified Qt SDK, dependency build, and application build are cached after
+their individual stages. The first run is therefore much slower than later
+runs, and a packaging failure does not force a full recompile. Artifacts are
+retained for 14 days.
 
 Qt is downloaded from Qt's official online repository by install-qt.ps1. The
 script pins the MSVC 2022 package revision and verifies each archive against
@@ -66,4 +68,5 @@ validate-package.ps1 rejects a package when it finds any of these problems:
   * silent installation, installed-app startup, or uninstall fails
 
 The installer smoke test uses a temporary directory and removes it after the
-test. Build logs are written to Scribus-builds\logs.
+test. As expected by the Visual Studio projects, build output and logs are
+written to the Scribus-builds directory beside the Scribus source directory.

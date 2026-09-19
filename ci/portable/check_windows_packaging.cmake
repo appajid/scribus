@@ -37,6 +37,10 @@ endfunction()
 require_text("${WORKFLOW}" "runs-on: windows-2022" "native Windows runner")
 require_text("${WORKFLOW}" "install-qt.ps1" "verified Qt installer")
 require_text("${WORKFLOW}" "qt-6.11.2-msvc2022-x64-20260813-v1" "pinned Qt cache")
+require_text("${WORKFLOW}" "actions/cache/save@v4" "successful-stage cache persistence")
+require_text("${WORKFLOW}" "-DependencyBuildOnly" "separate dependency build stage")
+require_text("${WORKFLOW}" "-ApplicationBuildOnly" "separate application build stage")
+require_text("${WORKFLOW}" "-SkipApplicationBuild" "package-only stage")
 require_text("${WORKFLOW}" "-TestInstaller" "installer smoke test")
 require_text("${QT_INSTALLER}"
 	"download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6112"
@@ -48,6 +52,7 @@ require_text("${BUILDER}"
 	"pinned dependency archive checksum")
 require_text("${BUILDER}" "scribus-libs-msvc2022.sln" "Visual Studio 2022 dependency solution")
 require_text("${BUILDER}" "/p:WindowsTargetPlatformVersion=10.0" "Windows 10 SDK retargeting")
+require_text("${BUILDER}" "Split-Path -LiteralPath $Sources -Parent" "sibling Visual Studio output directory")
 require_text("${VALIDATOR}" "Assert-X64PE" "x64 PE validation")
 require_text("${VALIDATOR}" "python\\python313.dll" "bundled Python validation")
 require_text("${VALIDATOR}" "qtplugins\\platforms\\qwindows.dll" "Qt Windows platform validation")
