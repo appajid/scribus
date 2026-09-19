@@ -1,6 +1,9 @@
 name: Windows native package
 
 on:
+  push:
+    branches:
+      - codex/windows-test-package
   workflow_dispatch:
 
 permissions:
