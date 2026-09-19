@@ -125,8 +125,8 @@ foreach ($directory in @(
     'plugins',
     'python\lib',
     'share\poppler',
-    'share\scribus\icons',
-    'share\scribus\templates'
+    'share\icons',
+    'share\templates'
 )) {
     Assert-Directory $AppDir $directory
 }
