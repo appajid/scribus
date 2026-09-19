@@ -15,6 +15,7 @@ Layout
               *.dll                     Qt6 + 3rd-party runtime DLLs
               qtplugins\                Qt platform/plugin DLLs (from windeployqt)
               plugins\                  Scribus import/export + tool plugins
+              python\                   Bundled Python runtime for Scripter
               libs\                     scribus support dlls/lib
               share\                    resources, icons, translations, fonts,
                                         colour profiles, templates

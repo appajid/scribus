@@ -1,0 +1,76 @@
+name: Windows native package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-native-package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows-x64:
+    name: Windows x64 / Qt 6.11.2 / MSVC 2022
+    runs-on: windows-2022
+    timeout-minutes: 360
+
+    env:
+      SCRIBUS_VERSION: 2.0.0
+      SCRIBUS_DEPENDENCY_ROOT: C:\scribus-deps
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Qt 6.11.2
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.11.2
+          arch: win64_msvc2022_64
+          modules: qt5compat
+          cache: true
+
+      - name: Restore compiled Scribus dependencies
+        uses: actions/cache@v4
+        with:
+          path: C:\scribus-deps
+          key: scribus-libs-msvc2022-release-x64-20260412-v1
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+
+      - name: Build, package, and test Scribus
+        shell: pwsh
+        run: |
+          .\win32\ci\build-package.ps1 `
+            -Sources $env:GITHUB_WORKSPACE `
+            -QtDir $env:QT_ROOT_DIR `
+            -DependencyRoot $env:SCRIBUS_DEPENDENCY_ROOT `
+            -Version $env:SCRIBUS_VERSION `
+            -MaximumCpuCount 2 `
+            -TestInstaller
+
+      - name: Upload Windows test applications
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scribus-${{ env.SCRIBUS_VERSION }}-Windows-x64
+          path: |
+            win32/deploy/dist/Scribus-${{ env.SCRIBUS_VERSION }}-win64.zip
+            win32/installer/dist/Scribus-${{ env.SCRIBUS_VERSION }}-Setup.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scribus-${{ env.SCRIBUS_VERSION }}-Windows-x64-build-logs
+          path: Scribus-builds/logs/*.log
+          if-no-files-found: warn
+          retention-days: 14

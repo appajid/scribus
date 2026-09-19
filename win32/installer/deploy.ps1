@@ -200,7 +200,7 @@ Copy-Item -LiteralPath (Join-Path $BuildRoot 'Scribus.exe') -Destination $StageD
 Get-ChildItem -LiteralPath $BuildRoot -Filter '*.dll' -File -ErrorAction SilentlyContinue |
     Copy-Item -Destination $StageDir
 
-foreach ($sub in @('libs', 'plugins', 'share')) {
+foreach ($sub in @('libs', 'plugins', 'python', 'share')) {
     $src = Join-Path $BuildRoot $sub
     if (Test-Path -LiteralPath $src) {
         Copy-Item -LiteralPath $src -Destination $StageDir -Recurse
@@ -263,9 +263,15 @@ if (-not $SkipWindeploy -and $Script:WindeployAvailable) {
 if (-not $SkipNsis -and $Makensis) {
     Write-Host "== Building NSIS installer ==" -ForegroundColor Cyan
     New-Item -ItemType Directory -LiteralPath $DistDir -Force | Out-Null
-    & $Makensis "/DVERSION=$Version" (Join-Path $ScriptDir 'Scribus.nsi')
-    if ($LASTEXITCODE -ne 0) {
-        throw "makensis failed with exit code $LASTEXITCODE."
+    Push-Location $ScriptDir
+    try {
+        & $Makensis "/DVERSION=$Version" 'Scribus.nsi'
+        if ($LASTEXITCODE -ne 0) {
+            throw "makensis failed with exit code $LASTEXITCODE."
+        }
+    }
+    finally {
+        Pop-Location
     }
     $installer = Join-Path $DistDir "Scribus-$Version-Setup.exe"
     if (Test-Path -LiteralPath $installer) {

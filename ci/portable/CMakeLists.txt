@@ -64,3 +64,8 @@ add_test(NAME windows_project_sources
 	COMMAND "${CMAKE_COMMAND}"
 		-DSCRIBUS_ROOT=${SCRIBUS_ROOT}
 		-P "${CMAKE_CURRENT_LIST_DIR}/check_windows_projects.cmake")
+
+add_test(NAME windows_packaging_contract
+	COMMAND "${CMAKE_COMMAND}"
+		-DSCRIBUS_ROOT=${SCRIBUS_ROOT}
+		-P "${CMAKE_CURRENT_LIST_DIR}/check_windows_packaging.cmake")

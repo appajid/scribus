@@ -55,8 +55,9 @@ What the installer does
 -----------------------
   * Installs to C:\Program Files\Scribus <version> (by default)
   * Installs Scribus.exe, all Qt runtime DLLs + Qt plugins (qtplugins\),
-    the Scribus plugins (plugins\), support files (libs\) and all resources,
-    translations, fonts, colour profiles, templates under share\
+    the Scribus plugins (plugins\), bundled Python runtime (python\), support
+    files (libs\) and all resources, translations, fonts, colour profiles,
+    templates under share\
   * Creates Start Menu and (optional) desktop shortcuts
   * Optionally registers the .sla / .sla.gz file associations
   * Registers an Add/Remove Programs entry with a full uninstaller
@@ -78,6 +79,6 @@ Troubleshooting
 Manual staging (optional)
 -------------------------
 For advanced use, place a ready-made application tree into app\ (Scribus.exe,
-runtime DLLs, qtplugins\, plugins\, libs\, share\...) and run directly:
+runtime DLLs, qtplugins\, plugins\, python\, libs\, share\...) and run directly:
 
     makensis /DVERSION=2.0.0 Scribus.nsi

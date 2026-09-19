@@ -174,7 +174,7 @@ if (-not $ZipOnly) {
     Get-ChildItem -LiteralPath $BuildRoot -Filter '*.dll' -File -ErrorAction SilentlyContinue |
         Copy-Item -Destination $AppDir
 
-    foreach ($sub in @('libs', 'plugins', 'share')) {
+    foreach ($sub in @('libs', 'plugins', 'python', 'share')) {
         $src = Join-Path $BuildRoot $sub
         if (Test-Path -LiteralPath $src) {
             Copy-Item -LiteralPath $src -Destination $AppDir -Recurse
