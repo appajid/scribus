@@ -5,10 +5,17 @@ a copyright and/or license notice that predates the release of Scribus 1.3.2
 for which a new license (GPL+exception) is in place.
 */
 
+#include <QFileInfo>
 #include <QQueue>
 
 #include "cmdmani.h"
 #include "cmdutil.h"
+#include "embeddedimageextractor.h"
+#include "filewatcher.h"
+#include "imagealphacontour.h"
+#include "imagecmykbatch.h"
+#include "imagecmykconversion.h"
+#include "imagelinkreplacement.h"
 #include "pyesstring.h"
 #include "scribuscore.h"
 #include "scribusdoc.h"
@@ -60,6 +67,261 @@ PyObject *scribus_relinkimage(PyObject* /* self */, PyObject* args)
 	}
 
 	return PyBool_FromLong(item->relinkImage(QString::fromUtf8(image.c_str()), false));
+}
+
+PyObject *scribus_replaceimagelinks(PyObject* /* self */, PyObject* args)
+{
+	PyESString source;
+	PyESString replacement;
+	PyESString scopeName;
+	int dryRun = 0;
+	if (!PyArg_ParseTuple(args, "eses|pes", "utf-8", source.ptr(), "utf-8", replacement.ptr(),
+		&dryRun, "utf-8", scopeName.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	const QString scope = QString::fromUtf8(scopeName.c_str());
+	ImageLinkReplacementScope replacementScope = ImageLinkReplacementScope::EntireDocument;
+	if (scope == QLatin1String("page"))
+		replacementScope = ImageLinkReplacementScope::CurrentPage;
+	else if (scope == QLatin1String("masters"))
+		replacementScope = ImageLinkReplacementScope::MasterPages;
+	else if (!scope.isEmpty() && scope != QLatin1String("document"))
+	{
+		PyErr_SetString(PyExc_ValueError, "scope must be document, page or masters");
+		return nullptr;
+	}
+	const ImageLinkReplacementResult result = replaceImageLinks(ScCore->primaryMainWindow()->doc,
+		QString::fromUtf8(source.c_str()), QString::fromUtf8(replacement.c_str()),
+		replacementScope, dryRun != 0);
+	return Py_BuildValue("(iii)", result.matched, result.replaced, result.failed);
+}
+
+PyObject *scribus_generateimagealphacontour(PyObject* /* self */, PyObject* args)
+{
+	int threshold = 128;
+	double padding = 0.0;
+	int enableWrap = 1;
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "|idpes", &threshold, &padding, &enableWrap, "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	QString error;
+	if (!generateImageAlphaContour(item, threshold, padding, enableWrap != 0, &error))
+	{
+		PyErr_SetString(ScribusException, error.toUtf8().constData());
+		return nullptr;
+	}
+	Py_RETURN_TRUE;
+}
+
+PyObject *scribus_generateimagecontour(PyObject* /* self */, PyObject* args)
+{
+	const char* sourceName = "alpha";
+	ImageContourOptions options;
+	int wrap = 1;
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "|sididpes", &sourceName, &options.threshold,
+		&options.padding, &options.smoothing, &options.simplification,
+		&wrap, "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	const QString source = QString::fromUtf8(sourceName).toLower();
+	if (source == QLatin1String("alpha"))
+		options.source = ImageContourSource::Alpha;
+	else if (source == QLatin1String("clip"))
+		options.source = ImageContourSource::ImageClippingPath;
+	else if (source == QLatin1String("luminance"))
+		options.source = ImageContourSource::Luminance;
+	else if (source == QLatin1String("edge"))
+		options.source = ImageContourSource::ContrastEdge;
+	else
+	{
+		PyErr_SetString(PyExc_ValueError, "source must be alpha, clip, luminance or edge");
+		return nullptr;
+	}
+	options.enableWrap = wrap != 0;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	QString error;
+	if (!generateImageContour(item, options, &error))
+	{
+		PyErr_SetString(ScribusException, error.toUtf8().constData());
+		return nullptr;
+	}
+	Py_RETURN_TRUE;
+}
+
+PyObject *scribus_exportimageascmykcopy(PyObject* /* self */, PyObject* args)
+{
+	PyESString destination;
+	PyESString name;
+	int relink = 0;
+	if (!PyArg_ParseTuple(args, "es|esp", "utf-8", destination.ptr(), "utf-8", name.ptr(), &relink))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem* item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (!item)
+		return nullptr;
+	if (!item->isImageFrame() || item->isLatexFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Target is not an image frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (relink && item->isImageInline())
+	{
+		PyErr_SetString(ScribusException, QObject::tr("Embedded images cannot be relinked by this export.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	const QString destinationPath = QFileInfo(QString::fromUtf8(destination.c_str())).absoluteFilePath();
+	QString error;
+	if (!exportImageAsCMYKCopy(item, destinationPath, &error))
+	{
+		PyErr_SetString(ScribusException, error.toUtf8().constData());
+		return nullptr;
+	}
+	if (relink && !item->relinkImage(destinationPath, false, true))
+		Py_RETURN_FALSE;
+	Py_RETURN_TRUE;
+}
+
+PyObject *scribus_batchexportimagesascmyk(PyObject* /* self */, PyObject* args)
+{
+	PyESString directory;
+	PyESString sourceProfile;
+	PyESString destinationProfile;
+	int intent = -1;
+	int blackPoint = -1;
+	int backup = 1;
+	int relink = 0;
+	int dryRun = 0;
+	if (!PyArg_ParseTuple(args, "es|esesiippp", "utf-8", directory.ptr(),
+		"utf-8", sourceProfile.ptr(), "utf-8", destinationProfile.ptr(),
+		&intent, &blackPoint, &backup, &relink, &dryRun))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	if (intent < -1 || intent > 3 || blackPoint < -1 || blackPoint > 1)
+	{
+		PyErr_SetString(PyExc_ValueError, "Invalid rendering intent or black-point compensation value");
+		return nullptr;
+	}
+	ImageCMYKBatchOptions options;
+	options.color.sourceProfileName = QString::fromUtf8(sourceProfile.c_str());
+	options.color.destinationProfileName = QString::fromUtf8(destinationProfile.c_str());
+	if (intent >= 0)
+		options.color.renderingIntent = static_cast<eRenderIntent>(intent);
+	if (blackPoint >= 0)
+		options.color.blackPointCompensation = blackPoint != 0;
+	options.copyOriginals = backup != 0;
+	options.relink = relink != 0;
+	options.dryRun = dryRun != 0;
+	const ImageCMYKBatchResult result = runImageCMYKBatch(ScCore->primaryMainWindow()->doc,
+		QFileInfo(QString::fromUtf8(directory.c_str())).absoluteFilePath(), options);
+	if (!result.error.isEmpty())
+	{
+		PyErr_SetString(ScribusException, result.error.toUtf8().constData());
+		return nullptr;
+	}
+	return Py_BuildValue("(iiiis)", result.ready, result.exported, result.relinked,
+		result.failed, result.reportPath.toUtf8().constData());
+}
+
+PyObject *scribus_embedimage(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "|es", "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem *item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (item == nullptr)
+		return nullptr;
+	if (!item->isImageFrame() || item->isLatexFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Target is not an image frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (item->isImageInline())
+		Py_RETURN_TRUE;
+	if (!item->imageIsAvailable || item->Pfile.isEmpty())
+		Py_RETURN_FALSE;
+
+	const QString oldPath = item->Pfile;
+	if (ScCore->fileWatcher->isWatching(oldPath))
+		ScCore->fileWatcher->removeFile(oldPath);
+	item->makeImageInline();
+	if (!item->isImageInline())
+	{
+		ScCore->fileWatcher->addFile(oldPath);
+		Py_RETURN_FALSE;
+	}
+
+	ScCore->fileWatcher->addFile(item->Pfile);
+	const bool flipHorizontal = item->imageFlippedH();
+	const bool flipVertical = item->imageFlippedV();
+	ScCore->primaryMainWindow()->doc->loadPict(item->Pfile, item, true);
+	item->setImageFlippedH(flipHorizontal);
+	item->setImageFlippedV(flipVertical);
+	Py_RETURN_TRUE;
+}
+
+PyObject *scribus_extractembeddedimage(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	PyESString destination;
+	int relink = 0;
+	int overwrite = 0;
+	if (!PyArg_ParseTuple(args, "es|ppes", "utf-8", destination.ptr(), &relink, &overwrite, "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem *item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (item == nullptr)
+		return nullptr;
+	if (!item->isImageFrame() || item->isLatexFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Target is not an image frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	if (!item->isImageInline() || !item->imageIsAvailable)
+		Py_RETURN_FALSE;
+
+	const QString destinationPath = QFileInfo(QString::fromUtf8(destination.c_str())).absoluteFilePath();
+	QString error;
+	if (!copyEmbeddedImageBytes(item->Pfile, destinationPath, overwrite != 0, &error))
+	{
+		PyErr_SetString(ScribusException, error.toUtf8().constData());
+		return nullptr;
+	}
+	if (relink && !item->relinkExtractedImage(destinationPath, false))
+		Py_RETURN_FALSE;
+	Py_RETURN_TRUE;
+}
+
+PyObject *scribus_isimageembedded(PyObject* /* self */, PyObject* args)
+{
+	PyESString name;
+	if (!PyArg_ParseTuple(args, "|es", "utf-8", name.ptr()))
+		return nullptr;
+	if (!checkHaveDocument())
+		return nullptr;
+	PageItem *item = GetUniqueItem(QString::fromUtf8(name.c_str()));
+	if (item == nullptr)
+		return nullptr;
+	if (!item->isImageFrame() || item->isLatexFrame())
+	{
+		PyErr_SetString(WrongFrameTypeError, QObject::tr("Target is not an image frame.", "python error").toUtf8().constData());
+		return nullptr;
+	}
+	return PyBool_FromLong(item->isImageInline());
 }
 
 PyObject *scribus_scaleimage(PyObject* /* self */, PyObject* args)

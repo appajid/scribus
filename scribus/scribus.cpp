@@ -184,6 +184,7 @@ for which a new license (GPL+exception) is in place.
 #include "ui/edittoolbar.h"
 #include "ui/effectsdialog.h"
 #include "ui/filetoolbar.h"
+#include "ui/fontreplacedialog.h"
 #include "ui/guidemanager.h"
 #include "ui/helpbrowser.h"
 #include "ui/hruler.h"
@@ -1350,6 +1351,8 @@ void ScribusMainWindow::initMenuBar()
 	scrMenuMgr->addMenuItemString("itemUpdateMarks", "Extras");
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Extras");
 	scrMenuMgr->addMenuItemString("extrasManageImages", "Extras");
+	scrMenuMgr->addMenuItemString("extrasReplaceFonts", "Extras");
+	scrMenuMgr->addMenuItemString("extrasConvertRGBColors", "Extras");
 	scrMenuMgr->addMenuItemString("SEPARATOR", "Extras");
 	scrMenuMgr->addMenuItemString("extrasUpdateDocument", "Extras");
 //	Disabled for release as it does nothing useful
@@ -2443,6 +2446,8 @@ void ScribusMainWindow::extrasMenuAboutToShow()
 		}
 	}
 	scrActions["extrasManageImages"]->setEnabled(enablePicManager);
+	scrActions["extrasReplaceFonts"]->setEnabled(HaveDoc);
+	scrActions["extrasConvertRGBColors"]->setEnabled(HaveDoc);
 }
 
 void ScribusMainWindow::newActWin(QMdiSubWindow *w)
@@ -8518,6 +8523,53 @@ void ScribusMainWindow::StatusPic()
 	connect(dia, SIGNAL(selectElementByItem(PageItem*,bool,int)), this, SLOT(selectItemsFromOutlines(PageItem*,bool,int)));
 	dia->exec();
 	delete dia;
+}
+
+void ScribusMainWindow::replaceDocumentFonts()
+{
+	if (!HaveDoc || !doc)
+		return;
+
+	DocumentFontReplacementDialog dialog(this, doc, doc->documentFontNames());
+	if (dialog.exec() != QDialog::Accepted)
+		return;
+	if (!doc->replaceDocumentFont(dialog.sourceFont(), dialog.replacementFont()))
+	{
+		ScMessageBox::warning(this, tr("Replace Fonts"),
+			tr("The font could not be replaced. Choose a different installed font and try again."));
+	}
+}
+
+void ScribusMainWindow::convertRGBColorsToCMYK()
+{
+	if (!HaveDoc || !doc)
+		return;
+	QMap<QString, ScColor> preview;
+	if (!doc->previewRGBProcessColorsToCMYK(preview))
+	{
+		ScMessageBox::warning(this, tr("Convert RGB Colors to CMYK"),
+			tr("A valid RGB and CMYK ICC profile pair is required. Check this document's color management settings."));
+		return;
+	}
+	if (preview.isEmpty())
+	{
+		ScMessageBox::information(this, tr("Convert RGB Colors to CMYK"),
+			tr("This document has no RGB process colors to convert."));
+		return;
+	}
+	RGBToCMYKDialog dialog(this, doc, preview);
+	if (dialog.exec() != QDialog::Accepted)
+		return;
+	const QStringList selectedColors = dialog.selectedColors();
+	if (selectedColors.isEmpty())
+		return;
+	if (doc->convertRGBProcessColorsToCMYK(selectedColors) < 0)
+	{
+		ScMessageBox::warning(this, tr("Convert RGB Colors to CMYK"),
+			tr("The colors could not be converted. Check the document profiles and try again."));
+		return;
+	}
+	view->DrawNew();
 }
 
 QPair<QString, uint> ScribusMainWindow::CFileDialog(const QString& workingDirectory, const QString& dialogCaption, const QString& fileFilter, const QString& defaultFilename, int optionFlags, bool *useCompression, bool *useFonts, bool *useProfiles)

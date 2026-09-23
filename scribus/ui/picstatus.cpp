@@ -24,10 +24,12 @@ for which a new license (GPL+exception) is in place.
 
 #include <QAction>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QHash>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -42,13 +44,21 @@ for which a new license (GPL+exception) is in place.
 #include <QProgressDialog>
 #include <QScopedPointer>
 #include <QSignalBlocker>
+#include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeWidget>
+#include <QVBoxLayout>
 
 #include "effectsdialog.h"
+#include "embeddedimageextractor.h"
 #include "extimageprops.h"
 #include "iconmanager.h"
+#include "imagealphacontour.h"
+#include "imagecmykconversion.h"
+#include "imagecmykbatch.h"
+#include "imagelinkreplacement.h"
 #include "imagelinkmatcher.h"
 #include "pageitem.h"
 #include "picsearch.h"
@@ -76,6 +86,8 @@ PicStatus::PicStatus(QWidget* parent, ScribusDoc *docu) : QDialog( parent )
 	imageViewArea->setIconSize(QSize(128, 128));
 	imageViewArea->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_Doc = docu;
+	m_lastExtractionDirectory = m_Doc->hasName
+		? QFileInfo(m_Doc->documentFileName()).absolutePath() : QDir::homePath();
 	setWindowIcon(IconManager::instance().loadIcon("app-icon"));
 	fillTable();
 	workTab->setCurrentIndex(0);
@@ -90,11 +102,13 @@ PicStatus::PicStatus(QWidget* parent, ScribusDoc *docu) : QDialog( parent )
 	connect(searchButton, SIGNAL(clicked()), this, SLOT(SearchPic()));
 	connect(relinkFolderButton, SIGNAL(clicked()), this, SLOT(relinkMissingImages()));
 	connect(mapFolderButton, &QPushButton::clicked, this, &PicStatus::mapMissingImageFolder);
+	connect(extractSelectedButton, &QPushButton::clicked, this, &PicStatus::extractSelectedEmbeddedImage);
+	connect(extractAllButton, &QPushButton::clicked, this, &PicStatus::extractAllEmbeddedImages);
 	connect(fileManagerButton, SIGNAL(clicked()), this, SLOT(FileManager()));
 	connect(effectsButton, SIGNAL(clicked()), this, SLOT(doImageEffects()));
 	connect(buttonLayers, SIGNAL(clicked()), this, SLOT(doImageExtProp()));
 	connect(buttonEdit, SIGNAL(clicked()), this, SLOT(doEditImage()));
-	connect(imageViewArea, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(slotRightClick()));
+	connect(imageViewArea, &QListWidget::customContextMenuRequested, this, &PicStatus::slotRightClick);
 }
 
 QPixmap PicStatus::createImgIcon(PageItem* item)
@@ -140,6 +154,8 @@ void PicStatus::enableWidgets(bool enabled)
 	effectsButton->setEnabled(enabled);
 	buttonLayers->setEnabled(enabled);
 	buttonEdit->setEnabled(enabled);
+	extractSelectedButton->setEnabled(enabled && currItem && currItem->isImageInline()
+		&& currItem->imageIsAvailable && QFileInfo::exists(currItem->Pfile));
 }
 
 void PicStatus::fillTable()
@@ -227,6 +243,7 @@ void PicStatus::fillTable()
 	}
 	relinkFolderButton->setEnabled(hasMissingImages);
 	mapFolderButton->setEnabled(hasMissingImages);
+	extractAllButton->setEnabled(!embeddedImageItems().isEmpty());
 	if (sortOrder == 0)
 		sortByName();
 	else
@@ -346,8 +363,10 @@ void PicStatus::sortByPage()
 	applyImageFilters();
 }
 
-void PicStatus::slotRightClick()
+void PicStatus::slotRightClick(const QPoint& position)
 {
+	if (QListWidgetItem* clicked = imageViewArea->itemAt(position))
+		imageViewArea->setCurrentItem(clicked);
 	QMenu *pmen = new QMenu();
 	qApp->changeOverrideCursor(QCursor(Qt::ArrowCursor));
 	QAction* Act1 = pmen->addAction( tr("Sort by Name"));
@@ -360,8 +379,295 @@ void PicStatus::slotRightClick()
 		Act2->setChecked(true);
 	connect(Act1, SIGNAL(triggered()), this, SLOT(sortByName()));
 	connect(Act2, SIGNAL(triggered()), this, SLOT(sortByPage()));
+	pmen->addSeparator();
+	QAction* replaceAll = pmen->addAction(tr("Replace All Uses of This Image..."));
+	replaceAll->setEnabled(currItem && !currItem->isImageInline() && !currItem->Pfile.isEmpty());
+	connect(replaceAll, &QAction::triggered, this, &PicStatus::replaceSelectedImageEverywhere);
+	QAction* alphaContour = pmen->addAction(tr("Generate Image Contour..."));
+	alphaContour->setEnabled(currItem && currItem->imageIsAvailable && currItem->isRaster);
+	connect(alphaContour, &QAction::triggered, this, &PicStatus::generateSelectedImageContour);
+	QAction* exportCMYK = pmen->addAction(tr("Export CMYK TIFF Copy..."));
+	exportCMYK->setEnabled(currItem && currItem->imageIsAvailable && currItem->isRaster
+		&& currItem->pixm.imgInfo.colorspace == ColorSpaceRGB && m_Doc->HasCMS
+		&& m_Doc->DocPrinterProf && m_Doc->DocPrinterProf.colorSpace() == ColorSpace_Cmyk);
+	connect(exportCMYK, &QAction::triggered, this, &PicStatus::exportSelectedCMYKCopy);
+	QAction* batchCMYK = pmen->addAction(tr("Batch Export RGB Images to CMYK..."));
+	batchCMYK->setEnabled(m_Doc->HasCMS && m_Doc->DocPrinterProf
+		&& m_Doc->DocPrinterProf.colorSpace() == ColorSpace_Cmyk);
+	connect(batchCMYK, &QAction::triggered, this, &PicStatus::batchExportCMYKCopies);
 	pmen->exec(QCursor::pos());
 	delete pmen;
+}
+
+void PicStatus::batchExportCMYKCopies()
+{
+	const QString directory = QFileDialog::getExistingDirectory(this, tr("Choose CMYK Output Folder"),
+		m_lastExtractionDirectory);
+	if (directory.isEmpty())
+		return;
+	QDialog dialog(this);
+	dialog.setWindowTitle(tr("Batch Export RGB Images to CMYK"));
+	auto* layout = new QVBoxLayout(&dialog);
+	auto* form = new QFormLayout();
+	auto* inputProfile = new QComboBox(&dialog);
+	inputProfile->addItem(tr("Each image's existing profile"), QString());
+	for (const QString& name : ScCore->InputProfiles.keys())
+		inputProfile->addItem(name, name);
+	form->addRow(tr("RGB source profile:"), inputProfile);
+	auto* outputProfile = new QComboBox(&dialog);
+	outputProfile->addItem(tr("Document CMYK output profile"), QString());
+	for (const QString& name : ScCore->PrinterProfiles.keys())
+		outputProfile->addItem(name, name);
+	form->addRow(tr("CMYK output profile:"), outputProfile);
+	auto* intent = new QComboBox(&dialog);
+	intent->addItem(tr("Document/image default"), -1);
+	intent->addItem(tr("Perceptual"), static_cast<int>(Intent_Perceptual));
+	intent->addItem(tr("Relative colorimetric"), static_cast<int>(Intent_Relative_Colorimetric));
+	intent->addItem(tr("Saturation"), static_cast<int>(Intent_Saturation));
+	intent->addItem(tr("Absolute colorimetric"), static_cast<int>(Intent_Absolute_Colorimetric));
+	form->addRow(tr("Rendering intent:"), intent);
+	auto* blackPoint = new QComboBox(&dialog);
+	blackPoint->addItem(tr("Document default"), -1);
+	blackPoint->addItem(tr("Enabled"), 1);
+	blackPoint->addItem(tr("Disabled"), 0);
+	form->addRow(tr("Black-point compensation:"), blackPoint);
+	layout->addLayout(form);
+	auto* backup = new QCheckBox(tr("Copy original images into an originals folder"), &dialog);
+	backup->setChecked(true);
+	layout->addWidget(backup);
+	auto* relink = new QCheckBox(tr("Relink eligible frames to the exported TIFFs (undoable)"), &dialog);
+	layout->addWidget(relink);
+	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+	buttons->button(QDialogButtonBox::Ok)->setText(tr("Preview and Export"));
+	layout->addWidget(buttons);
+	connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+	connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+	if (dialog.exec() != QDialog::Accepted)
+		return;
+	ImageCMYKBatchOptions options;
+	options.color.sourceProfileName = inputProfile->currentData().toString();
+	options.color.destinationProfileName = outputProfile->currentData().toString();
+	if (intent->currentData().toInt() >= 0)
+		options.color.renderingIntent = static_cast<eRenderIntent>(intent->currentData().toInt());
+	if (blackPoint->currentData().toInt() >= 0)
+		options.color.blackPointCompensation = blackPoint->currentData().toBool();
+	options.copyOriginals = backup->isChecked();
+	options.relink = relink->isChecked();
+	options.dryRun = true;
+	const ImageCMYKBatchResult preview = runImageCMYKBatch(m_Doc, directory, options);
+	if (!preview.error.isEmpty())
+	{
+		ScMessageBox::warning(this, tr("Batch CMYK Export"), preview.error);
+		return;
+	}
+	if (preview.ready == 0)
+	{
+		ScMessageBox::information(this, tr("Batch CMYK Export"), tr("No eligible RGB raster image frames were found."));
+		return;
+	}
+	if (QMessageBox::question(this, tr("Batch CMYK Export"),
+		tr("%1 image frame(s) appear eligible. %2 frame(s) will be skipped.\n\n"
+		   "Files will be written to %3. Originals will not be overwritten. Continue?")
+			.arg(preview.ready).arg(preview.entries.size() - preview.ready)
+			.arg(QDir::toNativeSeparators(directory)),
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+		return;
+	options.dryRun = false;
+	const ImageCMYKBatchResult result = runImageCMYKBatch(m_Doc, directory, options);
+	fillTable();
+	ScMessageBox::information(this, tr("Batch CMYK Export"),
+		tr("Exported: %1\nRelinked: %2\nFailed: %3\nReport: %4\n\n%5")
+			.arg(result.exported).arg(result.relinked).arg(result.failed)
+			.arg(QDir::toNativeSeparators(result.reportPath), result.error));
+}
+
+void PicStatus::replaceSelectedImageEverywhere()
+{
+	if (!currItem || currItem->isImageInline() || currItem->Pfile.isEmpty())
+		return;
+	const QString source = currItem->Pfile;
+	const QString replacement = QFileDialog::getOpenFileName(this, tr("Choose Replacement Image"),
+		QFileInfo(source).absolutePath(), tr("All Files (*)"));
+	if (replacement.isEmpty())
+		return;
+	bool scopeAccepted = false;
+	const QStringList scopes { tr("Entire document and master pages"),
+		tr("Current document page only"), tr("Master pages only") };
+	const QString chosenScope = QInputDialog::getItem(this, tr("Replacement Scope"),
+		tr("Replace links on:"), scopes, 0, false, &scopeAccepted);
+	if (!scopeAccepted)
+		return;
+	const ImageLinkReplacementScope scope = chosenScope == scopes.at(1)
+		? ImageLinkReplacementScope::CurrentPage : chosenScope == scopes.at(2)
+			? ImageLinkReplacementScope::MasterPages : ImageLinkReplacementScope::EntireDocument;
+	const ImageLinkReplacementResult preview = replaceImageLinks(m_Doc, source, replacement, scope, true);
+	if (preview.matched == 0 || QDir::cleanPath(QFileInfo(source).absoluteFilePath())
+		== QDir::cleanPath(QFileInfo(replacement).absoluteFilePath()))
+		return;
+	QString previewDetails;
+	for (const ImageLinkReplacementEntry& entry : preview.entries)
+		previewDetails += tr("Page %1: %2\n").arg(entry.page, entry.frame);
+	QMessageBox confirmation(this);
+	confirmation.setWindowTitle(tr("Replace Image Links"));
+	confirmation.setText(
+		tr("Replace %n external frame(s) linked to:\n%1\n\nWith:\n%2\n\n"
+		   "Embedded images are excluded. "
+		   "The changes can be undone together.", nullptr, preview.matched)
+			.arg(QDir::toNativeSeparators(source), QDir::toNativeSeparators(replacement)));
+	confirmation.setDetailedText(previewDetails);
+	confirmation.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+	confirmation.setDefaultButton(QMessageBox::No);
+	if (confirmation.exec() != QMessageBox::Yes)
+		return;
+	const ImageLinkReplacementResult result = replaceImageLinks(m_Doc, source, replacement, scope, false);
+	fillTable();
+	QString reportMessage;
+	if (QMessageBox::question(this, tr("Replacement Report"),
+		tr("Save a JSON report of the frames and replacement results?"),
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
+	{
+		const QString reportPath = QFileDialog::getSaveFileName(this, tr("Save Replacement Report"),
+			QFileInfo(source).absolutePath() + QDir::separator() + QStringLiteral("image-replacement-report.json"),
+			tr("JSON Report (*.json)"));
+		if (!reportPath.isEmpty() && !writeImageLinkReplacementReport(reportPath, source, replacement, result))
+			reportMessage = tr("\nThe report could not be saved.");
+	}
+	ScMessageBox::information(this, tr("Replace All Uses of This Image"),
+		tr("Matched: %1\nReplaced: %2\nCould not load: %3\n\nOriginal image files were not changed.%4")
+			.arg(result.matched).arg(result.replaced).arg(result.failed).arg(reportMessage));
+}
+
+void PicStatus::generateSelectedImageContour()
+{
+	if (!currItem || !currItem->imageIsAvailable || !currItem->isRaster)
+		return;
+	QDialog options(this);
+	options.setWindowTitle(tr("Generate Image Contour"));
+	auto* layout = new QVBoxLayout(&options);
+	auto* form = new QFormLayout();
+	auto* source = new QComboBox(&options);
+	source->addItem(tr("Transparency (alpha)"), static_cast<int>(ImageContourSource::Alpha));
+	source->addItem(tr("Embedded clipping path"), static_cast<int>(ImageContourSource::ImageClippingPath));
+	source->addItem(tr("Dark areas (luminance)"), static_cast<int>(ImageContourSource::Luminance));
+	source->addItem(tr("Contrast against corners"), static_cast<int>(ImageContourSource::ContrastEdge));
+	form->addRow(tr("Source:"), source);
+	auto* threshold = new QSpinBox(&options);
+	threshold->setRange(1, 255);
+	threshold->setValue(128);
+	threshold->setToolTip(tr("Opacity, darkness or background-contrast threshold, depending on source."));
+	form->addRow(tr("Threshold:"), threshold);
+	auto* smoothing = new QSpinBox(&options);
+	smoothing->setRange(0, 50);
+	smoothing->setSuffix(tr(" pt"));
+	form->addRow(tr("Corner smoothing:"), smoothing);
+	auto* simplification = new QDoubleSpinBox(&options);
+	simplification->setRange(0, 8);
+	simplification->setDecimals(1);
+	simplification->setToolTip(tr("Reduce source detail before tracing; 0 keeps the most detail."));
+	form->addRow(tr("Simplification:"), simplification);
+	auto* padding = new QDoubleSpinBox(&options);
+	padding->setRange(0, 1000);
+	padding->setDecimals(1);
+	padding->setSuffix(tr(" pt"));
+	padding->setToolTip(tr("Extra distance between the visible image and surrounding text."));
+	form->addRow(tr("Text clearance:"), padding);
+	layout->addLayout(form);
+	auto* preview = new QLabel(&options);
+	preview->setFixedSize(260, 205);
+	preview->setAlignment(Qt::AlignCenter);
+	layout->addWidget(preview, 0, Qt::AlignHCenter);
+	auto* wrap = new QCheckBox(tr("Enable text flow around the generated contour"), &options);
+	wrap->setChecked(true);
+	layout->addWidget(wrap);
+	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &options);
+	buttons->button(QDialogButtonBox::Ok)->setText(tr("Generate"));
+	auto currentOptions = [&]() {
+		ImageContourOptions value;
+		value.source = static_cast<ImageContourSource>(source->currentData().toInt());
+		value.threshold = threshold->value();
+		value.smoothing = smoothing->value();
+		value.simplification = simplification->value();
+		value.padding = padding->value();
+		value.enableWrap = wrap->isChecked();
+		return value;
+	};
+	auto refreshPreview = [&]() {
+		QPainterPath contour;
+		QString previewError;
+		const bool valid = buildImageContour(currItem, currentOptions(), &contour, &previewError);
+		buttons->button(QDialogButtonBox::Ok)->setEnabled(valid);
+		if (!valid)
+		{
+			preview->setPixmap(QPixmap());
+			preview->setText(previewError);
+			return;
+		}
+		QPixmap picture(preview->size());
+		picture.fill(preview->palette().window().color());
+		QPainter painter(&picture);
+		painter.setRenderHint(QPainter::Antialiasing);
+		const double scale = qMin(240.0 / currItem->width(), 180.0 / currItem->height());
+		painter.translate((picture.width() - currItem->width() * scale) / 2,
+			(picture.height() - currItem->height() * scale) / 2);
+		painter.scale(scale, scale);
+		painter.setPen(QPen(Qt::gray, 1.0 / scale));
+		painter.drawRect(QRectF(0, 0, currItem->width(), currItem->height()));
+		painter.setPen(QPen(QColor(0, 130, 160), 2.0 / scale));
+		painter.setBrush(QColor(0, 130, 160, 45));
+		painter.drawPath(contour);
+		preview->setPixmap(picture);
+	};
+	connect(source, &QComboBox::currentIndexChanged, &options, refreshPreview);
+	connect(threshold, &QSpinBox::valueChanged, &options, refreshPreview);
+	connect(smoothing, &QSpinBox::valueChanged, &options, refreshPreview);
+	connect(simplification, &QDoubleSpinBox::valueChanged, &options, refreshPreview);
+	connect(padding, &QDoubleSpinBox::valueChanged, &options, refreshPreview);
+	refreshPreview();
+	connect(buttons, &QDialogButtonBox::accepted, &options, &QDialog::accept);
+	connect(buttons, &QDialogButtonBox::rejected, &options, &QDialog::reject);
+	layout->addWidget(buttons);
+	if (options.exec() != QDialog::Accepted)
+		return;
+	QString error;
+	if (!generateImageContour(currItem, currentOptions(), &error))
+		ScMessageBox::warning(this, tr("Generate Image Contour"), error);
+	else
+		fillTable();
+}
+
+void PicStatus::exportSelectedCMYKCopy()
+{
+	if (!currItem || !currItem->imageIsAvailable || !currItem->isRaster
+		|| currItem->pixm.imgInfo.colorspace != ColorSpaceRGB || !m_Doc->HasCMS
+		|| !m_Doc->DocPrinterProf || m_Doc->DocPrinterProf.colorSpace() != ColorSpace_Cmyk)
+		return;
+
+	const QFileInfo sourceInfo(currItem->Pfile);
+	const QString suggestedPath = sourceInfo.absolutePath() + QDir::separator()
+		+ sourceInfo.completeBaseName() + QStringLiteral("-CMYK.tif");
+	const QString destination = QFileDialog::getSaveFileName(this, tr("Export CMYK TIFF Copy"),
+		suggestedPath, tr("TIFF Image (*.tif *.tiff)"));
+	if (destination.isEmpty())
+		return;
+	QString error;
+	if (!exportImageAsCMYKCopy(currItem, destination, &error))
+	{
+		ScMessageBox::warning(this, tr("Export CMYK TIFF Copy"), error);
+		return;
+	}
+	if (!currItem->isImageInline()
+		&& QMessageBox::question(this, tr("Export CMYK TIFF Copy"),
+			tr("Relink this frame to the new CMYK TIFF? The original file is kept, and the relink can be undone."),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
+	{
+		if (!loadPict(currItem, destination, true, true))
+			ScMessageBox::warning(this, tr("Export CMYK TIFF Copy"),
+				tr("The CMYK TIFF was saved, but the frame could not be relinked. Its original image remains in place."));
+		fillTable();
+		return;
+	}
+	ScMessageBox::information(this, tr("Export CMYK TIFF Copy"),
+		tr("CMYK TIFF saved. The original image and this frame's link were not changed."));
 }
 
 void PicStatus::newImageSelected()
@@ -538,13 +844,14 @@ void PicStatus::SelectPic()
 	emit selectElementByItem(currItem, true, 1);
 }
 
-bool PicStatus::loadPict(PageItem* item, const QString & newFilePath, bool showMsg)
+bool PicStatus::loadPict(PageItem* item, const QString & newFilePath, bool showMsg,
+	bool useNewEmbeddedProfile)
 {
 	bool masterPageMode = !item->OnMasterPage.isEmpty();
 	bool oldMasterPageMode = m_Doc->masterPageMode();
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(masterPageMode);
-	const bool loaded = item->relinkImage(newFilePath, showMsg);
+	const bool loaded = item->relinkImage(newFilePath, showMsg, useNewEmbeddedProfile);
 	if (masterPageMode != oldMasterPageMode)
 		m_Doc->setMasterPageMode(oldMasterPageMode);
 	return loaded;
@@ -558,6 +865,148 @@ void PicStatus::relinkMissingImages()
 void PicStatus::mapMissingImageFolder()
 {
 	relinkMissingImagesFromFolder(true);
+}
+
+QList<PageItem*> PicStatus::embeddedImageItems() const
+{
+	QList<PageItem*> items;
+	for (int i = 0; i < imageViewArea->count(); ++i)
+	{
+		const auto *imageItem = static_cast<PicItem*>(imageViewArea->item(i));
+		PageItem *pageItem = imageItem->PageItemObject;
+		if (pageItem && pageItem->isImageInline() && pageItem->imageIsAvailable
+			&& QFileInfo::exists(pageItem->Pfile))
+			items.append(pageItem);
+	}
+	return items;
+}
+
+void PicStatus::extractSelectedEmbeddedImage()
+{
+	if (!currItem || !currItem->isImageInline() || !currItem->imageIsAvailable
+		|| !QFileInfo::exists(currItem->Pfile))
+		return;
+
+	const QString defaultName = suggestedEmbeddedImageFileName(currItem->itemName(), currItem->Pfile, 1);
+	const QString destination = QFileDialog::getSaveFileName(this, tr("Extract Embedded Image"),
+		QDir(m_lastExtractionDirectory).filePath(defaultName), tr("All Files (*)"));
+	if (destination.isEmpty())
+		return;
+	m_lastExtractionDirectory = QFileInfo(destination).absolutePath();
+
+	QString error;
+	if (!copyEmbeddedImageBytes(currItem->Pfile, destination, true, &error))
+	{
+		ScMessageBox::warning(this, tr("Extract Embedded Image"), error);
+		return;
+	}
+
+	const auto relink = QMessageBox::question(this, tr("Extract Embedded Image"),
+		tr("The embedded image was extracted successfully.\n\n"
+		   "Relink this frame to the extracted file? The relinking can be undone without deleting the extracted file."),
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+	if (relink == QMessageBox::Yes && !currItem->relinkExtractedImage(destination))
+	{
+		ScMessageBox::warning(this, tr("Extract Embedded Image"),
+			tr("The image was extracted, but the frame could not be relinked. It remains embedded."));
+		return;
+	}
+	fillTable();
+}
+
+void PicStatus::extractAllEmbeddedImages()
+{
+	const QList<PageItem*> images = embeddedImageItems();
+	if (images.isEmpty())
+		return;
+
+	const QString directory = QFileDialog::getExistingDirectory(this, tr("Extract All Embedded Images"),
+		m_lastExtractionDirectory);
+	if (directory.isEmpty())
+		return;
+	m_lastExtractionDirectory = directory;
+
+	QDialog options(this);
+	options.setWindowTitle(tr("Extract All Embedded Images"));
+	auto *layout = new QVBoxLayout(&options);
+	auto *description = new QLabel(tr("Extract %n embedded image(s) to:\n%1", nullptr, images.size())
+		.arg(QDir::toNativeSeparators(directory)), &options);
+	description->setWordWrap(true);
+	layout->addWidget(description);
+	auto *conflictLabel = new QLabel(tr("If a filename already exists:"), &options);
+	layout->addWidget(conflictLabel);
+	auto *conflictBox = new QComboBox(&options);
+	conflictBox->setAccessibleName(tr("Existing file handling"));
+	conflictBox->addItem(tr("Keep both files (add a number)"), static_cast<int>(ImageExtractionConflict::KeepBoth));
+	conflictBox->addItem(tr("Skip the embedded image"), static_cast<int>(ImageExtractionConflict::Skip));
+	conflictBox->addItem(tr("Replace the existing file"), static_cast<int>(ImageExtractionConflict::Replace));
+	layout->addWidget(conflictBox);
+	auto *relinkBox = new QCheckBox(tr("Relink frames to the extracted files"), &options);
+	relinkBox->setToolTip(tr("Relinking is grouped into one undo step. Undo does not delete extracted files."));
+	layout->addWidget(relinkBox);
+	auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &options);
+	buttons->button(QDialogButtonBox::Ok)->setText(tr("Extract"));
+	connect(buttons, &QDialogButtonBox::accepted, &options, &QDialog::accept);
+	connect(buttons, &QDialogButtonBox::rejected, &options, &QDialog::reject);
+	layout->addWidget(buttons);
+	if (options.exec() != QDialog::Accepted)
+		return;
+
+	const auto conflict = static_cast<ImageExtractionConflict>(conflictBox->currentData().toInt());
+	const bool relinkFrames = relinkBox->isChecked();
+	QSet<QString> reservedPaths;
+	UndoTransaction transaction;
+	if (relinkFrames && UndoManager::undoEnabled())
+		transaction = UndoManager::instance()->beginTransaction(Um::SelectionGroup, Um::IGroup,
+			tr("Relink extracted images"), QString(), Um::IGetImage);
+
+	int extracted = 0;
+	int relinked = 0;
+	int relinkFailed = 0;
+	int renamed = 0;
+	int skipped = 0;
+	int failed = 0;
+	for (int i = 0; i < images.size(); ++i)
+	{
+		PageItem *pageItem = images.at(i);
+		const QString fileName = suggestedEmbeddedImageFileName(pageItem->itemName(), pageItem->Pfile, i + 1);
+		const ImageExtractionPath output = resolveImageExtractionPath(directory, fileName, conflict, &reservedPaths);
+		if (output.skipped)
+		{
+			++skipped;
+			continue;
+		}
+		QString error;
+		if (!copyEmbeddedImageBytes(pageItem->Pfile, output.path,
+			conflict == ImageExtractionConflict::Replace, &error))
+		{
+			++failed;
+			continue;
+		}
+		++extracted;
+		if (output.renamed)
+			++renamed;
+		if (relinkFrames)
+		{
+			if (pageItem->relinkExtractedImage(output.path, false))
+				++relinked;
+			else
+				++relinkFailed;
+		}
+	}
+	if (transaction)
+	{
+		if (relinked > 0)
+			transaction.commit();
+		else
+			transaction.cancel();
+	}
+
+	fillTable();
+	ScMessageBox::information(this, tr("Extract All Embedded Images"),
+		tr("Extracted: %1\nRelinked: %2\nRenamed to avoid conflicts: %3\nSkipped: %4\nFailed to extract: %5\nFailed to relink: %6\n\n"
+		   "Undoing relinking will not delete extracted files.")
+			.arg(extracted).arg(relinked).arg(renamed).arg(skipped).arg(failed).arg(relinkFailed));
 }
 
 void PicStatus::relinkMissingImagesFromFolder(bool mapFolder)

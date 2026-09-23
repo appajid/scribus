@@ -787,6 +787,7 @@ public: // Start public functions
 	void setInlineData(const QByteArray& data, const QString& ext);
 	void makeImageInline();
 	void makeImageExternal(const QString& path);
+	bool relinkExtractedImage(const QString& path, bool showMsg = true);
 
 	//Text Data - Move to PageItem_TextFrame at some point? --- no, to FrameStyle, av
 	double textToFrameDistLeft() const { return m_textDistanceMargins.left(); }
@@ -1268,9 +1269,11 @@ public: // Start public functions
 	 *
 	 * The operation is failure-safe and undoable. Embedded images are deliberately
 	 * excluded because relinking them would also change their storage mode.
+	 * Set useNewEmbeddedProfile only when the replacement is known to contain a
+	 * valid ICC profile; undo/redo then preserves each file's profile choice.
 	 * @return True if the replacement image was loaded successfully.
 	 */
-	bool relinkImage(const QString& filename, bool showMsg = false);
+	bool relinkImage(const QString& filename, bool showMsg = false, bool useNewEmbeddedProfile = false);
 
 	/**
 	 * @brief Connect the item's signals to the GUI, primarily the Properties palette, also some to ScMW
@@ -1614,6 +1617,7 @@ protected: // Start protected functions
 	void restoreFillRule(SimpleState* state, bool isUndo);
 	void restoreFirstLineOffset(SimpleState *state, bool isUndo);
 	void restoreGetImage(UndoState *state, bool isUndo);
+	void restoreExtractedImage(UndoState *state, bool isUndo);
 	void restoreRelinkImage(UndoState *state, bool isUndo);
 	void restoreGradPos(SimpleState *state,bool isUndo);
 	void restoreGradientCol1(SimpleState *state, bool isUndo);

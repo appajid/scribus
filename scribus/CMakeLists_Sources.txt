@@ -90,10 +90,18 @@ set(SCRIBUS_SOURCES
 	dynamicvariable.cpp
 	documentinformation.cpp
 	documentlogmanager.cpp
+	embeddedimageextractor.cpp
 	exif.cpp
 	fileloader.cpp
 	filesearch.cpp
 	filewatcher.cpp
+	imagealphacontour.cpp
+	imagealphasilhouette.cpp
+	imagecmykbatch.cpp
+	collectmanifest.cpp
+	imagecmykconversion.cpp
+	imagecmykexport.cpp
+	imagelinkreplacement.cpp
 	imagelinkmatcher.cpp
 	fontlistmodel.cpp
 	fpoint.cpp

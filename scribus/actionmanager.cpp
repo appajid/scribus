@@ -1015,6 +1015,10 @@ void ActionManager::initExtrasMenuActions()
 	QString name;
 	name = "extrasManageImages";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
+	name = "extrasReplaceFonts";
+	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
+	name = "extrasConvertRGBColors";
+	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name = "extrasHyphenateText";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	name = "extrasDeHyphenateText";
@@ -1024,6 +1028,8 @@ void ActionManager::initExtrasMenuActions()
 	name = "extrasUpdateDocument";
 	scrActions->insert(name, new ScrAction("", defaultKey(name), mainWindow));
 	connect( (*scrActions)["extrasManageImages"], SIGNAL(triggered()), mainWindow, SLOT(StatusPic()) );
+	connect( (*scrActions)["extrasReplaceFonts"], SIGNAL(triggered()), mainWindow, SLOT(replaceDocumentFonts()) );
+	connect( (*scrActions)["extrasConvertRGBColors"], SIGNAL(triggered()), mainWindow, SLOT(convertRGBColorsToCMYK()) );
 	connect( (*scrActions)["extrasGenerateTableOfContents"], SIGNAL(triggered()), mainWindow, SLOT(generateTableOfContents()) );
 	connect( (*scrActions)["extrasUpdateDocument"], SIGNAL(triggered()), mainWindow, SLOT(updateDocument()) );
 }
@@ -1856,6 +1862,8 @@ void ActionManager::languageChange()
 
 	//Extras Menu
 	(*scrActions)["extrasManageImages"]->setTexts( tr("&Manage Images..."));
+	(*scrActions)["extrasReplaceFonts"]->setTexts( tr("&Replace Fonts..."));
+	(*scrActions)["extrasConvertRGBColors"]->setTexts( tr("Convert RGB Colors to CMYK..."));
 	(*scrActions)["extrasHyphenateText"]->setTexts( tr("&Hyphenate Text"));
 	(*scrActions)["extrasDeHyphenateText"]->setTexts( tr("Dehyphenate Text"));
 	(*scrActions)["extrasGenerateTableOfContents"]->setTexts( tr("&Generate Table Of Contents and Indexes"));
@@ -2494,6 +2502,8 @@ void ActionManager::createDefaultMenus()
 	++itmenu;
 	itmenu->second
 		<< "extrasManageImages"
+		<< "extrasReplaceFonts"
+		<< "extrasConvertRGBColors"
 		<< "extrasHyphenateText"
 		<< "extrasDeHyphenateText"
 		<< "extrasGenerateTableOfContents"

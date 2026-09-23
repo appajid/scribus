@@ -85,6 +85,34 @@ target_compile_definitions(imagelinkmatchertests PRIVATE COMPILE_SCRIBUS_MAIN_AP
 add_test(NAME imagelinkmatchertests COMMAND imagelinkmatchertests)
 set_tests_properties(imagelinkmatchertests PROPERTIES LABELS "image-relinking;phase-4")
 
+# Unit tests for byte-preserving embedded-image extraction and naming
+set(EMBEDDEDIMAGEEXTRACTORTESTS_SOURCES embeddedimageextractortests.cpp ../embeddedimageextractor.cpp)
+add_executable(embeddedimageextractortests ${EMBEDDEDIMAGEEXTRACTORTESTS_SOURCES})
+target_link_libraries(embeddedimageextractortests Qt6::Test Qt6::Core)
+target_compile_definitions(embeddedimageextractortests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME embeddedimageextractortests COMMAND embeddedimageextractortests)
+set_tests_properties(embeddedimageextractortests PROPERTIES LABELS "embedded-image-extraction;phase-4")
+
+set(IMAGECMYKEXPORTTESTS_SOURCES imagecmykexporttests.cpp ../imagecmykexport.cpp)
+add_executable(imagecmykexporttests ${IMAGECMYKEXPORTTESTS_SOURCES})
+target_link_libraries(imagecmykexporttests Qt6::Test Qt6::Core Qt6::Gui ${TIFF_LIBRARIES})
+target_compile_definitions(imagecmykexporttests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME imagecmykexporttests COMMAND imagecmykexporttests)
+set_tests_properties(imagecmykexporttests PROPERTIES LABELS "image-color-conversion;phase-4")
+
+add_executable(imagealphacontourtests imagealphacontourtests.cpp ../imagealphasilhouette.cpp)
+target_link_libraries(imagealphacontourtests ${TESTS_LIBRARIES} Qt6::Gui Qt6::Widgets)
+target_compile_definitions(imagealphacontourtests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME imagealphacontourtests COMMAND imagealphacontourtests)
+
+add_executable(collectmanifesttests collectmanifesttests.cpp ../collectmanifest.cpp)
+target_link_libraries(collectmanifesttests Qt6::Test Qt6::Core)
+target_compile_definitions(collectmanifesttests PRIVATE COMPILE_SCRIBUS_MAIN_APP)
+add_test(NAME collectmanifesttests COMMAND collectmanifesttests)
+set_tests_properties(collectmanifesttests PROPERTIES LABELS "collect-for-output;phase-4")
+set_tests_properties(imagealphacontourtests PROPERTIES LABELS "image-contour;phase-4")
+set_tests_properties(imagealphacontourtests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # End-to-end running-header tests use the installed application because the
 # Scripter and file-format plugins are loaded from the installation layout.
 if(APPLEBUNDLE)
@@ -272,6 +300,114 @@ set_tests_properties(image_relinking PROPERTIES
 	FIXTURES_REQUIRED runningheader_test_app
 	LABELS "integration;image-relinking;phase-4;scripter;undo-redo"
 	PASS_REGULAR_EXPRESSION "IMAGE_RELINK_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(image_link_replacement_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-image-link-replacement")
+set(image_link_replacement_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-image-link-replacement")
+file(MAKE_DIRECTORY "${image_link_replacement_prefs_dir}")
+file(MAKE_DIRECTORY "${image_link_replacement_output_dir}")
+add_test(NAME image_link_replacement
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${image_link_replacement_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_image_link_replacement.py")
+set_tests_properties(image_link_replacement PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${image_link_replacement_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;image-relinking;phase-4;scripter;undo-redo;persistence"
+	PASS_REGULAR_EXPRESSION "IMAGE_LINK_REPLACEMENT_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(embedded_image_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-embedded-image")
+set(embedded_image_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-embedded-image")
+file(MAKE_DIRECTORY "${embedded_image_prefs_dir}")
+file(MAKE_DIRECTORY "${embedded_image_output_dir}")
+add_test(NAME embedded_image_extraction
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${embedded_image_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_embedded_image_extraction.py")
+set_tests_properties(embedded_image_extraction PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${embedded_image_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;embedded-images;phase-4;scripter;undo-redo;persistence"
+	PASS_REGULAR_EXPRESSION "EMBEDDED_IMAGE_EXTRACTION_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(document_font_replacement_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-document-font-replacement")
+set(document_font_replacement_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-document-font-replacement")
+file(MAKE_DIRECTORY "${document_font_replacement_prefs_dir}")
+file(MAKE_DIRECTORY "${document_font_replacement_output_dir}")
+add_test(NAME document_font_replacement
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${document_font_replacement_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_document_font_replacement.py")
+set_tests_properties(document_font_replacement PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${document_font_replacement_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;font-replacement;phase-4;scripter;undo-redo;persistence"
+	PASS_REGULAR_EXPRESSION "DOCUMENT_FONT_REPLACEMENT_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(rgb_to_cmyk_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-rgb-to-cmyk")
+set(rgb_to_cmyk_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-rgb-to-cmyk")
+file(MAKE_DIRECTORY "${rgb_to_cmyk_prefs_dir}")
+file(MAKE_DIRECTORY "${rgb_to_cmyk_output_dir}")
+add_test(NAME rgb_to_cmyk
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${rgb_to_cmyk_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_rgb_to_cmyk.py")
+set_tests_properties(rgb_to_cmyk PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${rgb_to_cmyk_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;rgb-to-cmyk;phase-4;scripter;undo-redo;persistence"
+	PASS_REGULAR_EXPRESSION "RGB_TO_CMYK_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(image_cmyk_export_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-image-cmyk-export")
+set(image_alpha_contour_prefs_dir "${CMAKE_CURRENT_BINARY_DIR}/prefs-image-alpha-contour")
+set(image_alpha_contour_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-image-alpha-contour")
+file(MAKE_DIRECTORY "${image_alpha_contour_prefs_dir}")
+file(MAKE_DIRECTORY "${image_alpha_contour_output_dir}")
+add_test(NAME image_alpha_contour
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${image_alpha_contour_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_image_alpha_contour.py")
+set_tests_properties(image_alpha_contour PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${image_alpha_contour_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;image-contour;phase-4;scripter;undo-redo;persistence"
+	PASS_REGULAR_EXPRESSION "IMAGE_ALPHA_CONTOUR_QA_PASSED"
+	RUN_SERIAL TRUE
+	TIMEOUT 120)
+
+set(image_cmyk_export_output_dir "${CMAKE_CURRENT_BINARY_DIR}/output-image-cmyk-export")
+file(MAKE_DIRECTORY "${image_cmyk_export_prefs_dir}")
+file(MAKE_DIRECTORY "${image_cmyk_export_output_dir}")
+add_test(NAME image_cmyk_export
+	COMMAND "${SCRIBUS_SCRIPT_TEST_EXECUTABLE}"
+		--no-splash
+		--prefs "${image_cmyk_export_prefs_dir}"
+		--no-gui
+		--python-script "${CMAKE_CURRENT_SOURCE_DIR}/scripts/test_image_cmyk_export.py")
+set_tests_properties(image_cmyk_export PROPERTIES
+	ENVIRONMENT "QT_QPA_PLATFORM=offscreen;SCRIBUS_TEST_OUTPUT_DIR=${image_cmyk_export_output_dir}"
+	FIXTURES_REQUIRED runningheader_test_app
+	LABELS "integration;image-color-conversion;phase-4;scripter"
+	PASS_REGULAR_EXPRESSION "IMAGE_CMYK_EXPORT_QA_PASSED"
 	RUN_SERIAL TRUE
 	TIMEOUT 120)
 

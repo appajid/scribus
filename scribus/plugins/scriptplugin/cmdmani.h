@@ -209,6 +209,107 @@ May raise WrongFrameTypeError if the target frame is not an image frame.\n\
 /*! Relink an external image without changing frame-level image settings. */
 PyObject *scribus_relinkimage(PyObject * /*self*/, PyObject* args);
 
+PyDoc_STRVAR(scribus_replaceimagelinks__doc__,
+QT_TR_NOOP("replaceImageLinks(\"source\", \"replacement\" [, dryRun=False, scope=\"document\"]) -> (matched, replaced, failed)\n\
+\n\
+Replace every external image frame linked to the exact source path, including\n\
+frames on master pages and inside groups. Embedded and empty frames are skipped.\n\
+Each successful relink preserves frame crop and scale; all changes form one\n\
+undo step. A dry run counts matches without changing the document. The tuple\n\
+reports matches, successful replacements and load failures. Original image\n\
+files are never changed.\n\
+scope may be document, page (current page only), or masters.\n\
+"));
+PyObject *scribus_replaceimagelinks(PyObject * /*self*/, PyObject* args);
+
+PyDoc_STRVAR(scribus_generateimagealphacontour__doc__,
+QT_TR_NOOP("generateImageAlphaContour([threshold=128, padding=0.0, wrap=True, name=\"\"]) -> bool\n\
+\n\
+Build an editable contour from the loaded image's transparency, clipped to\n\
+the frame. Threshold is 1–255; padding is a clearance in points. When wrap\n\
+is True, text flows around the contour. The change is undoable and does not\n\
+modify the image file. Raises ScribusException if no usable alpha exists.\n\
+"));
+PyObject *scribus_generateimagealphacontour(PyObject * /*self*/, PyObject* args);
+
+PyDoc_STRVAR(scribus_generateimagecontour__doc__,
+QT_TR_NOOP("generateImageContour([source=\"alpha\", threshold=128, padding=0.0, smoothing=0, simplification=0.0, wrap=True, name=\"\"]) -> bool\n\
+\n\
+Build an editable image contour from alpha, clip, luminance, or edge contrast.\n\
+The edge mode compares pixels with the average corner background colour.\n\
+Smoothing rounds outward in points; simplification reduces source detail before\n\
+tracing. The contour is clipped to the image frame before padding is applied.\n\
+The operation is undoable and does not modify the image file.\n\
+"));
+PyObject *scribus_generateimagecontour(PyObject * /*self*/, PyObject* args);
+
+PyDoc_STRVAR(scribus_exportimageascmykcopy__doc__,
+QT_TR_NOOP("exportImageAsCMYKCopy(\"filename\" [, \"name\", relink=False]) -> bool\n\
+\n\
+Exports a non-destructive CMYK TIFF copy of the RGB raster image in frame\n\
+\"name\" using the document's CMYK output ICC profile. The source image and\n\
+frame link remain unchanged unless relink is True. A relink uses the new TIFF's\n\
+embedded ICC profile and can be undone without deleting the exported file.\n\
+Color management must be enabled. The destination\n\
+must end in .tif or .tiff and must not exist. Images with transparency or\n\
+frame effects are not supported.\n\
+Raises ScribusException on conversion or file errors. Returns False if the\n\
+export succeeds but the optional relink fails. Embedded images cannot be\n\
+relinked through this command.\n\
+"));
+PyObject *scribus_exportimageascmykcopy(PyObject * /*self*/, PyObject* args);
+
+PyDoc_STRVAR(scribus_batchexportimagesascmyk__doc__,
+QT_TR_NOOP("batchExportImagesAsCMYK(directory [, sourceProfile='', destinationProfile='', intent=-1, blackPoint=-1, backup=True, relink=False, dryRun=False]) -> tuple\n\
+\n\
+Export eligible RGB raster image frames as separate profile-embedded CMYK TIFFs.\n\
+Returns (eligible, exported, relinked, failed, reportPath). Dry run writes no files.\n\
+The source image files are never overwritten. Optional frame relinks are grouped\n\
+in one undo step. A JSON report is saved in the output directory on export.\n\
+intent and blackPoint use -1 for each frame's current defaults.\n\
+"));
+PyObject *scribus_batchexportimagesascmyk(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_embedimage__doc__,
+QT_TR_NOOP("embedImage([\"name\"]) -> bool\n\
+\n\
+Embeds the image used by image frame \"name\" in the document without\n\
+re-encoding it. If \"name\" is not given the currently selected item is used.\n\
+Returns True when the image is embedded.\n\
+\n\
+May raise WrongFrameTypeError if the target frame is not an image frame.\n\
+"));
+/*! Embed an externally linked image in the document. */
+PyObject *scribus_embedimage(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_extractembeddedimage__doc__,
+QT_TR_NOOP("extractEmbeddedImage(\"filename\" [, relink=False, overwrite=False, \"name\"]) -> bool\n\
+\n\
+Copies the exact stored bytes of the embedded image in frame \"name\" to\n\
+\"filename\". Set relink to True to replace the embedded data with a link to\n\
+the extracted file; that document change is undoable. Existing files are kept\n\
+unless overwrite is True. If \"name\" is not given the currently selected item\n\
+is used.\n\
+\n\
+May raise WrongFrameTypeError if the target frame is not an image frame.\n\
+"));
+/*! Extract an embedded image, optionally relinking its frame. */
+PyObject *scribus_extractembeddedimage(PyObject * /*self*/, PyObject* args);
+
+/*! docstring */
+PyDoc_STRVAR(scribus_isimageembedded__doc__,
+QT_TR_NOOP("isImageEmbedded([\"name\"]) -> bool\n\
+\n\
+Returns True if image frame \"name\" stores its image inside the document. If\n\
+\"name\" is not given the currently selected item is used.\n\
+\n\
+May raise WrongFrameTypeError if the target frame is not an image frame.\n\
+"));
+/*! Report whether an image frame contains embedded image data. */
+PyObject *scribus_isimageembedded(PyObject * /*self*/, PyObject* args);
+
 /*! docstring */
 PyDoc_STRVAR(scribus_scaleimage__doc__,
 QT_TR_NOOP("scaleImage(x, y [, \"name\"])\n\
