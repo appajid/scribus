@@ -1,0 +1,138 @@
+name: Linux AppImage candidate
+
+on:
+  push:
+    branches:
+      - codex/apscribe-release-*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  appimage:
+    name: Linux x64 AppImage candidate / Qt 6.11.2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      QT_QPA_PLATFORM: offscreen
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            ninja-build pkg-config libxkbcommon-dev \
+            libcairo2-dev libcups2-dev libfontconfig1-dev libfreetype-dev \
+            libharfbuzz-dev libhunspell-dev libicu-dev libjpeg-dev \
+            liblcms2-dev libpagemaker-dev libpng-dev libpoppler-cpp-dev \
+            libpoppler-private-dev librevenge-dev libtiff-dev libxml2-dev \
+            python3-dev zlib1g-dev poppler-utils
+
+      - name: Install Qt 6.11.2
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.11.2
+          arch: linux_gcc_64
+          modules: qt5compat
+          cache: true
+
+      - name: Restore compiled application for packaging retries
+        id: app-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/release-appimage
+          key: apscribe-appimage-qt6112-ubuntu2404-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'scribus/**', 'apscribe.appdata.xml.in') }}-v1
+
+      - name: Configure and build Apscribe
+        run: |
+          cmake -S . -B build/release-appimage -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DQT_PREFIX="$QT_ROOT_DIR" \
+            -DWANT_RELOCATABLE=ON -DWITH_TESTS=ON \
+            -DWANT_NOOSG=ON -DWITH_PODOFO=OFF -DWITH_BOOST=OFF
+          cmake --build build/release-appimage --parallel 2
+
+      - name: Cache compiled application before packaging
+        if: steps.app-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/release-appimage
+          key: apscribe-appimage-qt6112-ubuntu2404-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'scribus/**', 'apscribe.appdata.xml.in') }}-v1
+
+      - name: Run native integration tests
+        # The existing CTest fixture installs into CMAKE_INSTALL_PREFIX=/usr.
+        # The hosted runner is disposable; retain Qt's runtime paths under sudo.
+        run: |
+          sudo env QT_QPA_PLATFORM=offscreen \
+            LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+            QT_PLUGIN_PATH="$QT_PLUGIN_PATH" \
+            ctest --test-dir build/release-appimage -L phase-5 --output-on-failure
+          # The install fixture writes this manifest as root; the later
+          # unprivileged DESTDIR stage must be able to replace it.
+          sudo chown "$USER" build/release-appimage/install_manifest.txt
+
+      - name: Stage application and check release contents
+        run: |
+          DESTDIR="$GITHUB_WORKSPACE/AppDir" cmake --install build/release-appimage
+          test -x AppDir/usr/bin/apscribe
+          test -f AppDir/usr/share/applications/apscribe.desktop
+          test -f AppDir/usr/share/doc/scribus/COPYING
+          test -f AppDir/usr/lib/scribus/plugins/libimportpm.so || \
+            find AppDir/usr/lib -name 'libimportpm.so' -print -quit | grep -q .
+
+      - name: Install pinned AppImage bundling tools
+        run: |
+          mkdir -p tools
+          curl --fail --location --silent --show-error \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage \
+            --output tools/linuxdeploy-x86_64.AppImage
+          printf '%s  %s\n' \
+            c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d \
+            tools/linuxdeploy-x86_64.AppImage | sha256sum --check
+          curl --fail --location --silent --show-error \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage \
+            --output tools/linuxdeploy-plugin-qt-x86_64.AppImage
+          printf '%s  %s\n' \
+            15106be885c1c48a021198e7e1e9a48ce9d02a86dd0a1848f00bdbf3c1c92724 \
+            tools/linuxdeploy-plugin-qt-x86_64.AppImage | sha256sum --check
+          chmod +x tools/*.AppImage
+
+      - name: Bundle Qt and create AppImage
+        env:
+          EXTRA_PLATFORM_PLUGINS: libqoffscreen.so
+        run: |
+          if test -x "$QT_ROOT_DIR/bin/qmake6"; then
+            export QMAKE="$QT_ROOT_DIR/bin/qmake6"
+          elif test -x "$QT_ROOT_DIR/bin/qmake"; then
+            export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          else
+            echo 'Qt qmake was not installed' >&2
+            exit 1
+          fi
+          tools/linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
+            --appdir AppDir --plugin qt --output appimage
+          mapfile -t images < <(find . -maxdepth 1 -type f -name '*.AppImage')
+          test "${#images[@]}" -eq 1
+          mv "${images[0]}" Apscribe-2.0.0-rc1-linux-x86_64.AppImage
+
+      - name: Smoke test the packaged AppImage
+        run: |
+          chmod +x Apscribe-2.0.0-rc1-linux-x86_64.AppImage
+          Apscribe-2.0.0-rc1-linux-x86_64.AppImage \
+            --appimage-extract-and-run --version | grep -F 'Apscribe Version 2.0.0'
+          sha256sum Apscribe-2.0.0-rc1-linux-x86_64.AppImage \
+            > Apscribe-2.0.0-rc1-linux-x86_64.AppImage.sha256
+
+      - name: Upload Linux candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Apscribe-2.0.0-rc1-Linux-x86_64-AppImage
+          path: |
+            Apscribe-2.0.0-rc1-linux-x86_64.AppImage
+            Apscribe-2.0.0-rc1-linux-x86_64.AppImage.sha256
+          if-no-files-found: error
+          retention-days: 30

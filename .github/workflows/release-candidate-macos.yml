@@ -1,0 +1,85 @@
+name: macOS DMG candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Draft prerelease containing the unsigned Mac app ZIP
+        required: true
+        default: v2.0.0-rc1
+
+permissions:
+  contents: read
+
+jobs:
+  macos-dmg:
+    name: macOS ARM64 unsigned test DMG
+    # Current Homebrew Qt/SVG bottles in the locally staged app require macOS 27.
+    # Rebuild on an older SDK before advertising wider macOS compatibility.
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download bundled Mac app from draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p input
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.zip*' \
+            --dir input
+          (cd input && shasum -a 256 -c \
+            Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.zip.sha256)
+          mkdir -p unpacked
+          ditto -x -k input/Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.zip unpacked
+
+      - name: Check signature, platform, dependencies, and bundled Scripter
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          app="$GITHUB_WORKSPACE/unpacked/Apscribe.app"
+          codesign --verify --deep --strict "$app"
+          file "$app/Contents/MacOS/Apscribe" | grep -F 'arm64'
+          dependencies="$(find "$app/Contents" -type f \
+            \( -name '*.dylib' -o -name '*.so' -o -name Apscribe -o -name Python \) \
+            -print0 | xargs -0 -n1 otool -L 2>/dev/null)"
+          if grep -q '^[[:space:]]*/opt/homebrew/' <<< "$dependencies"; then
+            echo 'Bundled app still links to Homebrew' >&2
+            exit 1
+          fi
+          "$app/Contents/MacOS/Apscribe" --version | grep -F 'Apscribe Version 2.0.0'
+          marker="$(mktemp)"
+          APSCRIBE_EXPECTED_PYTHON_PREFIX="$app/Contents/Frameworks/Python.framework/Versions/3.14" \
+            APSCRIBE_SMOKE_RESULT="$marker" \
+            "$app/Contents/MacOS/Apscribe" --no-gui --python-script \
+            "$GITHUB_WORKSPACE/ci/release/macos-scripter-smoke.py"
+          test -s "$marker"
+
+      - name: Create and mount test DMG
+        run: |
+          mkdir -p dmg-stage mounted
+          ditto unpacked/Apscribe.app dmg-stage/Apscribe.app
+          ln -s /Applications dmg-stage/Applications
+          hdiutil create -volname 'Apscribe 2.0.0 RC1 Test' \
+            -srcfolder dmg-stage -format UDZO -ov \
+            Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg
+          hdiutil attach -readonly -nobrowse -mountpoint "$GITHUB_WORKSPACE/mounted" \
+            Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg
+          test -x mounted/Apscribe.app/Contents/MacOS/Apscribe
+          codesign --verify --deep --strict mounted/Apscribe.app
+          hdiutil detach "$GITHUB_WORKSPACE/mounted"
+          shasum -a 256 Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg \
+            > Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg.sha256
+
+      - name: Upload macOS candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Apscribe-2.0.0-rc1-macOS-ARM64-unsigned-DMG
+          path: |
+            Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg
+            Apscribe-2.0.0-rc1-macos-arm64-unsigned-test.dmg.sha256
+          if-no-files-found: error
+          retention-days: 30

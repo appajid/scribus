@@ -26,6 +26,7 @@ for which a new license (GPL+exception) is in place.
 
 #include <QApplication>
 #include <QByteArray>
+#include <QDir>
 #include <QMessageBox>
 #include <QPixmap>
 #include <QString>
@@ -172,6 +173,16 @@ bool ScriptPlugin::initPlugin()
 		pythonHome.resize(2 * ph.length() + 2);
 		memcpy(pythonHome.data(), ph.utf16(), 2 * ph.length() + 2);
 		Py_SetPythonHome((const wchar_t*) pythonHome.constData());
+	}
+#elif defined(Q_OS_MACOS)
+	// A deployed app carries its own Python runtime. Keep Scripter from
+	// silently loading the build machine's Homebrew Python instead.
+	const QDir bundledPython(QApplication::applicationDirPath()
+		+ "/../Frameworks/Python.framework/Versions/3.14");
+	if (bundledPython.exists())
+	{
+		qputenv("PYTHONHOME", bundledPython.canonicalPath().toUtf8());
+		qputenv("PYTHONDONTWRITEBYTECODE", "1");
 	}
 #endif
 
